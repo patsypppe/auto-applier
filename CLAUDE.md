@@ -95,7 +95,7 @@ packages/extension/
 3. `resolveValue` ✅ committed
 4. `discoverFields` ✅ committed
 5. `matchField`, `AttributeMatcher`, `BareNameMatcher` ✅ committed
-6. Fillers: **6a** `setNativeValue` + `TextFiller` ✅ committed; **6b** `SelectFiller`, `RadioFiller`, `CheckboxFiller` ✅ committed; **6c** `ComboboxFiller` (in progress) (`FileFiller` is proposed to move to step 9, because it needs the resume store; not yet agreed)
+6. Fillers: **6a** `setNativeValue` + `TextFiller` ✅ committed; **6b** `SelectFiller`, `RadioFiller`, `CheckboxFiller` ✅ committed; **6c** `ComboboxFiller` ✅ committed (`FileFiller` is proposed to move to step 9, because it needs the resume store; not yet agreed)
 7. `fillPage` orchestrator + `content.ts` + "Fill this page" popup button → first end-to-end result
 8. LLM client, settings (API key), manifest `host_permissions`
 9. Resume parsing: `extractText`, `ResumeParser`, `ResumeUpload`, IndexedDB resume store

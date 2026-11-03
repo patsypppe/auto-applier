@@ -144,7 +144,7 @@ Steps are built one at a time: tests first, diff shown, approval, commit. `CLAUD
 | 5 | Matchers | `matchField.ts`, `AttributeMatcher.ts`, `BareNameMatcher.ts` | done |
 | 6a | Text filling | `setNativeValue.ts`, `TextFiller.ts` | done |
 | 6b | Select, radio, checkbox fillers | `SelectFiller`, `RadioFiller`, `CheckboxFiller` | done |
-| 6c | Combobox filler | `ComboboxFiller` | in progress |
+| 6c | Combobox filler | `ComboboxFiller` | done |
 | 7 | `fillPage`, `content.ts`, "Fill this page" button, highlight flagged fields | `fill/fillPage.ts`, `ui/highlightFlagged.ts` | planned. **First end-to-end result.** |
 | 8 | LLM client and settings | `SettingsStore`, `<Provider>LLMClient`, `messaging.ts`, manifest `host_permissions` | planned. **Needs the provider choice.** |
 | 9 | Resume parsing and file upload | `extractText` (`pdfjs-dist`), a DOCX reader (to be chosen), `ResumeParser`, `ResumeUpload`, `IndexedDbResumeStore`, `FileFiller` | planned |
