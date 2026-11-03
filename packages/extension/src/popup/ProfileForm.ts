@@ -1,8 +1,15 @@
-// Renders the editable profile form into the popup and saves it through a ProfileStore.
-import { emptyFormValues, fromFormValues, toFormValues } from "@auto-applier/core"
-import type { Profile, ProfileFormValues, ProfileStore } from "@auto-applier/core"
+// Renders the editable profile form into the popup, saves it through a ProfileStore, and lets other code fill it in.
+import { carriedOverOf, emptyFormValues, fromFormValues, toFormValues } from "@auto-applier/core"
+import type { CarriedOver, Profile, ProfileFormValues, ProfileStore } from "@auto-applier/core"
 import { PROFILE_FIELDS } from "./profileFields"
 import type { FieldSpec } from "./profileFields"
+
+export type ProfileFormHandle = {
+  getValues(): ProfileFormValues
+  getCarried(): CarriedOver | undefined
+  showProfile(profile: Profile): void
+  showDraft(values: ProfileFormValues, carried: CarriedOver, errors: string[]): void
+}
 
 // Creates the input control for one field: a yes/no select or a text-like input.
 function createControl(spec: FieldSpec, value: string): HTMLInputElement | HTMLSelectElement {
@@ -45,6 +52,14 @@ function readValues(form: HTMLFormElement): ProfileFormValues {
   )
 }
 
+// Puts the given values into the form's fields.
+function writeValues(form: HTMLFormElement, values: ProfileFormValues): void {
+  for (const spec of PROFILE_FIELDS) {
+    const control = form.elements.namedItem(spec.key) as HTMLInputElement | HTMLSelectElement | null
+    if (control) control.value = values[spec.key]
+  }
+}
+
 // Replaces the contents of a list element with one item per message.
 function showMessages(list: HTMLElement, messages: string[]): void {
   const items = messages.map((message) => {
@@ -55,10 +70,11 @@ function showMessages(list: HTMLElement, messages: string[]): void {
   list.replaceChildren(...items)
 }
 
-// Loads the saved profile into a form inside the container and saves it when submitted.
-export async function mountProfileForm(container: HTMLElement, store: ProfileStore): Promise<void> {
-  let current: Profile | undefined = await store.load()
-  const values = current ? toFormValues(current) : emptyFormValues()
+// Loads the saved profile into a form inside the container, saves it when submitted, and returns a handle to drive it.
+export async function mountProfileForm(container: HTMLElement, store: ProfileStore): Promise<ProfileFormHandle> {
+  const saved = await store.load()
+  let carried: CarriedOver | undefined = saved ? carriedOverOf(saved) : undefined
+  const values = saved ? toFormValues(saved) : emptyFormValues()
 
   const errors = document.createElement("ul")
   errors.className = "errors"
@@ -79,7 +95,7 @@ export async function mountProfileForm(container: HTMLElement, store: ProfileSto
     event.preventDefault()
     status.textContent = ""
 
-    const result = fromFormValues(readValues(form), current)
+    const result = fromFormValues(readValues(form), carried)
     if (!result.ok) {
       showMessages(errors, result.errors)
       return
@@ -87,7 +103,7 @@ export async function mountProfileForm(container: HTMLElement, store: ProfileSto
 
     try {
       await store.save(result.profile)
-      current = result.profile
+      carried = carriedOverOf(result.profile)
       showMessages(errors, [])
       status.textContent = "Saved."
     } catch (error: unknown) {
@@ -96,4 +112,21 @@ export async function mountProfileForm(container: HTMLElement, store: ProfileSto
   })
 
   container.replaceChildren(form)
+
+  return {
+    getValues: () => readValues(form),
+    getCarried: () => carried,
+    showProfile(profile) {
+      writeValues(form, toFormValues(profile))
+      carried = carriedOverOf(profile)
+      showMessages(errors, [])
+      status.textContent = ""
+    },
+    showDraft(draftValues, draftCarried, problems) {
+      writeValues(form, draftValues)
+      carried = draftCarried
+      showMessages(errors, problems)
+      status.textContent = ""
+    },
+  }
 }

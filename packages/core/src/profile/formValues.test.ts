@@ -1,6 +1,6 @@
 // Tests the conversion between flat form text and a Profile, in both directions.
 import { describe, expect, test } from "vitest"
-import { emptyFormValues, fromFormValues, toFormValues } from "./formValues"
+import { carriedOverOf, emptyFormValues, fromFormValues, toFormValues } from "./formValues"
 import type { ProfileFormValues } from "./formValues"
 import type { Profile } from "./types"
 
@@ -120,6 +120,22 @@ describe("fromFormValues", () => {
 
   test("rejects the empty form because required fields are blank", () => {
     expect(fromFormValues(emptyFormValues()).ok).toBe(false)
+  })
+})
+
+describe("carriedOverOf", () => {
+  test("takes the experience, education and resume from a profile", () => {
+    expect(carriedOverOf(existingProfile)).toEqual({
+      experience: existingProfile.experience,
+      education: existingProfile.education,
+      resume: existingProfile.resume,
+    })
+  })
+
+  test("leaves the resume out when the profile has none", () => {
+    const { resume: _resume, ...withoutResume } = existingProfile
+
+    expect(carriedOverOf(withoutResume).resume).toBeUndefined()
   })
 })
 

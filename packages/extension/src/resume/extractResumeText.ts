@@ -5,7 +5,7 @@ const TEXT_EXTENSION = /\.(txt|md)$/i
 export type PdfReader = (data: ArrayBuffer) => Promise<string>
 
 // Returns true when the browser or the file name says the file is a PDF.
-function isPdf(file: File): boolean {
+export function isPdf(file: File): boolean {
   return file.type === "application/pdf" || PDF_EXTENSION.test(file.name)
 }
 

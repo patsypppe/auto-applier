@@ -25,6 +25,11 @@ export type ProfileFormValues = {
 // The parts of a profile the form does not edit, which are kept when the form is saved.
 export type CarriedOver = Pick<Profile, "experience" | "education" | "resume">
 
+// Picks out the parts of a profile that the form does not edit.
+export function carriedOverOf(profile: Profile): CarriedOver {
+  return { experience: profile.experience, education: profile.education, resume: profile.resume }
+}
+
 // Returns form values with every text blank and sponsorship set to no.
 export function emptyFormValues(): ProfileFormValues {
   return {
