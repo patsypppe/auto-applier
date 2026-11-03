@@ -5,6 +5,7 @@ import type { FieldOutcome, FieldReport } from "./fillPage"
 import {
   addSummaries,
   emptySummary,
+  explainReport,
   formatSummary,
   isReportSummary,
   needsAttention,
@@ -127,5 +128,34 @@ describe("formatSummary", () => {
 
   test("says so when there were no fields", () => {
     expect(formatSummary(emptySummary())).toBe("No fillable fields found.")
+  })
+})
+
+describe("explainReport", () => {
+  test("says why a field failed, with the page's reason", () => {
+    expect(explainReport(report({ status: "failed", reason: 'No single option matches "Indiana"' }))).toBe('Failed: No single option matches "Indiana"')
+  })
+
+  test("says a field was not recognised, and which profile item is missing for a no-value field", () => {
+    expect(explainReport(report({ status: "unmatched" }))).toBe("Not recognised by the rules")
+    expect(explainReport(report({ status: "no-value", profileKey: "linkedin" }))).toBe("Your profile has no value for linkedin")
+  })
+
+  test("says what was left alone and why", () => {
+    expect(explainReport(report({ status: "skipped", reason: "Field already has a value" }))).toBe("Left alone: Field already has a value")
+  })
+
+  test("says when the AI was asked and did not settle a field", () => {
+    expect(explainReport({ ...report({ status: "unmatched" }), askedAi: true })).toBe("Not recognised by the rules. The AI was asked and left it blank.")
+    expect(explainReport({ ...report({ status: "failed", reason: "x" }), askedAi: true })).toBe("Failed: x. The AI was asked and did not settle it.")
+  })
+
+  test("says what the AI wrote or chose", () => {
+    expect(explainReport(report({ status: "filled" }, "ai"))).toBe("Chosen by the AI")
+    expect(explainReport(report({ status: "drafted" }, "ai"))).toBe("Written by the AI")
+  })
+
+  test("says a plain fill came from the profile", () => {
+    expect(explainReport(report({ status: "filled" }))).toBe("Filled from your profile")
   })
 })

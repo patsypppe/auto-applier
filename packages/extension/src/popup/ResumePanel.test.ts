@@ -91,6 +91,62 @@ describe("ResumePanel", () => {
   })
 })
 
+describe("ResumePanel: which resume is stored", () => {
+  const POINTER = { name: "my-resume.pdf", mimeType: "application/pdf", storageKey: "resume" }
+
+  // Returns the text of the line that names the stored resume.
+  function storedLine(): string {
+    return document.querySelector(".stored-resume")?.textContent ?? ""
+  }
+
+  test("says no resume is stored yet when the profile has none", () => {
+    mountPanel(async () => ({ status: "saved", profile: PROFILE, warnings: [] }))
+
+    expect(storedLine()).toBe("No resume stored yet.")
+  })
+
+  test("names the resume the saved profile points to when it opens", () => {
+    const form = fakeForm()
+    form.getCarried.mockReturnValue({ ...CARRIED, resume: POINTER })
+    mountPanel(async () => ({ status: "saved", profile: PROFILE, warnings: [] }), form)
+
+    expect(storedLine()).toBe("Stored resume: my-resume.pdf")
+  })
+
+  test("names the resume right after a saved import", async () => {
+    mountPanel(async () => ({ status: "saved", profile: { ...PROFILE, resume: POINTER }, warnings: [] }))
+
+    chooseFile(FILE)
+    await vi.waitFor(() => expect(storedLine()).toBe("Stored resume: my-resume.pdf"))
+  })
+
+  test("says the resume still needs Save profile when the import needs review", async () => {
+    mountPanel(async () => ({
+      status: "needs-review",
+      values: emptyFormValues(),
+      carried: { ...CARRIED, resume: POINTER },
+      errors: ["answers.workAuthorization: Required"],
+      warnings: [],
+    }))
+
+    chooseFile(FILE)
+    await vi.waitFor(() => expect(storedLine()).toBe("Stored resume: my-resume.pdf (press Save profile to keep it linked)"))
+  })
+
+  test("keeps the earlier line when the import fails, and says so in the status", async () => {
+    const form = fakeForm()
+    form.getCarried.mockReturnValue({ ...CARRIED, resume: POINTER })
+    mountPanel(async () => {
+      throw new Error("Gemini returned 503")
+    }, form)
+
+    chooseFile(FILE)
+    await vi.waitFor(() => expect(status()).toBe("Gemini returned 503"))
+
+    expect(storedLine()).toBe("Stored resume: my-resume.pdf")
+  })
+})
+
 describe("ResumePanel: a saved profile", () => {
   test("shows the saved profile in the form and says it was saved", async () => {
     const { form } = mountPanel(async () => ({ status: "saved", profile: PROFILE, warnings: [] }))

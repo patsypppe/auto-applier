@@ -2,7 +2,7 @@
 import type { FormField } from "../fields/types"
 
 // A machine-readable reason a fill failed, so callers can react without reading the message text.
-export type FailureCode = "no-option-match"
+export type FailureCode = "no-option-match" | "no-options"
 
 export type FillResult =
   | { status: "filled" }

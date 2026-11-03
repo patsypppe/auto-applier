@@ -1,8 +1,9 @@
 // Outlines fields on the page: red for failures, amber for what needs the user, blue for what the AI wrote or chose.
-import { needsAttention, needsReview } from "@auto-applier/core"
+import { explainReport, needsAttention, needsReview } from "@auto-applier/core"
 import type { FieldReport } from "@auto-applier/core"
 
 const MARK_ATTRIBUTE = "data-auto-applier"
+const REASON_ATTRIBUTE = "data-auto-applier-reason"
 const FAILED_COLOR = "#d93025"
 const ATTENTION_COLOR = "#f9ab00"
 const REVIEW_COLOR = "#1a73e8"
@@ -24,10 +25,11 @@ function clearMarks(): void {
     element.style.outline = ""
     element.style.outlineOffset = ""
     element.removeAttribute(MARK_ATTRIBUTE)
+    element.removeAttribute(REASON_ATTRIBUTE)
   })
 }
 
-// Outlines every field that needs the user or a check, after clearing the outlines of a previous run.
+// Outlines every field that needs the user or a check, and writes the reason on it, after clearing the marks of a previous run.
 export function highlightFlagged(reports: FieldReport[]): void {
   clearMarks()
 
@@ -37,6 +39,7 @@ export function highlightFlagged(reports: FieldReport[]): void {
 
     const element = report.field.element
     element.setAttribute(MARK_ATTRIBUTE, mark.label)
+    element.setAttribute(REASON_ATTRIBUTE, explainReport(report))
     element.style.outline = `2px solid ${mark.color}`
     element.style.outlineOffset = "2px"
   }

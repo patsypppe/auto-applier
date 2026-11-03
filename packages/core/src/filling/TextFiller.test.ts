@@ -115,3 +115,41 @@ describe("TextFiller: fill", () => {
     expect(result).toEqual({ status: "failed", reason: "Field is not a text input" })
   })
 })
+
+describe("TextFiller: a page that reformats what was typed", () => {
+  // Makes the field reformat its value after every input, as a phone-number widget does.
+  function reformatTo(field: FormField, shown: string): void {
+    field.element.addEventListener("input", () => {
+      ;(field.element as HTMLInputElement).value = shown
+    })
+  }
+
+  test("counts a phone number the page showed with spaces and brackets as filled", () => {
+    const field = makeField()
+    reformatTo(field, "(555) 123-4567")
+
+    expect(filler.fill(field, "5551234567")).toEqual({ status: "filled" })
+  })
+
+  test("counts a number the page showed without its country code as filled", () => {
+    const field = makeField()
+    reformatTo(field, "(555) 123-4567")
+
+    expect(filler.fill(field, "+1 555 123 4567")).toEqual({ status: "filled" })
+  })
+
+  test("still fails when the page kept different digits", () => {
+    const field = makeField()
+    reformatTo(field, "(999) 888-7777")
+
+    expect(filler.fill(field, "5551234567")).toEqual({ status: "failed", reason: "The page did not accept the value" })
+  })
+
+  test("does not treat short digit strings that merely end alike as the same", () => {
+    const field = makeField()
+    reformatTo(field, "2020")
+
+    expect(filler.fill(field, "12020")).toMatchObject({ status: "failed" })
+  })
+})
+

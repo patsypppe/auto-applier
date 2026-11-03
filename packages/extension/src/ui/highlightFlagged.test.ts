@@ -36,6 +36,25 @@ describe("highlightFlagged", () => {
     expect(report.field.element.getAttribute("data-auto-applier")).toBe("failed")
   })
 
+  test("writes the reason on the field so it can be read from the page", () => {
+    const failed = reportFor({ status: "failed", reason: "No single option matches" })
+    const aiFilled = reportFor({ status: "filled" }, "ai")
+
+    highlightFlagged([failed, aiFilled])
+
+    expect(failed.field.element.getAttribute("data-auto-applier-reason")).toBe("Failed: No single option matches")
+    expect(aiFilled.field.element.getAttribute("data-auto-applier-reason")).toBe("Chosen by the AI")
+  })
+
+  test("removes the reason together with the outline of an earlier run", () => {
+    const report = reportFor({ status: "failed", reason: "x" })
+    highlightFlagged([report])
+
+    highlightFlagged([])
+
+    expect(report.field.element.hasAttribute("data-auto-applier-reason")).toBe(false)
+  })
+
   test("outlines fields that are unrecognised or have no data in amber", () => {
     const unmatched = reportFor({ status: "unmatched" })
     const noValue = reportFor({ status: "no-value", profileKey: "linkedin" })

@@ -50,6 +50,12 @@ function showFindings(
   findings.replaceChildren(...parts)
 }
 
+// Returns the line that names the stored resume, or says there is none; a resume not yet linked to a saved profile says so.
+function storedLine(name: string | undefined, linked: boolean): string {
+  if (!name) return "No resume stored yet."
+  return linked ? `Stored resume: ${name}` : `Stored resume: ${name} (press Save profile to keep it linked)`
+}
+
 // Adds a file input and a status area to the container; a chosen file is imported and the result shown in the form.
 export function mountResumePanel(container: HTMLElement, options: ResumePanelOptions): void {
   const { form, importFile } = options
@@ -65,6 +71,10 @@ export function mountResumePanel(container: HTMLElement, options: ResumePanelOpt
 
   const status = document.createElement("p")
   status.setAttribute("role", "status")
+
+  const stored = document.createElement("p")
+  stored.className = "stored-resume"
+  stored.textContent = storedLine(form.getCarried()?.resume?.name, true)
 
   const findings = document.createElement("div")
   findings.className = "findings"
@@ -82,10 +92,12 @@ export function mountResumePanel(container: HTMLElement, options: ResumePanelOpt
       if (outcome.status === "saved") {
         form.showProfile(outcome.profile)
         status.textContent = SAVED_MESSAGE
+        stored.textContent = storedLine(outcome.profile.resume?.name, true)
         showFindings(findings, outcome.warnings, outcome.profile.experience, outcome.profile.education)
       } else {
         form.showDraft(outcome.values, outcome.carried, outcome.errors)
         status.textContent = REVIEW_MESSAGE
+        stored.textContent = storedLine(outcome.carried.resume?.name, false)
         showFindings(findings, outcome.warnings, outcome.carried.experience, outcome.carried.education)
       }
     } catch (error: unknown) {
@@ -98,5 +110,5 @@ export function mountResumePanel(container: HTMLElement, options: ResumePanelOpt
   const field = document.createElement("div")
   field.className = "field"
   field.append(label, input)
-  container.append(field, status, findings)
+  container.append(field, stored, status, findings)
 }

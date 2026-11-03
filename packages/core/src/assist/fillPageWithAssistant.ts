@@ -2,6 +2,7 @@
 import type { FieldKind, FormField } from "../fields/types"
 import { DEFAULT_SETUP, fillPage, fillWith } from "../fill/fillPage"
 import type { FieldReport, FillSetup } from "../fill/fillPage"
+import { readsOptions } from "../filling/OptionReader"
 import type { LLMClient } from "../ports/LLMClient"
 import type { Profile } from "../profile/types"
 import { buildAnswerFieldsPrompt, parseFieldAnswers } from "./answerFieldsPrompt"
@@ -28,13 +29,13 @@ function hasUserValue(field: FormField): boolean {
   return field.kind === "text" && typeof element.value === "string" && element.value !== ""
 }
 
-// Returns true for a field the rules left undecided: not recognised, no value in the profile, or no option that matched.
+// Returns true for a field the rules left undecided: not recognised, no value in the profile, or no option that matched or appeared.
 function isLeftover(report: FieldReport): boolean {
   const { outcome } = report
   return (
     outcome.status === "unmatched" ||
     outcome.status === "no-value" ||
-    (outcome.status === "failed" && outcome.code === "no-option-match")
+    (outcome.status === "failed" && (outcome.code === "no-option-match" || outcome.code === "no-options"))
   )
 }
 
@@ -42,6 +43,13 @@ function isLeftover(report: FieldReport): boolean {
 function canAssist(field: FormField, setup: FillSetup): boolean {
   const fillable = setup.fillers.some((filler) => filler.canFill(field))
   return ANSWERABLE_KINDS.has(field.kind) && fillable && (field.label !== "" || field.name !== "") && !hasUserValue(field)
+}
+
+// Returns the choices to offer for a field: the ones the page lists, or for a dropdown the ones read by opening it.
+async function optionsFor(field: FormField, setup: FillSetup): Promise<string[]> {
+  if (field.options.length > 0) return field.options
+  const reader = setup.fillers.find((filler) => filler.canFill(field) && readsOptions(filler))
+  return reader && readsOptions(reader) ? reader.readOptions(field) : []
 }
 
 // Fills one field with the model's answer: a written draft is reported as a draft to review, any other answer as the AI's fill.
@@ -68,13 +76,16 @@ async function answerLeftovers(
   const leftovers = reports.filter((report) => isLeftover(report) && canAssist(report.field, setup)).slice(0, MAX_FIELDS)
   if (leftovers.length === 0) return reports
 
-  const items: FieldToAnswer[] = leftovers.map(({ field }, id) => ({
-    id,
-    question: (field.label || field.name).slice(0, MAX_QUESTION_CHARS),
-    kind: field.kind,
-    options: field.options,
-    longAnswer: isFreeTextQuestion(field),
-  }))
+  const items: FieldToAnswer[] = []
+  for (const { field } of leftovers) {
+    items.push({
+      id: items.length,
+      question: (field.label || field.name).slice(0, MAX_QUESTION_CHARS),
+      kind: field.kind,
+      options: await optionsFor(field, setup),
+      longAnswer: isFreeTextQuestion(field),
+    })
+  }
   const answers = parseFieldAnswers(await llm.completeJson(buildAnswerFieldsPrompt(items, profile, jobContext)), items)
 
   const updates = new Map<FieldReport, FieldReport>()
@@ -83,7 +94,11 @@ async function answerLeftovers(
     const item = items[id]
     if (report && item) updates.set(report, await fillAnswer(report, item, answer, setup))
   }
-  return reports.map((report) => updates.get(report) ?? report)
+  const asked = new Set(leftovers)
+  return reports.map((report) => {
+    const result = updates.get(report) ?? report
+    return asked.has(report) ? { ...result, askedAi: true as const } : result
+  })
 }
 
 // Fills the page with the rules, then makes one AI call for the rest; if it fails, what the rules filled is kept and a note says why.

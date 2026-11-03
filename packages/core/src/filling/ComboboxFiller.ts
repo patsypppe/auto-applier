@@ -3,6 +3,7 @@ import { cleanText } from "../fields/labels"
 import type { FormField } from "../fields/types"
 import { clickLikeUser } from "./events"
 import { findChoice } from "./findChoice"
+import type { OptionReader } from "./OptionReader"
 import { setNativeValue } from "./setNativeValue"
 import type { FailureCode, Filler, FillResult } from "./types"
 import { waitUntil } from "./waitUntil"
@@ -72,7 +73,7 @@ function giveUp(input: HTMLInputElement, reason: string, code?: FailureCode): Fi
   return { status: "failed", reason, code }
 }
 
-export class ComboboxFiller implements Filler {
+export class ComboboxFiller implements Filler, OptionReader {
   private readonly timing: WaitTiming
 
   constructor(timing: Partial<WaitTiming> = {}) {
@@ -82,6 +83,19 @@ export class ComboboxFiller implements Filler {
   // Accepts fields whose kind is combobox.
   canFill(field: FormField): boolean {
     return field.kind === "combobox"
+  }
+
+  // Opens the list without typing, returns its option texts, and closes it again; returns nothing for a locked or already-filled field or a list that stays empty.
+  async readOptions(field: FormField): Promise<string[]> {
+    const input = field.element
+    if (!isInput(input) || input.readOnly || input.disabled || shownChoice(input) !== "") return []
+
+    input.focus()
+    if (input.getAttribute("aria-expanded") !== "true") clickLikeUser(input)
+    const appeared = await waitUntil(() => findOptions(input).length > 0, this.timing)
+    const texts = appeared ? findOptions(input).map(optionText).filter((text) => text !== "") : []
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }))
+    return [...new Set(texts)]
   }
 
   // Opens the list with a full click if it is closed, types the value to filter it, clicks the matching option, and checks the list reacted.
@@ -105,7 +119,7 @@ export class ComboboxFiller implements Filler {
     setNativeValue(input, value)
 
     const appeared = await waitUntil(() => findOptions(input).length > 0, this.timing)
-    if (!appeared) return giveUp(input, "No options appeared")
+    if (!appeared) return giveUp(input, "No options appeared", "no-options")
 
     const target = findChoice(value, findOptions(input), optionText)
     if (!target) return giveUp(input, `No single option matches "${value}"`, "no-option-match")

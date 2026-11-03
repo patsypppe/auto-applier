@@ -104,6 +104,27 @@ describe("buildAnswerFieldsPrompt", () => {
   })
 })
 
+describe("buildAnswerFieldsPrompt: rules for common yes/no questions", () => {
+  test("tells the model to answer 'ever employed by <company>' from the work history", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+
+    expect(prompt).toMatch(/employed by a company[^\n]*jobs/i)
+    expect(prompt).toMatch(/not listed[^\n]*No/i)
+  })
+
+  test("tells the model to decline opt-ins to messages unless the notes say otherwise", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+
+    expect(prompt).toMatch(/opt-in[^\n]*No[^\n]*notes/i)
+  })
+
+  test("still tells the model to take work-style preferences from the notes only", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+
+    expect(prompt).toMatch(/remote[^\n]*notes/i)
+  })
+})
+
 describe("parseFieldAnswers", () => {
   const SELECT = item()
   const TEXT = item({ id: 1, question: "School", kind: "combobox", options: [] })
@@ -129,6 +150,13 @@ describe("parseFieldAnswers", () => {
 
     expect(parseFieldAnswers({ answers: [{ id: 0, answer: "Maybe" }] }, [field]).size).toBe(0)
     expect(parseFieldAnswers({ answers: [{ id: 0, answer: "no" }] }, [field]).get(0)).toBe("No")
+  })
+
+  test("checks the options of a dropdown whose options were read, and gives the page's spelling", () => {
+    const dropdown = item({ kind: "combobox", options: ["UAE", "US"] })
+
+    expect(parseFieldAnswers({ answers: [{ id: 0, answer: "United States" }] }, [dropdown]).size).toBe(0)
+    expect(parseFieldAnswers({ answers: [{ id: 0, answer: "us" }] }, [dropdown]).get(0)).toBe("US")
   })
 
   test("accepts any text for a text or search-as-you-type field", () => {

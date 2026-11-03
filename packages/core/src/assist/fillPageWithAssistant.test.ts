@@ -239,19 +239,6 @@ describe("fillPageWithAssistant: fields the model is never asked about", () => {
     expect(llm.completeJson).not.toHaveBeenCalled()
   })
 
-  test("a dropdown that failed for a reason the model cannot fix is not asked about", async () => {
-    const fast = { ...DEFAULT_SETUP, fillers: [...DEFAULT_SETUP.fillers.filter((filler) => !(filler instanceof ComboboxFiller)), new ComboboxFiller({ timeoutMs: 20, pollMs: 5 })] }
-    const { prompts, result } = await run(
-      `<label for="country">Country</label><input id="country" role="combobox" />${REFERRAL}`,
-      { answers: [{ id: 0, answer: "FRIEND42" }] },
-      undefined,
-      fast,
-    )
-
-    expect(reportFor(result.reports, "country").outcome).toMatchObject({ status: "failed", reason: "No options appeared" })
-    expect(prompts[0]).not.toContain("Country")
-  })
-
   test("asks about at most forty fields", async () => {
     const many = Array.from({ length: 55 }, (_unused, index) => `<label for="f${index}">Question ${index}</label><input id="f${index}" />`).join("")
 
@@ -292,5 +279,122 @@ describe("fillPageWithAssistant: when the model is not available", () => {
     const result = await fillPageWithAssistant(document, profile, llm)
 
     expect(result.notes).toEqual(["AI help skipped: The LLM request failed"])
+  })
+})
+
+// Wires an input into a click-to-open dropdown with the given options, as React-select behaves, and returns what was chosen.
+function wireDropdown(id: string, optionTexts: string[]): { chosen: () => string } {
+  const input = document.getElementById(id) as HTMLInputElement
+  const listbox = document.createElement("div")
+  listbox.id = `${id}-list`
+  listbox.setAttribute("role", "listbox")
+  input.after(listbox)
+  input.setAttribute("aria-controls", listbox.id)
+  input.setAttribute("aria-expanded", "false")
+  let chosen = ""
+
+  // Shows the options that contain what is typed and marks the list open.
+  function show(): void {
+    const shown = optionTexts.filter((text) => text.toLowerCase().includes(input.value.toLowerCase()))
+    listbox.replaceChildren(
+      ...shown.map((text) => {
+        const option = document.createElement("div")
+        option.setAttribute("role", "option")
+        option.textContent = text
+        option.addEventListener("click", () => {
+          chosen = text
+          listbox.replaceChildren()
+          input.setAttribute("aria-expanded", "false")
+        })
+        return option
+      }),
+    )
+    input.setAttribute("aria-expanded", "true")
+  }
+  input.addEventListener("click", show)
+  input.addEventListener("input", show)
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return
+    listbox.replaceChildren()
+    input.setAttribute("aria-expanded", "false")
+  })
+  return { chosen: () => chosen }
+}
+
+const VETERAN = `<label for="v">Veteran Status</label><input id="v" role="combobox" />`
+const VETERAN_OPTIONS = ["I am a veteran", "I am not a protected veteran", "I don't wish to answer"]
+
+// Loads the page, wires its dropdowns, then runs the assisted fill.
+async function runWithDropdowns(html: string, dropdowns: Record<string, string[]>, script: Script) {
+  document.body.innerHTML = html
+  const wired = Object.fromEntries(Object.entries(dropdowns).map(([id, options]) => [id, wireDropdown(id, options)]))
+  const { llm, prompts } = scriptedLlm(script)
+  const result = await fillPageWithAssistant(document, profile, llm)
+  return { result, prompts, wired }
+}
+
+describe("fillPageWithAssistant: dropdowns whose options are only known once opened", () => {
+  test("the model is shown the real options of a dropdown, read by opening it", async () => {
+    const { prompts } = await runWithDropdowns(VETERAN, { v: VETERAN_OPTIONS }, {})
+
+    expect(prompts[0]).toContain("I am not a protected veteran")
+    expect(prompts[0]).toContain("I don't wish to answer")
+  })
+
+  test("the model's choice is typed and picked, and reported as the AI's", async () => {
+    const { result, wired } = await runWithDropdowns(VETERAN, { v: VETERAN_OPTIONS }, { answers: [{ id: 0, answer: "I am not a protected veteran" }] })
+
+    expect(wired.v?.chosen()).toBe("I am not a protected veteran")
+    expect(reportFor(result.reports, "v")).toMatchObject({ outcome: { status: "filled" }, source: "ai" })
+  })
+
+  test("a choice that is not one of the real options is ignored", async () => {
+    const { result, wired } = await runWithDropdowns(VETERAN, { v: VETERAN_OPTIONS }, { answers: [{ id: 0, answer: "No" }] })
+
+    expect(wired.v?.chosen()).toBe("")
+    expect(reportFor(result.reports, "v").outcome.status).toBe("unmatched")
+  })
+
+  test("a dropdown the rules typed into and found nothing for is asked about, with its options", async () => {
+    const country = `<label for="k">Please select the country where you currently reside.</label><input id="k" role="combobox" />`
+    const { result, prompts, wired } = await runWithDropdowns(country, { k: ["Canada", "UAE", "US", "Other"] }, { answers: [{ id: 0, answer: "US" }] })
+
+    expect(prompts[0]).toContain('"US"')
+    expect(wired.k?.chosen()).toBe("US")
+    expect(reportFor(result.reports, "k")).toMatchObject({ outcome: { status: "filled" }, source: "ai" })
+  })
+
+  test("a search box that lists nothing until typed is still asked about, as free text", async () => {
+    const search = `<label for="s">Hobby</label><input id="s" role="combobox" />`
+    const { prompts, wired } = await runWithDropdowns(search, { s: [] }, { answers: [{ id: 0, answer: "Chess" }] })
+
+    expect(prompts[0]).toContain("Hobby")
+    expect(wired.s?.chosen()).toBe("")
+  })
+
+  test("a dropdown is left closed after its options were read", async () => {
+    await runWithDropdowns(VETERAN, { v: VETERAN_OPTIONS }, {})
+
+    expect(document.getElementById("v")?.getAttribute("aria-expanded")).toBe("false")
+  })
+})
+
+describe("fillPageWithAssistant: marking the fields the model was asked about", () => {
+  test("a field the model was asked about and left blank is marked as asked", async () => {
+    const { result } = await run(GENDER_SELECT, { answers: [] })
+
+    expect(reportFor(result.reports, "g")).toMatchObject({ outcome: { status: "unmatched" }, askedAi: true })
+  })
+
+  test("a field the rules settled is not marked as asked", async () => {
+    const { result } = await run(`${GENDER_SELECT}<label for="e">Email</label><input id="e" />`, { answers: [] })
+
+    expect(reportFor(result.reports, "e").askedAi).toBeUndefined()
+  })
+
+  test("a field the model was never asked about is not marked as asked", async () => {
+    const { result } = await run(`${GENDER_SELECT}<label for="c">Cover letter</label><input id="c" type="file" />`, { answers: [] })
+
+    expect(reportFor(result.reports, "c").askedAi).toBeUndefined()
   })
 })

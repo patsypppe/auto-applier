@@ -46,6 +46,25 @@ export function needsReview(report: FieldReport): boolean {
   return status === "drafted" || (status === "filled" && report.source === "ai")
 }
 
+// Returns the sentence that says what happened to a field and why, for the user or for a person checking the page.
+export function explainReport(report: FieldReport): string {
+  const { outcome } = report
+  switch (outcome.status) {
+    case "failed":
+      return `Failed: ${outcome.reason}${report.askedAi ? ". The AI was asked and did not settle it." : ""}`
+    case "unmatched":
+      return `Not recognised by the rules${report.askedAi ? ". The AI was asked and left it blank." : ""}`
+    case "no-value":
+      return `Your profile has no value for ${outcome.profileKey}${report.askedAi ? ". The AI was asked and left it blank." : ""}`
+    case "skipped":
+      return `Left alone: ${outcome.reason}`
+    case "drafted":
+      return "Written by the AI"
+    case "filled":
+      return report.source === "ai" ? "Chosen by the AI" : "Filled from your profile"
+  }
+}
+
 // Returns which count a report belongs to; fills that the AI helped with are counted separately.
 function summaryKey(report: FieldReport): keyof ReportSummary {
   const { status } = report.outcome

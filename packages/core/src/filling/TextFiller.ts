@@ -10,6 +10,21 @@ function isTextControl(element: HTMLElement): element is TextControl {
   return element.localName === "input" || element.localName === "textarea"
 }
 
+const MIN_PHONE_DIGITS = 7
+
+// Returns the digits of a text.
+function digitsOf(text: string): string {
+  return text.replace(/\D/g, "")
+}
+
+// Returns true when the page shows the same number as was typed, only reformatted (spaces, brackets, a country code added or dropped).
+function isSameNumber(typed: string, shown: string): boolean {
+  const first = digitsOf(typed)
+  const second = digitsOf(shown)
+  if (first.length < MIN_PHONE_DIGITS || second.length < MIN_PHONE_DIGITS) return false
+  return first.endsWith(second) || second.endsWith(first)
+}
+
 export class TextFiller implements Filler {
   // Accepts fields whose kind is plain text.
   canFill(field: FormField): boolean {
@@ -27,7 +42,7 @@ export class TextFiller implements Filler {
     if (element.value !== "") return { status: "skipped", reason: "Field already has a value" }
 
     setNativeValue(element, value)
-    return element.value === value
+    return element.value === value || isSameNumber(value, element.value)
       ? { status: "filled" }
       : { status: "failed", reason: "The page did not accept the value" }
   }

@@ -103,7 +103,7 @@ describe("ComboboxFiller: fill", () => {
 
     const result = await filler.fill(field, "Zzz")
 
-    expect(result).toEqual({ status: "failed", reason: "No options appeared" })
+    expect(result).toEqual({ status: "failed", reason: "No options appeared", code: "no-options" })
     expect(input.value).toBe("")
   })
 
@@ -385,3 +385,107 @@ describe("ComboboxFiller: a choice the dropdown already shows", () => {
     expect(result).toMatchObject({ status: "failed", reason: "No options appeared" })
   })
 })
+
+// Builds a dropdown that opens its list when clicked (as React-select does), filters it by typing, and closes on Escape.
+function buildClickDropdown(optionTexts: string[]) {
+  document.body.innerHTML = `
+    <label for="c">Veteran Status</label>
+    <input id="c" role="combobox" aria-controls="lb" aria-expanded="false" />
+    <div id="lb" role="listbox"></div>`
+  const input = document.getElementById("c") as HTMLInputElement
+  const listbox = document.getElementById("lb") as HTMLElement
+  const state = { chosen: "", opens: 0 }
+
+  // Shows the options that contain what is typed and marks the list open.
+  function show(): void {
+    const shown = optionTexts.filter((text) => text.toLowerCase().includes(input.value.toLowerCase()))
+    listbox.replaceChildren(
+      ...shown.map((text) => {
+        const option = document.createElement("div")
+        option.setAttribute("role", "option")
+        option.textContent = text
+        option.addEventListener("click", () => {
+          state.chosen = text
+          listbox.replaceChildren()
+          input.setAttribute("aria-expanded", "false")
+        })
+        return option
+      }),
+    )
+    input.setAttribute("aria-expanded", "true")
+  }
+
+  input.addEventListener("click", () => {
+    state.opens += 1
+    show()
+  })
+  input.addEventListener("input", show)
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return
+    listbox.replaceChildren()
+    input.setAttribute("aria-expanded", "false")
+  })
+  return { input, listbox, state, field: fieldForElement(input, "combobox") }
+}
+
+describe("ComboboxFiller: readOptions", () => {
+  test("opens the list with a click and returns the option texts", async () => {
+    const { field, state } = buildClickDropdown(["I am a veteran", "I am not a protected veteran", "I don't wish to answer"])
+
+    const options = await filler.readOptions(field)
+
+    expect(options).toEqual(["I am a veteran", "I am not a protected veteran", "I don't wish to answer"])
+    expect(state.opens).toBe(1)
+  })
+
+  test("closes the list and leaves the input empty afterwards", async () => {
+    const { field, input, listbox } = buildClickDropdown(["US", "UK"])
+
+    await filler.readOptions(field)
+
+    expect(input.getAttribute("aria-expanded")).toBe("false")
+    expect(listbox.children).toHaveLength(0)
+    expect(input.value).toBe("")
+  })
+
+  test("drops a trailing dial code, repeated options and empty ones", async () => {
+    const { field } = buildClickDropdown(["United States+1", "United States+1", "  ", "Canada+1"])
+
+    expect(await filler.readOptions(field)).toEqual(["United States", "Canada"])
+  })
+
+  test("returns nothing when no options ever appear, as a search box does before anything is typed", async () => {
+    const { field } = buildClickDropdown([])
+
+    expect(await filler.readOptions(field)).toEqual([])
+  })
+
+  test("returns nothing for a locked field and does not open it", async () => {
+    const { field, input, state } = buildClickDropdown(["US"])
+    input.readOnly = true
+
+    expect(await filler.readOptions(field)).toEqual([])
+    expect(state.opens).toBe(0)
+  })
+
+  test("returns nothing for a dropdown that already shows a choice", async () => {
+    const { field, input } = buildClickDropdown(["US"])
+    const shown = document.createElement("div")
+    shown.className = "css-abc-singleValue"
+    shown.textContent = "US"
+    input.parentElement?.insertBefore(shown, input)
+
+    expect(await filler.readOptions(field)).toEqual([])
+  })
+
+  test("can then fill the dropdown with one of the options it read", async () => {
+    const { field, state } = buildClickDropdown(["US", "UK"])
+
+    const [first] = await filler.readOptions(field)
+    const result = await filler.fill(field, first ?? "")
+
+    expect(result).toEqual({ status: "filled" })
+    expect(state.chosen).toBe("US")
+  })
+})
+

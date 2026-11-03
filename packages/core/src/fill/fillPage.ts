@@ -27,6 +27,7 @@ export type FieldReport = {
   profileKey?: ProfileKey
   outcome: FieldOutcome
   source?: "ai"
+  askedAi?: true
 }
 
 export type FillSetup = {

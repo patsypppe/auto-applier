@@ -29,7 +29,10 @@ const RULES = `Rules:
 - If the facts do not support an answer, leave that field out of your answer.
 - For a field with "options", answer with one option, copied exactly as written.
 - For an equal-opportunity question (gender, race, ethnicity, Hispanic or Latino, veteran or disability status), answer from the applicant data, including "notes". If it is not stated, choose an option that means declining to answer when one is offered, otherwise leave the field out.
-- For yes/no questions about the applicant (earlier employment, opt-ins, preferences), answer from "notes" and "answers"; leave the field out when unknown.
+- For an "ever employed by a company" question, check the applicant's jobs: if that company is not listed, answer No.
+- For opt-ins to messages, texts or marketing, answer No (or the option that declines) unless the notes say otherwise.
+- For where or how the applicant wants to work (remote, hybrid, on-site), answer only from "notes"; leave the field out when they do not say.
+- For any other yes/no question about the applicant, answer from "notes" and "answers"; leave the field out when unknown.
 - For a field marked "longAnswer", write 60 to 120 words in the first person, plainly, with no greeting or sign-off.
 - For any other text field, answer with only the value to type, such as a city, a school or a degree.`
 
@@ -96,6 +99,11 @@ function matchingOption(answer: string, options: string[]): string | undefined {
   return options.find((option) => normalize(option) === wanted || normalize(option.slice(0, MAX_OPTION_CHARS)) === wanted)
 }
 
+// Returns true when the answer must be one of the field's options: a list field, or a dropdown whose options were read.
+function isChoice(item: FieldToAnswer): boolean {
+  return CHOICE_KINDS.has(item.kind) || (item.kind === "combobox" && item.options.length > 0)
+}
+
 // Reads the model's answer into field id -> answer: choices must be a real option, blank answers and unknown ids are dropped.
 export function parseFieldAnswers(answer: unknown, items: FieldToAnswer[]): Map<number, string> {
   const parsed = answerSchema.safeParse(answer)
@@ -108,7 +116,7 @@ export function parseFieldAnswers(answer: unknown, items: FieldToAnswer[]): Map<
     const trimmed = (text ?? "").trim()
     if (!item || trimmed === "" || answers.has(id)) continue
 
-    const value = CHOICE_KINDS.has(item.kind) ? matchingOption(trimmed, item.options) : trimmed.slice(0, MAX_ANSWER_CHARS)
+    const value = isChoice(item) ? matchingOption(trimmed, item.options) : trimmed.slice(0, MAX_ANSWER_CHARS)
     if (value !== undefined) answers.set(id, value)
   }
   return answers
