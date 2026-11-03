@@ -59,6 +59,16 @@ describe("isLlmRequest", () => {
     expect(isLlmRequest({ type: "llm-complete", prompt: "hello" })).toBe(true)
   })
 
+  test("accepts a request that names a known provider", () => {
+    expect(isLlmRequest({ type: "llm-complete", prompt: "hello", provider: "groq" })).toBe(true)
+    expect(isLlmRequest({ type: "llm-complete", prompt: "hello", provider: "gemini" })).toBe(true)
+  })
+
+  test("rejects an unknown provider", () => {
+    expect(isLlmRequest({ type: "llm-complete", prompt: "hello", provider: "openai" })).toBe(false)
+    expect(isLlmRequest({ type: "llm-complete", prompt: "hello", provider: 5 })).toBe(false)
+  })
+
   test("rejects a missing or non-text prompt", () => {
     expect(isLlmRequest({ type: "llm-complete" })).toBe(false)
     expect(isLlmRequest({ type: "llm-complete", prompt: 5 })).toBe(false)

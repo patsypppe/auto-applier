@@ -64,7 +64,7 @@ The core defines **ports** (interfaces); the extension implements them. Swapping
 | Port (interface) | Today | Later |
 |---|---|---|
 | `ProfileStore` | `ChromeStorageProfileStore` | a database or file store for a server or headless runner |
-| `LLMClient` | `GeminiLLMClient` | one class per provider |
+| `LLMClient` | `GeminiLLMClient`, `GroqLLMClient`, `FallbackLLMClient` (tries providers in order) | one class per provider |
 | `Matcher` | `AttributeMatcher`, `BareNameMatcher` | more matchers, added to the chain |
 | `Filler` | `TextFiller` | select, radio, checkbox, combobox, file fillers |
 | `SiteAdapter` | interface only | Greenhouse, Lever, Workday and so on |
@@ -92,7 +92,7 @@ Patterns in use: Strategy (fillers, adapters), Chain of Responsibility (matchers
 
 ## 7. LLM integration
 
-- Behind `LLMClient.completeJson(prompt)`, one implementation per provider. **Provider: Google Gemini (chosen by the user)**, through the `generateContent` endpoint with the key in an `x-goog-api-key` header. The model name is a setting. The user supplies their own API key, kept in local storage.
+- Behind `LLMClient.completeJson(prompt)`, one implementation per provider. **Provider: Google Gemini (chosen by the user)**, through the `generateContent` endpoint with the key in an `x-goog-api-key` header. The model name is a setting. The user supplies their own API key, kept in local storage. **Backup: Groq** (OpenAI-compatible chat API), tried only when Gemini fails, each with its own key and model in the popup.
 - All LLM calls run in the background worker, never in the content script, so page scripts never see the key.
 - **Resume parsing:** plain code extracts the text; the LLM turns it into JSON; `validateProfile` checks it; it becomes a draft. **(Proposed)** if validation fails, the error list can be sent back to the LLM once for a fix. Scanned (image-only) PDFs have no text and will not work.
 - **Call A, map fields:** for fields the chain could not match. Sends only field metadata and the list of key names, never the user's values. Returns a key or `none` per field. One batched call per page.
@@ -148,7 +148,7 @@ Steps are built one at a time: tests first, diff shown, approval, commit. `CLAUD
 | 6b | Select, radio, checkbox fillers | `SelectFiller`, `RadioFiller`, `CheckboxFiller` | done |
 | 6c | Combobox filler | `ComboboxFiller` | done |
 | 7 | `fillPage`, `content.ts`, "Fill this page" button, highlight flagged fields | `fill/fillPage.ts`, `ui/highlightFlagged.ts` | done (checked by hand in Chrome on the fixture form; not yet on a real site). **First end-to-end result.** |
-| 8 | LLM client and settings | `SettingsStore`, `GeminiLLMClient`, `BackgroundLLMClient`, `messaging.ts`, manifest `host_permissions` | 8a and 8b done (not yet confirmed against the real Gemini API) |
+| 8 | LLM client and settings | `SettingsStore`, `GeminiLLMClient`, `BackgroundLLMClient`, `messaging.ts`, manifest `host_permissions` | 8a and 8b done (not yet confirmed against the real Gemini API); 8c (Groq backup, per-provider settings and Test connection) done, not yet run against real Groq |
 | 9 | Resume parsing and file upload | `extractText` (`pdfjs-dist`), a DOCX reader (to be chosen), `ResumeParser`, `ResumeUpload`, `IndexedDbResumeStore`, `FileFiller` | 9a done; 9b-i (engine: `importResume`, resume store, PDF and text reading) done; 9b-ii (popup upload and review) done (not yet run in real Chrome) |
 | 10 | LLM fallback | prompt files for Calls A, B and C (option picking), background handlers, a machine-readable code on failed fills so ambiguity can be routed to the LLM, wired into `fillPage` | 10a (core engine, `fillPageWithAssistant`) done; 10a and 10b done (not yet run in real Chrome or against real Gemini) |
 | 11 | Site adapters | `detectAdapter`, `GenericAdapter`, `GreenhouseAdapter`, then others | planned. The `SiteAdapter` interface will grow when the first adapter needs it. |

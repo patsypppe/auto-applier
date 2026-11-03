@@ -8,7 +8,12 @@ export type ProviderId = "gemini" | "groq"
 
 export const DEFAULT_MODELS: Record<ProviderId, string> = {
   gemini: "gemini-3.1-flash-lite",
-  groq: "llama-3.3-70b-versatile",
+  groq: "llama-3.1-8b-instant",
+}
+
+export const PROVIDER_LABELS: Record<ProviderId, string> = {
+  gemini: "Gemini",
+  groq: "Groq",
 }
 
 export const DEFAULT_MODEL = DEFAULT_MODELS.gemini

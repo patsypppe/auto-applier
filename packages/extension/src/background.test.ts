@@ -7,9 +7,12 @@ const EXTENSION_ID = "this-extension"
 const GEMINI_ANSWER = { candidates: [{ content: { parts: [{ text: '{"ok":true}' }] }, finishReason: "STOP" }] }
 
 // Stubs chrome (with the given stored items) and fetch, loads the worker, and returns its message listener.
-async function loadWorker(stored: Record<string, unknown>) {
+async function loadWorker(
+  stored: Record<string, unknown>,
+  respond: (url: string) => Response = () => new Response(JSON.stringify(GEMINI_ANSWER)),
+) {
   const addListener = vi.fn()
-  const fetchStub = vi.fn(async () => new Response(JSON.stringify(GEMINI_ANSWER)))
+  const fetchStub = vi.fn(async (input: RequestInfo | URL) => respond(String(input)))
   vi.stubGlobal("chrome", {
     runtime: { id: EXTENSION_ID, onMessage: { addListener } },
     storage: { local: { get: vi.fn(async (key: string) => ({ [key]: stored[key] })) } },
@@ -55,9 +58,50 @@ describe("background worker", () => {
     listener({ type: "llm-complete", prompt: "hi" }, { id: EXTENSION_ID }, sendResponse)
 
     await vi.waitFor(() =>
-      expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: expect.stringContaining("No Gemini API key") }),
+      expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: expect.stringContaining("No LLM is set up") }),
     )
     expect(fetchStub).not.toHaveBeenCalled()
+  })
+
+  test("falls back to Groq when Gemini is overloaded", async () => {
+    const stored = {
+      "llm-settings": {
+        gemini: { apiKey: "gemini-key", model: "gemini-model" },
+        groq: { apiKey: "groq-key", model: "groq-model" },
+      },
+    }
+    const { listener, fetchStub } = await loadWorker(stored, (url) =>
+      url.includes("generativelanguage")
+        ? new Response(JSON.stringify({ error: { message: "busy" } }), { status: 503 })
+        : new Response(JSON.stringify({ choices: [{ message: { content: '{"from":"groq"}' }, finish_reason: "stop" }] })),
+    )
+    const sendResponse = vi.fn()
+
+    listener({ type: "llm-complete", prompt: "hi" }, { id: EXTENSION_ID }, sendResponse)
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledWith({ ok: true, data: { from: "groq" } }))
+    expect(fetchStub).toHaveBeenCalledTimes(2)
+  })
+
+  test("tests one named provider on its own, without falling back", async () => {
+    const stored = {
+      "llm-settings": {
+        gemini: { apiKey: "gemini-key", model: "gemini-model" },
+        groq: { apiKey: "groq-key", model: "groq-model" },
+      },
+    }
+    const { listener, fetchStub } = await loadWorker(stored, () =>
+      new Response(JSON.stringify({ error: { message: "Invalid API Key" } }), { status: 401 }),
+    )
+    const sendResponse = vi.fn()
+
+    listener({ type: "llm-complete", prompt: "hi", provider: "groq" }, { id: EXTENSION_ID }, sendResponse)
+
+    await vi.waitFor(() =>
+      expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: "Groq returned 401: Invalid API Key" }),
+    )
+    expect(fetchStub).toHaveBeenCalledTimes(1)
+    expect(String(fetchStub.mock.calls[0]?.[0])).toContain("api.groq.com")
   })
 
   test("ignores messages sent by another extension", async () => {

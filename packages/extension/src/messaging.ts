@@ -1,10 +1,10 @@
 // Defines the messages sent between the popup and the content scripts, with guards that check them on arrival.
-import { isReportSummary } from "@auto-applier/core"
-import type { ReportSummary } from "@auto-applier/core"
+import { PROVIDER_ORDER, isReportSummary } from "@auto-applier/core"
+import type { ProviderId, ReportSummary } from "@auto-applier/core"
 
 export type FillPageRequest = { type: "fill-page" }
 
-export type LlmRequest = { type: "llm-complete"; prompt: string }
+export type LlmRequest = { type: "llm-complete"; prompt: string; provider?: ProviderId }
 
 export type LlmResponse = { ok: true; data: unknown } | { ok: false; error: string }
 
@@ -35,12 +35,13 @@ export function isFillResultMessage(message: unknown): message is FillResultMess
   return outcome.ok === false && typeof outcome.error === "string"
 }
 
-// Returns true when an unknown value is a request to run a prompt through the LLM.
+// Returns true when an unknown value is a request to run a prompt through the LLM, optionally naming one known provider.
 export function isLlmRequest(message: unknown): message is LlmRequest {
   if (typeof message !== "object" || message === null) return false
 
-  const { type, prompt } = message as { type?: unknown; prompt?: unknown }
-  return type === "llm-complete" && typeof prompt === "string"
+  const { type, prompt, provider } = message as { type?: unknown; prompt?: unknown; provider?: unknown }
+  const providerOk = provider === undefined || PROVIDER_ORDER.includes(provider as ProviderId)
+  return type === "llm-complete" && typeof prompt === "string" && providerOk
 }
 
 // Returns true when an unknown value is a well-formed reply to an LLM request.

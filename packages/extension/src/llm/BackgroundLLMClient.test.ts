@@ -22,6 +22,22 @@ describe("BackgroundLLMClient", () => {
     expect(sendMessage).toHaveBeenCalledWith({ type: "llm-complete", prompt: "Parse this resume" })
   })
 
+  test("names the provider in the request when one is given", async () => {
+    const sendMessage = stubSendMessage(async () => ({ ok: true, data: {} }))
+
+    await new BackgroundLLMClient("groq").completeJson("hi")
+
+    expect(sendMessage).toHaveBeenCalledWith({ type: "llm-complete", prompt: "hi", provider: "groq" })
+  })
+
+  test("sends no provider field when none is given", async () => {
+    const sendMessage = stubSendMessage(async () => ({ ok: true, data: {} }))
+
+    await new BackgroundLLMClient().completeJson("hi")
+
+    expect(Object.keys(sendMessage.mock.calls[0]?.[0] as object)).toEqual(["type", "prompt"])
+  })
+
   test("returns the data from a successful reply", async () => {
     stubSendMessage(async () => ({ ok: true, data: { firstName: "Pranav" } }))
 
