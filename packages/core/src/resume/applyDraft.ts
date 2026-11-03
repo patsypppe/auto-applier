@@ -1,9 +1,7 @@
 // Puts a parsed resume draft into the profile form values, and builds a validated profile from it.
 import { fromFormValues } from "../profile/formValues"
-import type { ProfileFormValues } from "../profile/formValues"
-import { validateProfile } from "../profile/schema"
+import type { CarriedOver, ProfileFormValues } from "../profile/formValues"
 import type { ValidationResult } from "../profile/schema"
-import type { Profile } from "../profile/types"
 import type { ProfileDraft } from "./types"
 
 // Returns new form values where the draft's non-empty details replace the matching fields and everything else is kept.
@@ -24,18 +22,20 @@ export function applyDraftToFormValues(draft: ProfileDraft, current: ProfileForm
   }
 }
 
-// Builds and validates a profile from the draft and the current form values; the draft's jobs and degrees replace the saved ones when it has any.
+// Returns what to keep alongside the form: the draft's jobs and degrees when it has any, otherwise the previous ones, plus the previous resume file.
+export function carryOverFromDraft(draft: ProfileDraft, previous?: CarriedOver): CarriedOver {
+  return {
+    experience: draft.experience.length > 0 ? draft.experience : (previous?.experience ?? []),
+    education: draft.education.length > 0 ? draft.education : (previous?.education ?? []),
+    resume: previous?.resume,
+  }
+}
+
+// Builds and validates a profile from the draft, the current form values and what was previously carried over.
 export function buildProfileFromDraft(
   draft: ProfileDraft,
   current: ProfileFormValues,
-  existing?: Profile,
+  previous?: CarriedOver,
 ): ValidationResult {
-  const built = fromFormValues(applyDraftToFormValues(draft, current), existing)
-  if (!built.ok) return built
-
-  return validateProfile({
-    ...built.profile,
-    experience: draft.experience.length > 0 ? draft.experience : built.profile.experience,
-    education: draft.education.length > 0 ? draft.education : built.profile.education,
-  })
+  return fromFormValues(applyDraftToFormValues(draft, current), carryOverFromDraft(draft, previous))
 }

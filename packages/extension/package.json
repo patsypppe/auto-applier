@@ -8,6 +8,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@auto-applier/core": "*"
+    "@auto-applier/core": "*",
+    "pdfjs-dist": "^6.5.438"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.7"
   }
 }

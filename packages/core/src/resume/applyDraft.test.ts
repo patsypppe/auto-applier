@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest"
 import { emptyFormValues, toFormValues } from "../profile/formValues"
 import type { ProfileFormValues } from "../profile/formValues"
 import type { Profile } from "../profile/types"
-import { applyDraftToFormValues, buildProfileFromDraft } from "./applyDraft"
+import { applyDraftToFormValues, buildProfileFromDraft, carryOverFromDraft } from "./applyDraft"
 import type { ProfileDraft } from "./types"
 
 const draft: ProfileDraft = {
@@ -41,6 +41,30 @@ const existingProfile: Profile = {
   answers: { workAuthorization: "Citizen", needsSponsorship: false, isAuthorizedToWork: true },
   resume: { name: "resume.pdf", mimeType: "application/pdf", storageKey: "resume-1" },
 }
+
+describe("carryOverFromDraft", () => {
+  test("uses the draft's jobs and degrees when it has any", () => {
+    const carried = carryOverFromDraft(draftWithHistory, existingProfile)
+
+    expect(carried.experience).toEqual(draftWithHistory.experience)
+    expect(carried.education).toEqual(draftWithHistory.education)
+  })
+
+  test("keeps the previous jobs and degrees when the draft has none", () => {
+    const carried = carryOverFromDraft(draft, existingProfile)
+
+    expect(carried.experience).toEqual(existingProfile.experience)
+    expect(carried.education).toEqual(existingProfile.education)
+  })
+
+  test("always keeps the previous resume file", () => {
+    expect(carryOverFromDraft(draftWithHistory, existingProfile).resume).toEqual(existingProfile.resume)
+  })
+
+  test("starts empty when there is nothing previous and the draft has nothing", () => {
+    expect(carryOverFromDraft(draft)).toEqual({ experience: [], education: [], resume: undefined })
+  })
+})
 
 describe("buildProfileFromDraft", () => {
   test("returns a valid profile when the form already holds the required answers", () => {

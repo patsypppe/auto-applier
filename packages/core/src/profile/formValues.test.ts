@@ -97,6 +97,20 @@ describe("fromFormValues", () => {
     expect(result.ok && result.profile.resume).toEqual(existingProfile.resume)
   })
 
+  test("accepts a carry-over that holds only experience, education and resume", () => {
+    const carried = {
+      experience: existingProfile.experience,
+      education: existingProfile.education,
+      resume: existingProfile.resume,
+    }
+
+    const result = fromFormValues(filledValues, carried)
+
+    expect(result.ok && result.profile.experience).toEqual(existingProfile.experience)
+    expect(result.ok && result.profile.education).toEqual(existingProfile.education)
+    expect(result.ok && result.profile.resume).toEqual(existingProfile.resume)
+  })
+
   test("returns errors that name the invalid field", () => {
     const result = fromFormValues({ ...filledValues, email: "not-an-email" })
 

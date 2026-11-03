@@ -22,6 +22,9 @@ export type ProfileFormValues = {
   salaryExpectation: string
 }
 
+// The parts of a profile the form does not edit, which are kept when the form is saved.
+export type CarriedOver = Pick<Profile, "experience" | "education" | "resume">
+
 // Returns form values with every text blank and sponsorship set to no.
 export function emptyFormValues(): ProfileFormValues {
   return {
@@ -73,8 +76,8 @@ export function toFormValues(profile: Profile): ProfileFormValues {
   }
 }
 
-// Builds and validates a profile from form text, keeping experience, education and resume from the existing profile.
-export function fromFormValues(values: ProfileFormValues, existing?: Profile): ValidationResult {
+// Builds and validates a profile from form text, keeping experience, education and resume from what is carried over.
+export function fromFormValues(values: ProfileFormValues, existing?: CarriedOver): ValidationResult {
   return validateProfile({
     personal: {
       firstName: values.firstName.trim(),
