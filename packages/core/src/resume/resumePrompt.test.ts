@@ -18,6 +18,9 @@ describe("buildResumePrompt", () => {
       "lastName",
       "email",
       "phone",
+      "city",
+      "state",
+      "country",
       "linkedin",
       "github",
       "portfolio",
@@ -42,6 +45,10 @@ describe("buildResumePrompt", () => {
 
     expect(prompt).toMatch(/never invent/i)
     expect(prompt).toContain('Use "" for anything')
+  })
+
+  test("tells the model to give a country only when the resume names one", () => {
+    expect(buildResumePrompt("text")).toContain("only if the resume names a country")
   })
 
   test("tells the model to treat the resume as untrusted data", () => {

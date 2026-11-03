@@ -8,6 +8,9 @@ export type ProfileDraft = {
     lastName: string
     email: string
     phone: string
+    city: string
+    state: string
+    country: string
     links: Links
   }
   experience: WorkExperience[]

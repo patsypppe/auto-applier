@@ -10,6 +10,9 @@ const FULL_ANSWER = {
   lastName: "Pattanashetty",
   email: "pranav@example.com",
   phone: "5551234567",
+  city: "Seattle",
+  state: "WA",
+  country: "",
   linkedin: "linkedin.com/in/pranav",
   github: "github.com/pranav",
   portfolio: "",
@@ -25,6 +28,25 @@ function modelAnswering(answer: unknown): LLMClient {
   return { completeJson: vi.fn(async () => answer) }
 }
 
+describe("parseResume: location", () => {
+  test("keeps the city, state and country the model found, trimmed", async () => {
+    const answer = { ...FULL_ANSWER, city: "  Austin ", state: " TX", country: "United States " }
+
+    const { draft } = await parseResume("resume text", modelAnswering(answer))
+
+    expect(draft.personal).toMatchObject({ city: "Austin", state: "TX", country: "United States" })
+  })
+
+  test("treats a missing or null location as blank", async () => {
+    const { city, state, country, ...withoutLocation } = FULL_ANSWER
+    const answer = { ...withoutLocation, state: null }
+
+    const { draft } = await parseResume("resume text", modelAnswering(answer))
+
+    expect([draft.personal.city, draft.personal.state, draft.personal.country]).toEqual(["", "", ""])
+  })
+})
+
 describe("parseResume: reading a good answer", () => {
   test("turns the answer into a draft", async () => {
     const { draft, warnings } = await parseResume("resume text", modelAnswering(FULL_ANSWER))
@@ -36,6 +58,9 @@ describe("parseResume: reading a good answer", () => {
         lastName: "Pattanashetty",
         email: "pranav@example.com",
         phone: "5551234567",
+        city: "Seattle",
+        state: "WA",
+        country: "",
         links: { linkedin: "linkedin.com/in/pranav", github: "github.com/pranav" },
       },
       experience: [{ company: "Acme", title: "Engineer", startDate: "Jan 2022", description: "Built things" }],
@@ -67,7 +92,17 @@ describe("parseResume: reading a good answer", () => {
   test("treats missing sections and fields as empty", async () => {
     const { draft } = await parseResume("text", modelAnswering({ firstName: "Pranav" }))
 
-    expect(draft.personal).toEqual({ firstName: "Pranav", middleName: "", lastName: "", email: "", phone: "", links: {} })
+    expect(draft.personal).toEqual({
+      firstName: "Pranav",
+      middleName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      city: "",
+      state: "",
+      country: "",
+      links: {},
+    })
     expect(draft.experience).toEqual([])
     expect(draft.education).toEqual([])
     expect(draft.skills).toEqual([])

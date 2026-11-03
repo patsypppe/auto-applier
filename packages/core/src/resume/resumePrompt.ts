@@ -11,6 +11,9 @@ Return one JSON object with exactly this shape:
   "lastName": string,
   "email": string,
   "phone": string,
+  "city": string,
+  "state": string,
+  "country": string,
   "linkedin": string,
   "github": string,
   "portfolio": string,
@@ -25,6 +28,7 @@ Return one JSON object with exactly this shape:
 
 Rules:
 - Use only what the resume says. Never invent or guess anything. Use "" for anything that is not there.
+- "city", "state" and "country" are where the person lives, taken from the header or contact line. Fill "country" only if the resume names a country, never work it out from the city or state.
 - Write dates the way the resume does, for example "Jan 2022" or "2022-01". Leave "endDate" as "" for a position or degree that is still going on.
 - "description" is the main responsibilities and results of that job, as one short paragraph.
 - "skills" lists individual skills only, not sentences.

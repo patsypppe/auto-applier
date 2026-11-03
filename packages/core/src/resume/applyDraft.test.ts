@@ -13,6 +13,9 @@ const draft: ProfileDraft = {
     lastName: "Pattanashetty",
     email: "pranav@example.com",
     phone: "5551234567",
+    city: "Seattle",
+    state: "WA",
+    country: "",
     links: { linkedin: "linkedin.com/in/pranav", github: "github.com/pranav" },
   },
   experience: [],
@@ -21,7 +24,7 @@ const draft: ProfileDraft = {
 }
 
 const emptyDraft: ProfileDraft = {
-  personal: { firstName: "", middleName: "", lastName: "", email: "", phone: "", links: {} },
+  personal: { firstName: "", middleName: "", lastName: "", email: "", phone: "", city: "", state: "", country: "", links: {} },
   experience: [],
   education: [],
   skills: [],
@@ -127,6 +130,31 @@ describe("buildProfileFromDraft", () => {
     buildProfileFromDraft(draftWithHistory, current, existingProfile)
 
     expect(JSON.stringify([draftWithHistory, current, existingProfile])).toBe(before)
+  })
+})
+
+describe("applyDraftToFormValues: location", () => {
+  test("fills the city and state from the draft", () => {
+    const values = applyDraftToFormValues(draft, emptyFormValues())
+
+    expect([values.city, values.state, values.country]).toEqual(["Seattle", "WA", ""])
+  })
+
+  test("keeps the country typed in the form when the draft has none", () => {
+    const current: ProfileFormValues = { ...emptyFormValues(), country: "United States", city: "Old City" }
+
+    const values = applyDraftToFormValues(draft, current)
+
+    expect(values.country).toBe("United States")
+    expect(values.city).toBe("Seattle")
+  })
+
+  test("keeps the whole location in the form when the draft has none", () => {
+    const current: ProfileFormValues = { ...emptyFormValues(), city: "Austin", state: "TX", country: "United States" }
+
+    const values = applyDraftToFormValues(emptyDraft, current)
+
+    expect([values.city, values.state, values.country]).toEqual(["Austin", "TX", "United States"])
   })
 })
 
