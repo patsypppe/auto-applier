@@ -24,7 +24,7 @@ A Chrome extension (Manifest V3) that autofills job applications from a saved pr
 
 - This folder has its **own git repo** (branch `main`). The user's home folder is a separate repo, so never commit from there.
 - npm workspaces. Tools: TypeScript, **esbuild** (bundler, chosen over Vite because content scripts must be single files), Vitest 5 (needs `vite` installed), jsdom (DOM tests), `@types/node` (for tests that read files), Zod 4 via `zod/mini`.
-- `npm test` runs the core tests. `npm run typecheck` checks both packages. `npm run build` writes `packages/extension/dist`.
+- `npm test` runs the core tests and then the extension tests (those stub the `chrome` global with `vi.stubGlobal`). `npm run typecheck` checks both packages. `npm run build` writes `packages/extension/dist`.
 - Load in Chrome: `chrome://extensions` → Developer mode → Load unpacked → `packages/extension/dist`. After changes: build, then reload the extension.
 - DOM tests need `// @vitest-environment jsdom` on the second line of the test file (after the header comment).
 - Do not `cd` into `node_modules` and leave the shell there.
@@ -50,13 +50,14 @@ packages/core/src/
   llm/        settings (LLMSettings, DEFAULT_MODEL, isLLMSettings), GeminiLLMClient
   testing/    makeField, fieldFromHtml (test helpers, need a DOM)
 packages/extension/
-  public/manifest.json    MV3, permission: storage, content script on <all_urls> with all_frames
-  src/background.ts       empty, will own LLM calls
+  public/manifest.json    MV3, permission: storage, host permission for generativelanguage.googleapis.com, content script on <all_urls> with all_frames
+  src/background.ts       answers `llm-complete` messages from this extension (only the background worker uses the API key)
+  src/llm/                answerLlmRequest (saved settings → client → reply), BackgroundLLMClient (proxy that popup and content code use)
   src/content.ts          on a "fill-page" message: loads and validates the saved profile, runs fillPage, outlines flagged fields, replies with a summary
-  src/messaging.ts        message types between popup and content scripts, with type guards
+  src/messaging.ts        message types between popup, content scripts and the background worker, with type guards
   src/ui/                 highlightFlagged (red outline for failed, amber for unmatched or no-value)
-  src/popup/              popup.html, popup.ts, ProfileForm.ts, profileFields.ts, FillPanel.ts
-  src/storage/            ChromeStorageProfileStore (implements ProfileStore)
+  src/popup/              popup.html, popup.ts, ProfileForm.ts, profileFields.ts, FillPanel.ts, SettingsPanel.ts (API key, model, Test connection)
+  src/storage/            ChromeStorageProfileStore, ChromeStorageSettingsStore (implement the core's stores)
   build.mjs               esbuild: background, content, popup entries as single iife files
 fixtures/simple-application.html   test form used by fillPage.test.ts and for trying the extension by hand
 ```
@@ -90,7 +91,7 @@ fixtures/simple-application.html   test form used by fillPage.test.ts and for tr
 
 ## LLM design (not built yet)
 
-- The LLM sits behind `LLMClient.completeJson(prompt): Promise<unknown>`; one implementation per provider. **Provider: Google Gemini (chosen by the user).** `GeminiLLMClient` (`core/src/llm`) calls `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` with the key in the `x-goog-api-key` header (never in the URL) and `generationConfig.responseMimeType: "application/json"`; the answer text is `candidates[0].content.parts[].text`. Google's newer Interactions API (`/v1beta/interactions`, needs an `Api-Revision` header) exists and its quickstart now leads with it. `generateContent` was chosen because its response format is documented in the API reference and the endpoint is live (a keyless request returns 403, not 404). If it is ever retired, write a second client behind `LLMClient`. The default model `gemini-3.5-flash-lite` came from Google's models page and has NOT yet been confirmed with a real call; it is a user setting. The user supplies their own API key, stored locally.
+- The LLM sits behind `LLMClient.completeJson(prompt): Promise<unknown>`; one implementation per provider. **Provider: Google Gemini (chosen by the user).** `GeminiLLMClient` (`core/src/llm`) calls `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` with the key in the `x-goog-api-key` header (never in the URL) and `generationConfig.responseMimeType: "application/json"`; the answer text is `candidates[0].content.parts[].text`. Google's newer Interactions API (`/v1beta/interactions`, needs an `Api-Revision` header) exists and its quickstart now leads with it. `generateContent` was chosen because its response format is documented in the API reference and the endpoint is live (a keyless request returns 403, not 404). If it is ever retired, write a second client behind `LLMClient`. The default model is `gemini-3.1-flash-lite`, chosen by the user as a cheap stable model (Google's models page lists it as stable, and `gemini-3.5-flash-lite` as the other stable lite option). The name came from that page and has NOT yet been confirmed with a real call; it is a user setting in the popup. The user supplies their own API key. It is stored in plain text in `chrome.storage.local` under `llm-settings`; only the popup (to save it) and the background worker (to use it) read it, never the content script. Popup and content code reach the LLM through `BackgroundLLMClient`, which messages the worker; the worker ignores messages from other senders.
 - All LLM calls run in the background service worker, never in the content script (keeps the key away from page scripts). Content script and popup talk to it through typed messages.
 - **Resume parsing:** extract text with plain code (pdf.js), then the LLM turns the text into JSON, then `validateProfile`, then it becomes an editable draft the user reviews before saving. Scanned image PDFs have no text and will not work.
 - **Call A (map fields):** only for fields the chain could not match. Sends field metadata (label, type, options, sibling labels, section heading) and the list of key names, NEVER the user's values. Returns a key or `none` per field. One batched call per page. A `none` or low confidence leaves the field empty and flagged.
@@ -107,7 +108,7 @@ fixtures/simple-application.html   test form used by fillPage.test.ts and for tr
 5. `matchField`, `AttributeMatcher`, `BareNameMatcher` ✅ committed
 6. Fillers: **6a** `setNativeValue` + `TextFiller` ✅ committed; **6b** `SelectFiller`, `RadioFiller`, `CheckboxFiller` ✅ committed; **6c** `ComboboxFiller` ✅ committed (`FileFiller` is proposed to move to step 9, because it needs the resume store; not yet agreed)
 7. `fillPage` orchestrator + `content.ts` + "Fill this page" popup button → first end-to-end result ✅ committed (tested in jsdom and by hand in Chrome on the fixture form; not yet tried on a real job site)
-8. LLM client and settings: **8a** `GeminiLLMClient` + settings types and `SettingsStore` port ✅ committed; **8b** background handler, API-key panel with a "Test connection" button in the popup, `BackgroundLLMClient` proxy, manifest `host_permissions` (in progress)
+8. LLM client and settings: **8a** `GeminiLLMClient` + settings types and `SettingsStore` port ✅ committed; **8b** background handler, API-key panel with a "Test connection" button in the popup, `BackgroundLLMClient` proxy, manifest `host_permissions` ✅ committed (tests pass with a fake network and fake chrome; not yet confirmed against the real Gemini API)
 9. Resume parsing: `extractText`, `ResumeParser`, `ResumeUpload`, IndexedDB resume store
 10. LLM fallback (Calls A and B)
 11. Site adapters (`SiteAdapter` interface exists): Greenhouse first, then others, plus a generic fallback
