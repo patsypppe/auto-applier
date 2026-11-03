@@ -23,11 +23,15 @@ A Chrome extension (Manifest V3) that autofills job applications from a saved pr
 ## Repo and commands
 
 - This folder has its **own git repo** (branch `main`). The user's home folder is a separate repo, so never commit from there.
-- npm workspaces. Tools: TypeScript, **esbuild** (bundler, chosen over Vite because content scripts must be single files), Vitest 5 (needs `vite` installed), jsdom (DOM tests), Zod 4.
+- npm workspaces. Tools: TypeScript, **esbuild** (bundler, chosen over Vite because content scripts must be single files), Vitest 5 (needs `vite` installed), jsdom (DOM tests), `@types/node` (for tests that read files), Zod 4 via `zod/mini`.
 - `npm test` runs the core tests. `npm run typecheck` checks both packages. `npm run build` writes `packages/extension/dist`.
 - Load in Chrome: `chrome://extensions` → Developer mode → Load unpacked → `packages/extension/dist`. After changes: build, then reload the extension.
 - DOM tests need `// @vitest-environment jsdom` on the second line of the test file (after the header comment).
 - Do not `cd` into `node_modules` and leave the shell there.
+- TypeScript 7 loads no `@types/*` unless the tsconfig lists them: core's tsconfig has `types: ["node"]`, the extension's has `["chrome"]`.
+- **Bundle size matters.** The content script is injected into every frame of every page. Import Zod only as `import * as z from "zod/mini"` plus `import en from "zod/v4/locales/en.js"` (the `.js` is required). A plain `import { z } from "zod"` pulls in every language and made `content.js` 820 KB; it is now about 70 KB. Check `ls -l packages/extension/dist` after adding any dependency.
+- jsdom replaces the global `URL`, so tests read files with `join(import.meta.dirname, ...)`, not `new URL(..., import.meta.url)`.
+- To try the extension by hand: `python3 -m http.server 8000 -d fixtures`, open `http://localhost:8000/simple-application.html`, save a profile in the popup, press "Fill this page".
 
 ## Architecture
 
@@ -36,24 +40,29 @@ Two packages. **`packages/core` never imports `chrome.*`** (so a future headless
 ```
 packages/core/src/
   profile/    types, schema (Zod), formValues, keys, names, resolveValue
-  fields/     types, discoverFields, labels
+  fields/     types, discoverFields, labels, radioGroup
   matching/   types, constants, matchField, normalizeText, AttributeMatcher, BareNameMatcher
-  filling/    types (Filler, FillResult), setNativeValue, TextFiller
+  filling/    types (Filler, FillResult), events, findChoice, setNativeValue, waitUntil,
+              TextFiller, SelectFiller, RadioFiller, CheckboxFiller, ComboboxFiller
+  fill/       fillPage (the orchestrator), summary (counts, needsAttention, formatSummary)
   adapters/   types only (SiteAdapter interface)
   ports/      ProfileStore, LLMClient
-  testing/    makeField (test helper, needs a DOM)
+  testing/    makeField, fieldFromHtml (test helpers, need a DOM)
 packages/extension/
   public/manifest.json    MV3, permission: storage, content script on <all_urls> with all_frames
-  src/background.ts       empty, will own LLM calls and messaging
-  src/content.ts          empty, will run the fill pipeline on the page
-  src/popup/              popup.html, popup.ts, ProfileForm.ts, profileFields.ts
+  src/background.ts       empty, will own LLM calls
+  src/content.ts          on a "fill-page" message: loads and validates the saved profile, runs fillPage, outlines flagged fields, replies with a summary
+  src/messaging.ts        message types between popup and content scripts, with type guards
+  src/ui/                 highlightFlagged (red outline for failed, amber for unmatched or no-value)
+  src/popup/              popup.html, popup.ts, ProfileForm.ts, profileFields.ts, FillPanel.ts
   src/storage/            ChromeStorageProfileStore (implements ProfileStore)
   build.mjs               esbuild: background, content, popup entries as single iife files
+fixtures/simple-application.html   test form used by fillPage.test.ts and for trying the extension by hand
 ```
 
 ## The pipeline (target design)
 
-`fillPage` (not built yet) will run: discover → match → resolve → validate → fill → report.
+`fillPage(root, profile, setup = DEFAULT_SETUP)` runs: discover → match → resolve → fill → report, one field at a time in page order (sequential, because comboboxes need focus). `DEFAULT_SETUP` is the matcher chain plus the five fillers; tests and adapters can pass their own.
 
 1. **discoverFields(root)** returns `FormField[]` (element, kind, label, name, options, groupId). Radio groups are ONE field (first radio is `element`, `options` are each radio's label, `groupId` is the radio name).
 2. **Matcher chain** `matchField(field, matchers, threshold = 0.8)`: first result with confidence >= threshold wins (inclusive), otherwise `null`.
@@ -61,11 +70,11 @@ packages/extension/
    - `BareNameMatcher(fields)`: maps a bare "Name" to `fullName`, but only when no other field on the page is a first or last name. Built per page, so the chain is `[new AttributeMatcher(), new BareNameMatcher(fields)]`.
    - The confidence numbers are the assistant's picks and are easy to retune in `matching/constants.ts`.
 3. **resolveValue(profile, key)** returns the text to type, or `undefined` if the profile has none (then the field is flagged, not filled). Derived keys: `fullName`, `legalName` (falls back to full name), `preferredName` (falls back to first name). Booleans become "Yes"/"No". Empty skills → `undefined`.
-4. **Validate the value against the field** before filling (a select must contain a matching option, a date must fit the format). Not built yet; this is not Zod.
+4. **Validating the value against the field** happens inside each filler (option matching, read-back after filling), not as a separate step. It is not Zod.
 5. **Fillers** (one per field kind, behind the `Filler` interface): `canFill(field)` and `fill(field, value)` returning `filled`, `skipped{reason}` or `failed{reason}`.
    - `TextFiller` never overwrites a different existing value (skips with a reason), skips read-only or disabled fields, and reads the value back to catch silent rejection. It fires only `input` and `change` events (no focus or blur).
    - `setNativeValue` uses the prototype's native value setter, then dispatches `input` and `change`, so React-style forms notice.
-6. **Report**: per-field results, flagged fields highlighted for the user.
+6. **Report**: `FieldReport { field, profileKey?, outcome }`. The outcome is a `FillResult` (`filled`, `skipped`, `failed`), or `unmatched` (no matcher result), or `no-value` (key matched, profile has nothing). `needsAttention` means failed, unmatched or no-value; those fields are outlined on the page (red for failed, amber for the rest). The popup button sends `fill-page` to every frame of the tab; each frame validates the saved profile (`validateProfile`), runs `fillPage` on its own document and sends a `fill-result` back; the popup adds the frames up and shows `Filled N · Left alone N · Needs you N`.
 7. **Stop before submit.** The user has not answered whether it should auto-submit. Default: it stops and the user reviews and submits. Do not build auto-submit without asking.
 
 ## Profile model
@@ -96,7 +105,7 @@ packages/extension/
 4. `discoverFields` ✅ committed
 5. `matchField`, `AttributeMatcher`, `BareNameMatcher` ✅ committed
 6. Fillers: **6a** `setNativeValue` + `TextFiller` ✅ committed; **6b** `SelectFiller`, `RadioFiller`, `CheckboxFiller` ✅ committed; **6c** `ComboboxFiller` ✅ committed (`FileFiller` is proposed to move to step 9, because it needs the resume store; not yet agreed)
-7. `fillPage` orchestrator + `content.ts` + "Fill this page" popup button → first end-to-end result
+7. `fillPage` orchestrator + `content.ts` + "Fill this page" popup button → first end-to-end result ✅ committed (tested in jsdom; not yet run in real Chrome)
 8. LLM client, settings (API key), manifest `host_permissions`
 9. Resume parsing: `extractText`, `ResumeParser`, `ResumeUpload`, IndexedDB resume store
 10. LLM fallback (Calls A and B)
@@ -109,7 +118,9 @@ packages/extension/
 - Labels are matched with English patterns only.
 - A radio group whose first radio is disabled is not discovered at all (`discoverFields` describes a group from its first radio). Not fixed; fix it if it shows up on a real site.
 - A select with no placeholder: an untouched first option is treated as empty and gets overwritten; an option the page marked `selected` is respected.
-- Controls hidden with CSS are not skipped (jsdom has no layout; needs a real-browser check).
+- Controls hidden with CSS are not skipped, so hidden "honeypot" fields would be filled. jsdom has no layout, so this needs a real-browser check; likely the first fix after trying a real page.
+- Every unmatched field is outlined amber, including search boxes and cookie checkboxes; this may be noisy on real pages.
+- `FileFiller` does not exist yet, so file inputs are always reported as unmatched.
 - Not handled yet: shadow DOM, custom dropdowns that are not `input[role=combobox]`, checkbox groups (each checkbox is its own field), password fields (skipped; they return with the login feature).
 - Keys like `currentCompany` / `currentTitle` are deferred until the experience editor exists.
 - A profile saved before `isAuthorizedToWork` existed will show "No" for it in the form. The user was told to re-check it and save.

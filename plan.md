@@ -84,7 +84,7 @@ Patterns in use: Strategy (fillers, adapters), Chain of Responsibility (matchers
 1. **Discover** (`discoverFields`): scan a page or element for `input`, `select` and `textarea`; build a `FormField` for each (element, kind, label, name, options, groupId). Labels come from `aria-labelledby`, then `<label>` elements, then `aria-label`, then `placeholder`. A radio group is one field. Hidden, button, password and disabled controls are skipped.
 2. **Match** (`matchField`): run the matcher chain; the first result at or above the 0.8 threshold wins. `AttributeMatcher` scores autocomplete 0.95, label 0.85, name 0.80. `BareNameMatcher` handles a lone "Name" field using the whole page as context. No match means the field is a candidate for the LLM fallback.
 3. **Resolve** (`resolveValue`): profile key to text. No value means flag the field, never type a placeholder.
-4. **Validate against the field** **(proposed, not built)**: before filling, check the value fits the field (a select has a matching option, a date fits the format). This is a small check against the field's own rules, not Zod.
+4. **Validate against the field**: done inside each filler (option matching and a read-back after filling), not as a separate step. It is a small check against the field's own rules, not Zod.
 5. **Fill**: pick the `Filler` by field kind. Fillers never overwrite a different existing value, skip locked fields, and read the value back to catch silent rejection.
 6. **Report**: collect one result per field; highlight the ones the user must handle.
 
@@ -126,7 +126,7 @@ Sites cannot block a content script. What breaks, and the fix:
 
 - **Unit tests first** for every step (Vitest). Core logic runs in Node; DOM code runs in jsdom.
 - **Manual Chrome check** for anything touching `chrome.*` or real pages (popup form, content script). Checklist for each such step: build, reload the extension, open the popup, try a local test page, then try a real application form.
-- **HTML fixtures (proposed):** save anonymised copies of real application forms (Greenhouse, Lever, Workday) as test fixtures, so adapters and matchers are tested against realistic markup and regressions are caught.
+- **HTML fixtures (proposed):** save anonymised copies of real application forms (Greenhouse, Lever, Workday) as test fixtures, so adapters and matchers are tested against realistic markup and regressions are caught. A first fixture exists: `fixtures/simple-application.html`, used by `fillPage.test.ts` and for trying the extension by hand.
 - **End-to-end (proposed, later):** Playwright against fixtures or a local test form, loading the built extension.
 - Known limit: jsdom has no layout, so CSS-hidden fields and real focus and blur behavior need a real-browser check.
 
@@ -145,7 +145,7 @@ Steps are built one at a time: tests first, diff shown, approval, commit. `CLAUD
 | 6a | Text filling | `setNativeValue.ts`, `TextFiller.ts` | done |
 | 6b | Select, radio, checkbox fillers | `SelectFiller`, `RadioFiller`, `CheckboxFiller` | done |
 | 6c | Combobox filler | `ComboboxFiller` | done |
-| 7 | `fillPage`, `content.ts`, "Fill this page" button, highlight flagged fields | `fill/fillPage.ts`, `ui/highlightFlagged.ts` | planned. **First end-to-end result.** |
+| 7 | `fillPage`, `content.ts`, "Fill this page" button, highlight flagged fields | `fill/fillPage.ts`, `ui/highlightFlagged.ts` | done (not yet run in real Chrome). **First end-to-end result.** |
 | 8 | LLM client and settings | `SettingsStore`, `<Provider>LLMClient`, `messaging.ts`, manifest `host_permissions` | planned. **Needs the provider choice.** |
 | 9 | Resume parsing and file upload | `extractText` (`pdfjs-dist`), a DOCX reader (to be chosen), `ResumeParser`, `ResumeUpload`, `IndexedDbResumeStore`, `FileFiller` | planned |
 | 10 | LLM fallback | prompt files for Calls A, B and C (option picking), background handlers, a machine-readable code on failed fills so ambiguity can be routed to the LLM, wired into `fillPage` | planned |
