@@ -112,7 +112,11 @@ describe("ComboboxFiller: fill", () => {
 
     const result = await filler.fill(field, "United States")
 
-    expect(result).toEqual({ status: "failed", reason: 'No single option matches "United States"' })
+    expect(result).toEqual({
+      status: "failed",
+      reason: 'No single option matches "United States"',
+      code: "no-option-match",
+    })
     expect(input.value).toBe("")
   })
 

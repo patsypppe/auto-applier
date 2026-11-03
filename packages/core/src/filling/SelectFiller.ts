@@ -35,7 +35,7 @@ export class SelectFiller implements Filler {
     if (select.disabled) return { status: "skipped", reason: "Field is disabled" }
 
     const target = findChoice(value, pickableOptions(select), (option) => cleanText(option.textContent))
-    if (!target) return { status: "failed", reason: `No single option matches "${value}"` }
+    if (!target) return { status: "failed", reason: `No single option matches "${value}"`, code: "no-option-match" }
 
     if (hasChosenValue(select)) {
       return select.selectedIndex === target.index

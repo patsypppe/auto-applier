@@ -65,7 +65,7 @@ describe("RadioFiller: fill", () => {
 
     const result = filler.fill(field, "Maybe")
 
-    expect(result).toEqual({ status: "failed", reason: 'No single option matches "Maybe"' })
+    expect(result).toEqual({ status: "failed", reason: 'No single option matches "Maybe"', code: "no-option-match" })
     expect(radios().some((radio) => radio.checked)).toBe(false)
   })
 

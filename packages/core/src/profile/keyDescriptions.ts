@@ -1,0 +1,22 @@
+// Describes each profile key in plain words, so the LLM knows what it stands for.
+import type { ProfileKey } from "./keys"
+
+export const PROFILE_KEY_HELP: Record<ProfileKey, string> = {
+  firstName: "the applicant's first (given) name",
+  middleName: "the applicant's middle name or initial",
+  lastName: "the applicant's last (family) name",
+  fullName: "the applicant's full name in a single field",
+  legalName: "the applicant's full legal name",
+  preferredName: "the name the applicant prefers to be called",
+  email: "the applicant's email address",
+  phone: "the applicant's phone number",
+  linkedin: "the applicant's LinkedIn profile address",
+  github: "the applicant's GitHub profile address",
+  portfolio: "the applicant's portfolio or personal website address",
+  skills: "the applicant's skills, as a comma separated list",
+  workAuthorization: "the applicant's work authorization status, for example Citizen",
+  needsSponsorship: "yes or no: whether the applicant needs visa sponsorship",
+  isAuthorizedToWork: "yes or no: whether the applicant is legally authorized to work in the country",
+  noticePeriod: "how much notice the applicant must give a current employer",
+  salaryExpectation: "the salary the applicant expects",
+}

@@ -54,7 +54,7 @@ describe("SelectFiller: fill", () => {
 
     const result = filler.fill(field, "Select")
 
-    expect(result).toEqual({ status: "failed", reason: 'No single option matches "Select"' })
+    expect(result).toEqual({ status: "failed", reason: 'No single option matches "Select"', code: "no-option-match" })
     expect(selectOf(field).value).toBe("")
   })
 
@@ -63,7 +63,7 @@ describe("SelectFiller: fill", () => {
 
     const result = filler.fill(field, "Maybe")
 
-    expect(result).toEqual({ status: "failed", reason: 'No single option matches "Maybe"' })
+    expect(result).toEqual({ status: "failed", reason: 'No single option matches "Maybe"', code: "no-option-match" })
     expect(selectOf(field).value).toBe("")
   })
 

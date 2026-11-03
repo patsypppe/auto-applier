@@ -3,16 +3,26 @@ import type { FieldOutcome, FieldReport } from "./fillPage"
 
 export type ReportSummary = {
   filled: number
+  aiFilled: number
+  drafted: number
   skipped: number
   failed: number
   unmatched: number
   noValue: number
 }
 
-const SUMMARY_KEYS: (keyof ReportSummary)[] = ["filled", "skipped", "failed", "unmatched", "noValue"]
+const SUMMARY_KEYS: (keyof ReportSummary)[] = [
+  "filled",
+  "aiFilled",
+  "drafted",
+  "skipped",
+  "failed",
+  "unmatched",
+  "noValue",
+]
 
-const SUMMARY_KEY_BY_STATUS: Record<FieldOutcome["status"], keyof ReportSummary> = {
-  filled: "filled",
+const SUMMARY_KEY_BY_STATUS: Record<Exclude<FieldOutcome["status"], "filled">, keyof ReportSummary> = {
+  drafted: "drafted",
   skipped: "skipped",
   failed: "failed",
   unmatched: "unmatched",
@@ -21,7 +31,7 @@ const SUMMARY_KEY_BY_STATUS: Record<FieldOutcome["status"], keyof ReportSummary>
 
 // Returns a summary with a zero for every outcome.
 export function emptySummary(): ReportSummary {
-  return { filled: 0, skipped: 0, failed: 0, unmatched: 0, noValue: 0 }
+  return { filled: 0, aiFilled: 0, drafted: 0, skipped: 0, failed: 0, unmatched: 0, noValue: 0 }
 }
 
 // Returns true when the field still needs the user: it failed, was not recognised, or the profile has no value for it.
@@ -30,10 +40,23 @@ export function needsAttention(report: FieldReport): boolean {
   return status === "failed" || status === "unmatched" || status === "no-value"
 }
 
+// Returns true when the field holds something the AI wrote or chose, which the user should check.
+export function needsReview(report: FieldReport): boolean {
+  const { status } = report.outcome
+  return status === "drafted" || (status === "filled" && report.source === "ai")
+}
+
+// Returns which count a report belongs to; fills that the AI helped with are counted separately.
+function summaryKey(report: FieldReport): keyof ReportSummary {
+  const { status } = report.outcome
+  if (status === "filled") return report.source === "ai" ? "aiFilled" : "filled"
+  return SUMMARY_KEY_BY_STATUS[status]
+}
+
 // Counts how many reports ended in each kind of outcome.
 export function summarizeReports(reports: FieldReport[]): ReportSummary {
   return reports.reduce((summary, report) => {
-    const key = SUMMARY_KEY_BY_STATUS[report.outcome.status]
+    const key = summaryKey(report)
     return { ...summary, [key]: summary[key] + 1 }
   }, emptySummary())
 }
@@ -42,6 +65,8 @@ export function summarizeReports(reports: FieldReport[]): ReportSummary {
 export function addSummaries(first: ReportSummary, second: ReportSummary): ReportSummary {
   return {
     filled: first.filled + second.filled,
+    aiFilled: first.aiFilled + second.aiFilled,
+    drafted: first.drafted + second.drafted,
     skipped: first.skipped + second.skipped,
     failed: first.failed + second.failed,
     unmatched: first.unmatched + second.unmatched,
@@ -57,11 +82,13 @@ export function isReportSummary(value: unknown): value is ReportSummary {
   return SUMMARY_KEYS.every((key) => typeof record[key] === "number")
 }
 
-// Turns a summary into one short line: how many were filled, left alone, and still need the user.
+// Turns a summary into one short line: how many were filled, left alone and still need the user, and how many to check.
 export function formatSummary(summary: ReportSummary): string {
+  const filled = summary.filled + summary.aiFilled + summary.drafted
   const needsYou = summary.failed + summary.unmatched + summary.noValue
-  const total = summary.filled + summary.skipped + needsYou
-  if (total === 0) return "No fillable fields found."
+  if (filled + summary.skipped + needsYou === 0) return "No fillable fields found."
 
-  return `Filled ${summary.filled} · Left alone ${summary.skipped} · Needs you ${needsYou}`
+  const line = `Filled ${filled} · Left alone ${summary.skipped} · Needs you ${needsYou}`
+  const toCheck = summary.aiFilled + summary.drafted
+  return toCheck > 0 ? `${line} · Check the AI's work on ${toCheck}` : line
 }

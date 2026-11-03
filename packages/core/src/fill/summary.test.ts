@@ -1,4 +1,4 @@
-// Tests that report summaries count outcomes correctly, merge across frames and read back safely.
+// Tests that report summaries count outcomes correctly, merge across frames, separate AI work and read back safely.
 import { describe, expect, test } from "vitest"
 import type { FormField } from "../fields/types"
 import type { FieldOutcome, FieldReport } from "./fillPage"
@@ -8,17 +8,20 @@ import {
   formatSummary,
   isReportSummary,
   needsAttention,
+  needsReview,
   summarizeReports,
 } from "./summary"
 
-// Builds a report with the given outcome.
-function report(outcome: FieldOutcome): FieldReport {
-  return { field: {} as FormField, outcome }
+// Builds a report with the given outcome, optionally marked as AI work.
+function report(outcome: FieldOutcome, source?: "ai"): FieldReport {
+  return { field: {} as FormField, outcome, source }
 }
+
+const ALL_SEVEN = { filled: 1, aiFilled: 2, drafted: 3, skipped: 4, failed: 5, unmatched: 6, noValue: 7 }
 
 describe("emptySummary", () => {
   test("has a zero for every outcome", () => {
-    expect(emptySummary()).toEqual({ filled: 0, skipped: 0, failed: 0, unmatched: 0, noValue: 0 })
+    expect(emptySummary()).toEqual({ filled: 0, aiFilled: 0, drafted: 0, skipped: 0, failed: 0, unmatched: 0, noValue: 0 })
   })
 })
 
@@ -27,6 +30,8 @@ describe("summarizeReports", () => {
     const reports = [
       report({ status: "filled" }),
       report({ status: "filled" }),
+      report({ status: "filled" }, "ai"),
+      report({ status: "drafted" }, "ai"),
       report({ status: "skipped", reason: "Field already has a value" }),
       report({ status: "failed", reason: "boom" }),
       report({ status: "unmatched" }),
@@ -34,7 +39,15 @@ describe("summarizeReports", () => {
       report({ status: "no-value", profileKey: "github" }),
     ]
 
-    expect(summarizeReports(reports)).toEqual({ filled: 2, skipped: 1, failed: 1, unmatched: 1, noValue: 2 })
+    expect(summarizeReports(reports)).toEqual({
+      filled: 2,
+      aiFilled: 1,
+      drafted: 1,
+      skipped: 1,
+      failed: 1,
+      unmatched: 1,
+      noValue: 2,
+    })
   })
 
   test("returns zeros for no reports", () => {
@@ -44,10 +57,9 @@ describe("summarizeReports", () => {
 
 describe("addSummaries", () => {
   test("adds the counts together", () => {
-    const first = { filled: 1, skipped: 2, failed: 3, unmatched: 4, noValue: 5 }
-    const second = { filled: 10, skipped: 20, failed: 30, unmatched: 40, noValue: 50 }
+    const doubled = { filled: 2, aiFilled: 4, drafted: 6, skipped: 8, failed: 10, unmatched: 12, noValue: 14 }
 
-    expect(addSummaries(first, second)).toEqual({ filled: 11, skipped: 22, failed: 33, unmatched: 44, noValue: 55 })
+    expect(addSummaries(ALL_SEVEN, ALL_SEVEN)).toEqual(doubled)
   })
 })
 
@@ -57,9 +69,24 @@ describe("needsAttention", () => {
     [{ status: "unmatched" }, true],
     [{ status: "no-value", profileKey: "email" }, true],
     [{ status: "filled" }, false],
+    [{ status: "drafted" }, false],
     [{ status: "skipped", reason: "Field already has a value" }, false],
   ] as [FieldOutcome, boolean][])("%j needs attention: %s", (outcome, expected) => {
     expect(needsAttention(report(outcome))).toBe(expected)
+  })
+})
+
+describe("needsReview", () => {
+  test("is true for a drafted answer and for a field filled with the AI's help", () => {
+    expect(needsReview(report({ status: "drafted" }, "ai"))).toBe(true)
+    expect(needsReview(report({ status: "filled" }, "ai"))).toBe(true)
+  })
+
+  test("is false for ordinary fills and for everything else", () => {
+    expect(needsReview(report({ status: "filled" }))).toBe(false)
+    expect(needsReview(report({ status: "skipped", reason: "x" }))).toBe(false)
+    expect(needsReview(report({ status: "failed", reason: "x" }, "ai"))).toBe(false)
+    expect(needsReview(report({ status: "unmatched" }))).toBe(false)
   })
 })
 
@@ -68,8 +95,10 @@ describe("isReportSummary", () => {
     expect(isReportSummary(emptySummary())).toBe(true)
   })
 
-  test("rejects a summary with a missing count", () => {
-    expect(isReportSummary({ filled: 1, skipped: 0, failed: 0, unmatched: 0 })).toBe(false)
+  test("rejects a summary with a missing count, including the AI counts", () => {
+    expect(isReportSummary({ filled: 1, skipped: 0, failed: 0, unmatched: 0, noValue: 0 })).toBe(false)
+    const { drafted: _drafted, ...withoutDrafted } = emptySummary()
+    expect(isReportSummary(withoutDrafted)).toBe(false)
   })
 
   test("rejects a count that is not a number", () => {
@@ -85,9 +114,15 @@ describe("isReportSummary", () => {
 
 describe("formatSummary", () => {
   test("shows filled, left alone and needs-you counts", () => {
-    const summary = { filled: 7, skipped: 1, failed: 1, unmatched: 1, noValue: 1 }
+    const summary = { ...emptySummary(), filled: 7, skipped: 1, failed: 1, unmatched: 1, noValue: 1 }
 
     expect(formatSummary(summary)).toBe("Filled 7 · Left alone 1 · Needs you 3")
+  })
+
+  test("counts AI work as filled and says how many to check", () => {
+    const summary = { ...emptySummary(), filled: 5, aiFilled: 2, drafted: 1, unmatched: 1 }
+
+    expect(formatSummary(summary)).toBe("Filled 8 · Left alone 0 · Needs you 1 · Check the AI's work on 3")
   })
 
   test("says so when there were no fields", () => {

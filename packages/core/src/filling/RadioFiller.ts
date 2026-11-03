@@ -23,7 +23,7 @@ export class RadioFiller implements Filler {
 
     const group = radiosInGroup(first, first.ownerDocument)
     const target = findChoice(value, group, (radio) => labelFor(radio))
-    if (!target) return { status: "failed", reason: `No single option matches "${value}"` }
+    if (!target) return { status: "failed", reason: `No single option matches "${value}"`, code: "no-option-match" }
 
     const checked = group.find((radio) => radio.checked)
     if (checked) {

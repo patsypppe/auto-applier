@@ -228,6 +228,14 @@ describe("fillPage: the fixture application form", () => {
       why: "unmatched",
       privacy: "unmatched",
     })
-    expect(summarizeReports(reports)).toEqual({ filled: 8, skipped: 0, failed: 0, unmatched: 3, noValue: 2 })
+    expect(summarizeReports(reports)).toEqual({
+      filled: 8,
+      aiFilled: 0,
+      drafted: 0,
+      skipped: 0,
+      failed: 0,
+      unmatched: 3,
+      noValue: 2,
+    })
   })
 })

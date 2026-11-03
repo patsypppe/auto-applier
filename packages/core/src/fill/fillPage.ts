@@ -19,11 +19,13 @@ export type FieldOutcome =
   | FillResult
   | { status: "unmatched" }
   | { status: "no-value"; profileKey: ProfileKey }
+  | { status: "drafted" }
 
 export type FieldReport = {
   field: FormField
   profileKey?: ProfileKey
   outcome: FieldOutcome
+  source?: "ai"
 }
 
 export type FillSetup = {
@@ -42,7 +44,7 @@ function errorMessage(error: unknown): string {
 }
 
 // Hands the value to the first filler that can handle the field; a filler that throws becomes a failure.
-async function fillWith(fillers: Filler[], field: FormField, value: string): Promise<FillResult> {
+export async function fillWith(fillers: Filler[], field: FormField, value: string): Promise<FillResult> {
   const filler = fillers.find((candidate) => candidate.canFill(field))
   if (!filler) return { status: "failed", reason: `Nothing can fill ${field.kind} fields yet` }
 

@@ -4,7 +4,7 @@ import type { FormField } from "../fields/types"
 import { clickLikeUser } from "./events"
 import { findChoice } from "./findChoice"
 import { setNativeValue } from "./setNativeValue"
-import type { Filler, FillResult } from "./types"
+import type { FailureCode, Filler, FillResult } from "./types"
 import { waitUntil } from "./waitUntil"
 import type { WaitTiming } from "./waitUntil"
 
@@ -33,9 +33,9 @@ function pickTookEffect(input: HTMLInputElement, option: HTMLElement): boolean {
 }
 
 // Clears the text we typed so the field is left as we found it, and reports the failure.
-function giveUp(input: HTMLInputElement, reason: string): FillResult {
+function giveUp(input: HTMLInputElement, reason: string, code?: FailureCode): FillResult {
   setNativeValue(input, "")
-  return { status: "failed", reason }
+  return { status: "failed", reason, code }
 }
 
 export class ComboboxFiller implements Filler {
@@ -67,7 +67,7 @@ export class ComboboxFiller implements Filler {
     if (!appeared) return giveUp(input, "No options appeared")
 
     const target = findChoice(value, findOptions(input), (option) => cleanText(option.textContent))
-    if (!target) return giveUp(input, `No single option matches "${value}"`)
+    if (!target) return giveUp(input, `No single option matches "${value}"`, "no-option-match")
     if (target.getAttribute("aria-disabled") === "true") return giveUp(input, "Option is disabled")
 
     clickLikeUser(target)
