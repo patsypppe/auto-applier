@@ -46,7 +46,8 @@ packages/core/src/
               TextFiller, SelectFiller, RadioFiller, CheckboxFiller, ComboboxFiller
   fill/       fillPage (the orchestrator), summary (counts, needsAttention, formatSummary)
   adapters/   types only (SiteAdapter interface)
-  ports/      ProfileStore, LLMClient
+  ports/      ProfileStore, LLMClient, SettingsStore
+  llm/        settings (LLMSettings, DEFAULT_MODEL, isLLMSettings), GeminiLLMClient
   testing/    makeField, fieldFromHtml (test helpers, need a DOM)
 packages/extension/
   public/manifest.json    MV3, permission: storage, content script on <all_urls> with all_frames
@@ -89,7 +90,7 @@ fixtures/simple-application.html   test form used by fillPage.test.ts and for tr
 
 ## LLM design (not built yet)
 
-- The LLM sits behind `LLMClient.completeJson(prompt): Promise<unknown>`; one implementation per provider. **The provider is undecided: ask the user.** The user supplies their own API key, stored locally.
+- The LLM sits behind `LLMClient.completeJson(prompt): Promise<unknown>`; one implementation per provider. **Provider: Google Gemini (chosen by the user).** `GeminiLLMClient` (`core/src/llm`) calls `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` with the key in the `x-goog-api-key` header (never in the URL) and `generationConfig.responseMimeType: "application/json"`; the answer text is `candidates[0].content.parts[].text`. Google's newer Interactions API (`/v1beta/interactions`, needs an `Api-Revision` header) exists and its quickstart now leads with it. `generateContent` was chosen because its response format is documented in the API reference and the endpoint is live (a keyless request returns 403, not 404). If it is ever retired, write a second client behind `LLMClient`. The default model `gemini-3.5-flash-lite` came from Google's models page and has NOT yet been confirmed with a real call; it is a user setting. The user supplies their own API key, stored locally.
 - All LLM calls run in the background service worker, never in the content script (keeps the key away from page scripts). Content script and popup talk to it through typed messages.
 - **Resume parsing:** extract text with plain code (pdf.js), then the LLM turns the text into JSON, then `validateProfile`, then it becomes an editable draft the user reviews before saving. Scanned image PDFs have no text and will not work.
 - **Call A (map fields):** only for fields the chain could not match. Sends field metadata (label, type, options, sibling labels, section heading) and the list of key names, NEVER the user's values. Returns a key or `none` per field. One batched call per page. A `none` or low confidence leaves the field empty and flagged.
@@ -106,7 +107,7 @@ fixtures/simple-application.html   test form used by fillPage.test.ts and for tr
 5. `matchField`, `AttributeMatcher`, `BareNameMatcher` ✅ committed
 6. Fillers: **6a** `setNativeValue` + `TextFiller` ✅ committed; **6b** `SelectFiller`, `RadioFiller`, `CheckboxFiller` ✅ committed; **6c** `ComboboxFiller` ✅ committed (`FileFiller` is proposed to move to step 9, because it needs the resume store; not yet agreed)
 7. `fillPage` orchestrator + `content.ts` + "Fill this page" popup button → first end-to-end result ✅ committed (tested in jsdom and by hand in Chrome on the fixture form; not yet tried on a real job site)
-8. LLM client, settings (API key), manifest `host_permissions`
+8. LLM client and settings: **8a** `GeminiLLMClient` + settings types and `SettingsStore` port ✅ committed; **8b** background handler, API-key panel with a "Test connection" button in the popup, `BackgroundLLMClient` proxy, manifest `host_permissions` (in progress)
 9. Resume parsing: `extractText`, `ResumeParser`, `ResumeUpload`, IndexedDB resume store
 10. LLM fallback (Calls A and B)
 11. Site adapters (`SiteAdapter` interface exists): Greenhouse first, then others, plus a generic fallback
@@ -114,7 +115,7 @@ fixtures/simple-application.html   test form used by fillPage.test.ts and for tr
 
 ## Known gaps and open decisions
 
-- LLM provider not chosen. Auto-submit vs stop-before-submit not confirmed (default: stop).
+- Auto-submit vs stop-before-submit not confirmed (default: stop).
 - Labels are matched with English patterns only.
 - A radio group whose first radio is disabled is not discovered at all (`discoverFields` describes a group from its first radio). Not fixed; fix it if it shows up on a real site.
 - A select with no placeholder: an untouched first option is treated as empty and gets overwritten; an option the page marked `selected` is respected.
