@@ -25,7 +25,7 @@ const existingProfile: Profile = {
   experience: [{ company: "Acme", title: "Engineer", startDate: "2022-01", description: "Built things" }],
   education: [{ school: "State U", degree: "BSc", startDate: "2018-09" }],
   skills: ["TypeScript", "React"],
-  answers: { workAuthorization: "Citizen", needsSponsorship: true, noticePeriod: "2 weeks" },
+  answers: { workAuthorization: "Citizen", needsSponsorship: true, isAuthorizedToWork: false, noticePeriod: "2 weeks" },
   resume: { name: "resume.pdf", mimeType: "application/pdf", storageKey: "resume-1" },
 }
 
@@ -35,6 +35,7 @@ describe("emptyFormValues", () => {
 
     expect(values.firstName).toBe("")
     expect(values.needsSponsorship).toBe("no")
+    expect(values.isAuthorizedToWork).toBe("yes")
   })
 })
 
@@ -73,6 +74,14 @@ describe("fromFormValues", () => {
     expect(no.ok && no.profile.answers.needsSponsorship).toBe(false)
   })
 
+  test("turns the yes/no authorized-to-work choice into a boolean", () => {
+    const yes = fromFormValues({ ...filledValues, isAuthorizedToWork: "yes" })
+    const no = fromFormValues({ ...filledValues, isAuthorizedToWork: "no" })
+
+    expect(yes.ok && yes.profile.answers.isAuthorizedToWork).toBe(true)
+    expect(no.ok && no.profile.answers.isAuthorizedToWork).toBe(false)
+  })
+
   test("starts with empty experience and education when there is no existing profile", () => {
     const result = fromFormValues(filledValues)
 
@@ -108,6 +117,7 @@ describe("toFormValues", () => {
     expect(values.github).toBe("github.com/pranav")
     expect(values.skills).toBe("TypeScript, React")
     expect(values.needsSponsorship).toBe("yes")
+    expect(values.isAuthorizedToWork).toBe("no")
     expect(values.noticePeriod).toBe("2 weeks")
   })
 

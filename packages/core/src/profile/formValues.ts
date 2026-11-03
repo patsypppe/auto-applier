@@ -17,6 +17,7 @@ export type ProfileFormValues = {
   skills: string
   workAuthorization: string
   needsSponsorship: "yes" | "no"
+  isAuthorizedToWork: "yes" | "no"
   noticePeriod: string
   salaryExpectation: string
 }
@@ -37,6 +38,7 @@ export function emptyFormValues(): ProfileFormValues {
     skills: "",
     workAuthorization: "",
     needsSponsorship: "no",
+    isAuthorizedToWork: "yes",
     noticePeriod: "",
     salaryExpectation: "",
   }
@@ -65,6 +67,7 @@ export function toFormValues(profile: Profile): ProfileFormValues {
     skills: profile.skills.join(", "),
     workAuthorization: answers.workAuthorization,
     needsSponsorship: answers.needsSponsorship ? "yes" : "no",
+    isAuthorizedToWork: answers.isAuthorizedToWork ? "yes" : "no",
     noticePeriod: answers.noticePeriod ?? "",
     salaryExpectation: answers.salaryExpectation ?? "",
   }
@@ -96,6 +99,7 @@ export function fromFormValues(values: ProfileFormValues, existing?: Profile): V
     answers: {
       workAuthorization: values.workAuthorization.trim(),
       needsSponsorship: values.needsSponsorship === "yes",
+      isAuthorizedToWork: values.isAuthorizedToWork === "yes",
       noticePeriod: optionalText(values.noticePeriod),
       salaryExpectation: optionalText(values.salaryExpectation),
     },

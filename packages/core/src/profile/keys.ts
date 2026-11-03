@@ -14,6 +14,7 @@ export const PROFILE_KEYS = [
   "skills",
   "workAuthorization",
   "needsSponsorship",
+  "isAuthorizedToWork",
   "noticePeriod",
   "salaryExpectation",
 ] as const

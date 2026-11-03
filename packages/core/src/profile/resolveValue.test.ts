@@ -21,6 +21,7 @@ const completeProfile: Profile = {
   answers: {
     workAuthorization: "Citizen",
     needsSponsorship: false,
+    isAuthorizedToWork: true,
     noticePeriod: "2 weeks",
     salaryExpectation: "120000",
   },
@@ -37,7 +38,7 @@ const minimalProfile: Profile = {
   experience: [],
   education: [],
   skills: [],
-  answers: { workAuthorization: "Citizen", needsSponsorship: true },
+  answers: { workAuthorization: "Citizen", needsSponsorship: true, isAuthorizedToWork: false },
 }
 
 describe("resolveValue", () => {
@@ -69,6 +70,11 @@ describe("resolveValue", () => {
   test("turns the sponsorship boolean into Yes or No", () => {
     expect(resolveValue(minimalProfile, "needsSponsorship")).toBe("Yes")
     expect(resolveValue(completeProfile, "needsSponsorship")).toBe("No")
+  })
+
+  test("turns the authorized-to-work boolean into Yes or No", () => {
+    expect(resolveValue(completeProfile, "isAuthorizedToWork")).toBe("Yes")
+    expect(resolveValue(minimalProfile, "isAuthorizedToWork")).toBe("No")
   })
 
   test("joins skills with commas", () => {

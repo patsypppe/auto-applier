@@ -35,6 +35,7 @@ export type Education = {
 export type StandardAnswers = {
   workAuthorization: string
   needsSponsorship: boolean
+  isAuthorizedToWork: boolean
   noticePeriod?: string
   salaryExpectation?: string
 }

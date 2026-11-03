@@ -21,6 +21,7 @@ export const PROFILE_FIELDS: FieldSpec[] = [
   { key: "portfolio", label: "Portfolio", type: "text" },
   { key: "skills", label: "Skills (comma separated)", type: "text" },
   { key: "workAuthorization", label: "Work authorization", type: "text", required: true },
+  { key: "isAuthorizedToWork", label: "Legally authorized to work", type: "yesno" },
   { key: "needsSponsorship", label: "Needs visa sponsorship", type: "yesno" },
   { key: "noticePeriod", label: "Notice period", type: "text" },
   { key: "salaryExpectation", label: "Salary expectation", type: "text" },

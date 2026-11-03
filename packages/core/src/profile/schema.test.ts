@@ -14,7 +14,7 @@ const validProfile: Profile = {
   experience: [],
   education: [],
   skills: [],
-  answers: { workAuthorization: "Citizen", needsSponsorship: false },
+  answers: { workAuthorization: "Citizen", needsSponsorship: false, isAuthorizedToWork: true },
 }
 
 describe("validateProfile", () => {
@@ -63,6 +63,16 @@ describe("validateProfile", () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.errors.join(" ")).toContain("answers.needsSponsorship")
+  })
+
+  test("rejects a non-boolean authorized-to-work answer", () => {
+    const answers = { workAuthorization: "Citizen", needsSponsorship: false, isAuthorizedToWork: "yes" }
+    const bad = { ...validProfile, answers }
+
+    const result = validateProfile(bad)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.errors.join(" ")).toContain("answers.isAuthorizedToWork")
   })
 
   test("rejects input that is not an object at all", () => {

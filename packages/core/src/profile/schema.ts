@@ -40,6 +40,7 @@ const educationSchema = z.object({
 const standardAnswersSchema = z.object({
   workAuthorization: requiredText,
   needsSponsorship: z.boolean(),
+  isAuthorizedToWork: z.boolean(),
   noticePeriod: z.string().optional(),
   salaryExpectation: z.string().optional(),
 })

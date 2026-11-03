@@ -18,6 +18,7 @@ const RESOLVERS: Record<ProfileKey, (profile: Profile) => string | undefined> = 
   skills: (profile) => profile.skills.join(", ") || undefined,
   workAuthorization: (profile) => profile.answers.workAuthorization,
   needsSponsorship: (profile) => (profile.answers.needsSponsorship ? "Yes" : "No"),
+  isAuthorizedToWork: (profile) => (profile.answers.isAuthorizedToWork ? "Yes" : "No"),
   noticePeriod: (profile) => profile.answers.noticePeriod,
   salaryExpectation: (profile) => profile.answers.salaryExpectation,
 }
