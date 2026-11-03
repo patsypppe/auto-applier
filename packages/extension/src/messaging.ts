@@ -4,6 +4,10 @@ import type { ReportSummary } from "@auto-applier/core"
 
 export type FillPageRequest = { type: "fill-page" }
 
+export type LlmRequest = { type: "llm-complete"; prompt: string }
+
+export type LlmResponse = { ok: true; data: unknown } | { ok: false; error: string }
+
 export type FillResultMessage = {
   type: "fill-result"
   result: { ok: true; summary: ReportSummary } | { ok: false; error: string }
@@ -24,4 +28,21 @@ export function isFillResultMessage(message: unknown): message is FillResultMess
   const outcome = result as { ok?: unknown; summary?: unknown; error?: unknown }
   if (outcome.ok === true) return isReportSummary(outcome.summary)
   return outcome.ok === false && typeof outcome.error === "string"
+}
+
+// Returns true when an unknown value is a request to run a prompt through the LLM.
+export function isLlmRequest(message: unknown): message is LlmRequest {
+  if (typeof message !== "object" || message === null) return false
+
+  const { type, prompt } = message as { type?: unknown; prompt?: unknown }
+  return type === "llm-complete" && typeof prompt === "string"
+}
+
+// Returns true when an unknown value is a well-formed reply to an LLM request.
+export function isLlmResponse(value: unknown): value is LlmResponse {
+  if (typeof value !== "object" || value === null) return false
+
+  const { ok, error } = value as { ok?: unknown; error?: unknown }
+  if (ok === true) return true
+  return ok === false && typeof error === "string"
 }

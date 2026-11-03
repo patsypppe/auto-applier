@@ -6,7 +6,7 @@
   ],
   "scripts": {
     "build": "npm run build -w @auto-applier/extension",
-    "test": "npm run test -w @auto-applier/core",
+    "test": "npm run test -w @auto-applier/core && npm run test -w @auto-applier/extension",
     "typecheck": "tsc -p packages/core --noEmit && tsc -p packages/extension --noEmit"
   },
   "devDependencies": {

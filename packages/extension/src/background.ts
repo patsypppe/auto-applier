@@ -1,2 +1,15 @@
-// Service worker entry point: will own LLM calls and messaging with content scripts.
-export {}
+// Service worker: answers LLM requests from this extension, because only this script uses the API key.
+import { GeminiLLMClient } from "@auto-applier/core"
+import { answerLlmRequest } from "./llm/answerLlmRequest"
+import { isLlmRequest } from "./messaging"
+import { ChromeStorageSettingsStore } from "./storage/ChromeStorageSettingsStore"
+
+const settingsStore = new ChromeStorageSettingsStore()
+
+// Returns true (keeping the reply channel open) only for LLM requests that come from this extension.
+chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id || !isLlmRequest(message)) return false
+
+  void answerLlmRequest(message, settingsStore, (settings) => new GeminiLLMClient(settings)).then(sendResponse)
+  return true
+})

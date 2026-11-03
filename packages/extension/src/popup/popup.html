@@ -17,11 +17,19 @@
       p { margin: 8px 0 0; }
       .fill-panel { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #ddd; }
       .fill-panel button { width: 100%; font-weight: 600; }
+      .settings { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #ddd; }
+      .settings summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
+      .settings .buttons { display: flex; gap: 8px; }
+      .settings .note { color: #666; font-size: 12px; }
     </style>
   </head>
   <body>
     <h1>Auto Applier</h1>
     <section id="fill-panel" class="fill-panel"></section>
+    <details id="settings" class="settings">
+      <summary>LLM settings</summary>
+      <div id="settings-body"></div>
+    </details>
     <main id="app">Loading…</main>
     <script src="popup.js"></script>
   </body>

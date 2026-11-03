@@ -4,7 +4,19 @@ export type LLMSettings = {
   model: string
 }
 
-export const DEFAULT_MODEL = "gemini-3.5-flash-lite"
+export const DEFAULT_MODEL = "gemini-3.1-flash-lite"
+
+// Combines saved settings with what was typed: a blank key keeps the saved one, a blank model uses the default, and no key at all gives undefined.
+export function mergeSettings(
+  saved: LLMSettings | undefined,
+  keyInput: string,
+  modelInput: string,
+): LLMSettings | undefined {
+  const apiKey = keyInput.trim() || saved?.apiKey || ""
+  if (apiKey === "") return undefined
+
+  return { apiKey, model: modelInput.trim() || DEFAULT_MODEL }
+}
 
 // Returns true when an unknown value is an object with a non-empty key and model.
 export function isLLMSettings(value: unknown): value is LLMSettings {
