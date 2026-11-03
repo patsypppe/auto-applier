@@ -1,5 +1,6 @@
 // Scans a page or element for fillable form controls and describes each one as a FormField.
 import { cleanText, groupLabel, labelFor } from "./labels"
+import { radiosInGroup } from "./radioGroup"
 import type { FieldKind, FormField } from "./types"
 
 type Control = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -24,15 +25,6 @@ function selectOptions(select: HTMLSelectElement): string[] {
     .filter((option) => option.value !== "")
     .map((option) => cleanText(option.textContent))
     .filter((text) => text !== "")
-}
-
-// Returns every radio that belongs to the same group (same name and form) as the given radio.
-function radiosInGroup(radio: HTMLInputElement, root: ParentNode): HTMLInputElement[] {
-  if (radio.name === "") return [radio]
-
-  return Array.from(root.querySelectorAll<HTMLInputElement>('input[type="radio"]')).filter(
-    (other) => other.name === radio.name && other.form === radio.form,
-  )
 }
 
 // Describes a radio group as one field built from its first radio; the other radios return undefined.
