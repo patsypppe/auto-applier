@@ -183,3 +183,205 @@ describe("ComboboxFiller: fill", () => {
     })
   })
 })
+
+describe("ComboboxFiller: finding the right list of options", () => {
+  const PHONE_LIST = `<ul id="phone-list" role="listbox"><li role="option">United States+1</li><li role="option">Canada+1</li></ul>`
+
+  // Builds a page with a phone country picker (whose list is always on the page) and a dropdown that announces its list only after typing.
+  function buildDropdownBesidePhonePicker() {
+    document.body.innerHTML = `
+      <input id="phone-country" role="combobox" aria-controls="phone-list" aria-expanded="false" />
+      ${PHONE_LIST}
+      <label for="q">Authorized to work?</label>
+      <input id="q" role="combobox" aria-expanded="false" />
+      <div id="area"></div>`
+
+    const input = document.getElementById("q") as HTMLInputElement
+    const state = { chosen: "" }
+    input.addEventListener("input", () => {
+      setTimeout(() => {
+        const list = document.createElement("div")
+        list.id = "q-list"
+        list.setAttribute("role", "listbox")
+        for (const text of ["Yes", "No"]) {
+          const option = document.createElement("div")
+          option.setAttribute("role", "option")
+          option.textContent = text
+          option.addEventListener("click", () => {
+            state.chosen = text
+            list.remove()
+            input.setAttribute("aria-expanded", "false")
+          })
+          list.append(option)
+        }
+        document.getElementById("area")!.append(list)
+        input.setAttribute("aria-controls", "q-list")
+        input.setAttribute("aria-expanded", "true")
+      }, 30)
+    })
+    return { input, field: fieldForElement(input, "combobox"), state }
+  }
+
+  test("does not read another dropdown's always-present list while its own has not appeared", async () => {
+    const { field, state } = buildDropdownBesidePhonePicker()
+
+    const result = await filler.fill(field, "Yes")
+
+    expect(result).toEqual({ status: "filled" })
+    expect(state.chosen).toBe("Yes")
+  })
+
+  test("fails with no options, not a wrong match, when the only options belong to another dropdown", async () => {
+    document.body.innerHTML = `
+      <input id="phone-country" role="combobox" aria-controls="phone-list" />
+      ${PHONE_LIST}
+      <input id="q" role="combobox" />`
+    const field = fieldForElement(document.getElementById("q") as HTMLInputElement, "combobox")
+
+    const result = await filler.fill(field, "Yes")
+
+    expect(result).toMatchObject({ status: "failed", reason: "No options appeared" })
+  })
+
+  test("ignores options inside a hidden container", async () => {
+    document.body.innerHTML = `
+      <input id="q" role="combobox" />
+      <div hidden><div role="option">Yes</div></div>`
+    const field = fieldForElement(document.getElementById("q") as HTMLInputElement, "combobox")
+
+    const result = await filler.fill(field, "Yes")
+
+    expect(result).toMatchObject({ status: "failed", reason: "No options appeared" })
+  })
+})
+
+describe("ComboboxFiller: options that end in a dial code", () => {
+  test("matches a country to the option that shows it with its dial code", async () => {
+    const { field, state } = buildCombobox(["Canada+1", "United States Minor Outlying Islands+1", "United States+1"])
+
+    const result = await filler.fill(field, "United States")
+
+    expect(result).toEqual({ status: "filled" })
+    expect(state.chosen).toBe("United States+1")
+  })
+
+  test("still fails rather than guess when only longer names fit", async () => {
+    const { field } = buildCombobox(["United States Minor Outlying Islands+1", "United States Virgin Islands+1"])
+
+    const result = await filler.fill(field, "United States")
+
+    expect(result).toMatchObject({ status: "failed", code: "no-option-match" })
+  })
+})
+
+describe("ComboboxFiller: dropdowns that only open for a full click", () => {
+  // Builds a dropdown like React-select: typing alone does nothing, a full click opens the list, and typing then filters it.
+  function buildClickToOpenCombobox(optionTexts: string[], settings: { alreadyOpen?: boolean } = {}) {
+    document.body.innerHTML = `
+      <div class="shell"><input id="c" role="combobox" aria-expanded="false" /></div>
+      <div class="shell2" id="area"></div>`
+    const input = document.getElementById("c") as HTMLInputElement
+    const area = document.getElementById("area") as HTMLElement
+    const state = { chosen: "", clicksOnInput: 0, open: false }
+
+    // Shows the options that contain the typed text, announcing the list like an open dropdown does.
+    function render(): void {
+      const list = document.createElement("div")
+      list.id = "c-list"
+      list.setAttribute("role", "listbox")
+      for (const text of optionTexts.filter((candidate) => candidate.toLowerCase().includes(input.value.toLowerCase()))) {
+        const option = document.createElement("div")
+        option.setAttribute("role", "option")
+        option.textContent = text
+        option.addEventListener("click", () => {
+          state.chosen = text
+          state.open = false
+          area.replaceChildren()
+          input.setAttribute("aria-expanded", "false")
+        })
+        list.append(option)
+      }
+      area.replaceChildren(list)
+      input.setAttribute("aria-controls", "c-list")
+      input.setAttribute("aria-expanded", "true")
+    }
+
+    const sequence: string[] = []
+    input.addEventListener("pointerdown", () => sequence.push("pointerdown"))
+    input.addEventListener("mousedown", () => sequence.push("mousedown"))
+    input.addEventListener("mouseup", () => sequence.push("mouseup"))
+    input.addEventListener("click", () => {
+      state.clicksOnInput += 1
+      if (sequence.join() === "pointerdown,mousedown,mouseup" && !state.open) {
+        state.open = true
+        render()
+      }
+    })
+    input.addEventListener("input", () => {
+      if (state.open) render()
+    })
+
+    if (settings.alreadyOpen) {
+      state.open = true
+      render()
+    }
+    return { input, field: fieldForElement(input, "combobox"), state }
+  }
+
+  test("opens the list with a full click before typing, then picks the option", async () => {
+    const { field, state } = buildClickToOpenCombobox(["Yes", "No"])
+
+    const result = await filler.fill(field, "Yes")
+
+    expect(result).toEqual({ status: "filled" })
+    expect(state.chosen).toBe("Yes")
+  })
+
+  test("does not click a dropdown that is already open", async () => {
+    const { field, state } = buildClickToOpenCombobox(["Yes", "No"], { alreadyOpen: true })
+
+    await filler.fill(field, "No")
+
+    expect(state.clicksOnInput).toBe(0)
+    expect(state.chosen).toBe("No")
+  })
+})
+
+describe("ComboboxFiller: a choice the dropdown already shows", () => {
+  test("skips a dropdown that already displays a chosen value, even though its input is empty", async () => {
+    document.body.innerHTML = `
+      <div class="select-shell">
+        <div class="select__single-value">No</div>
+        <input id="c" role="combobox" aria-expanded="false" />
+      </div>`
+    const field = fieldForElement(document.getElementById("c") as HTMLInputElement, "combobox")
+
+    const result = await filler.fill(field, "Yes")
+
+    expect(result).toEqual({ status: "skipped", reason: "Field already has a value" })
+  })
+
+  test("counts a dropdown that already shows the wanted value as filled", async () => {
+    document.body.innerHTML = `
+      <div class="select-shell">
+        <div class="css-abc-singleValue">United States</div>
+        <input id="c" role="combobox" aria-expanded="false" />
+      </div>`
+    const field = fieldForElement(document.getElementById("c") as HTMLInputElement, "combobox")
+
+    expect(await filler.fill(field, "United States")).toEqual({ status: "filled" })
+  })
+
+  test("treats a dropdown that only shows a placeholder as empty", async () => {
+    document.body.innerHTML = `
+      <div class="select-shell">
+        <div class="select__placeholder">Select...</div>
+        <input id="c" role="combobox" aria-expanded="false" />
+      </div>`
+    const field = fieldForElement(document.getElementById("c") as HTMLInputElement, "combobox")
+
+    const result = await filler.fill(field, "Yes")
+
+    expect(result).toMatchObject({ status: "failed", reason: "No options appeared" })
+  })
+})

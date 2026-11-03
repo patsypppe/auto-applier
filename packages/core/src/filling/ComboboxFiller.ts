@@ -9,17 +9,51 @@ import { waitUntil } from "./waitUntil"
 import type { WaitTiming } from "./waitUntil"
 
 const DEFAULT_TIMING: WaitTiming = { timeoutMs: 1500, pollMs: 50 }
+const SHOWN_CHOICE_SEARCH_DEPTH = 3
 
 // Returns true when the element is an input.
 function isInput(element: HTMLElement): element is HTMLInputElement {
   return element.localName === "input"
 }
 
-// Returns the option elements in the list this combobox controls, or none if that list is not on the page yet.
+// Returns the ids of the lists an element says it controls or owns.
+function listIds(element: Element): string[] {
+  const ids = `${element.getAttribute("aria-controls") ?? ""} ${element.getAttribute("aria-owns") ?? ""}`
+  return ids.split(/\s+/).filter((id) => id !== "")
+}
+
+// Returns the option elements of this combobox's own list; before it announces one, only visible options that no other combobox owns.
 function findOptions(input: HTMLInputElement): HTMLElement[] {
-  const listboxId = (input.getAttribute("aria-controls") ?? input.getAttribute("aria-owns") ?? "").split(/\s+/)[0]
-  const scope: ParentNode | null = listboxId ? input.ownerDocument.getElementById(listboxId) : input.ownerDocument
-  return scope ? Array.from(scope.querySelectorAll<HTMLElement>('[role="option"]')) : []
+  const doc = input.ownerDocument
+  const [ownId] = listIds(input)
+  if (ownId) {
+    const list = doc.getElementById(ownId)
+    return list ? Array.from(list.querySelectorAll<HTMLElement>('[role="option"]')) : []
+  }
+
+  const owned = new Set(
+    Array.from(doc.querySelectorAll('[role="combobox"]')).filter((other) => other !== input).flatMap(listIds),
+  )
+  return Array.from(doc.querySelectorAll<HTMLElement>('[role="option"]')).filter((option) => {
+    const list = option.closest('[role="listbox"]')
+    return !option.closest("[hidden]") && !(list && owned.has(list.id))
+  })
+}
+
+// Returns an option's text without a trailing dial code, so "United States+1" reads as "United States".
+function optionText(option: HTMLElement): string {
+  return cleanText(option.textContent).replace(/\s*\+\d+$/, "")
+}
+
+// Returns the choice a dropdown already displays next to its input (React-select shows it outside the input, which stays empty), or "".
+function shownChoice(input: HTMLInputElement): string {
+  let container = input.parentElement
+  for (let depth = 0; container && depth < SHOWN_CHOICE_SEARCH_DEPTH; depth += 1) {
+    const shown = container.querySelector('[class*="single-value"], [class*="singleValue"]')
+    if (shown) return cleanText(shown.textContent)
+    container = container.parentElement
+  }
+  return ""
 }
 
 // Returns true once the pick has visibly taken effect: the option is gone, or its list is closed or hidden.
@@ -50,23 +84,30 @@ export class ComboboxFiller implements Filler {
     return field.kind === "combobox"
   }
 
-  // Types the value to open and filter the list, clicks the matching option, and checks the list reacted.
+  // Opens the list with a full click if it is closed, types the value to filter it, clicks the matching option, and checks the list reacted.
   async fill(field: FormField, value: string): Promise<FillResult> {
     const input = field.element
     if (!isInput(input)) return { status: "failed", reason: "Field is not a combobox input" }
     if (input.readOnly || input.disabled) {
       return { status: "skipped", reason: "Field is read-only or disabled" }
     }
+    const shown = shownChoice(input)
+    if (shown !== "") {
+      return findChoice(value, [shown], (text) => text)
+        ? { status: "filled" }
+        : { status: "skipped", reason: "Field already has a value" }
+    }
     if (input.value === value) return { status: "filled" }
     if (input.value !== "") return { status: "skipped", reason: "Field already has a value" }
 
     input.focus()
+    if (input.getAttribute("aria-expanded") !== "true") clickLikeUser(input)
     setNativeValue(input, value)
 
     const appeared = await waitUntil(() => findOptions(input).length > 0, this.timing)
     if (!appeared) return giveUp(input, "No options appeared")
 
-    const target = findChoice(value, findOptions(input), (option) => cleanText(option.textContent))
+    const target = findChoice(value, findOptions(input), optionText)
     if (!target) return giveUp(input, `No single option matches "${value}"`, "no-option-match")
     if (target.getAttribute("aria-disabled") === "true") return giveUp(input, "Option is disabled")
 
