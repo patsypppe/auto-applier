@@ -65,6 +65,7 @@ export const profileSchema = z.object({
   education: z.array(educationSchema),
   skills: z.array(z.string()),
   answers: standardAnswersSchema,
+  notes: optionalText,
   resume: z.optional(resumeFileSchema),
 })
 

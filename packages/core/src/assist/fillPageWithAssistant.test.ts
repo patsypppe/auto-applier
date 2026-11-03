@@ -1,53 +1,49 @@
-// Tests that the LLM is asked for help only where the rules could not decide, sees only what it should, and fails safely.
+// Tests that one AI call answers what the rules could not, sees the whole profile, fills only safe fields, and fails safely.
 // @vitest-environment jsdom
 import { describe, expect, test, vi } from "vitest"
+import { ComboboxFiller } from "../filling/ComboboxFiller"
+import { DEFAULT_SETUP } from "../fill/fillPage"
 import type { FieldReport } from "../fill/fillPage"
 import type { LLMClient } from "../ports/LLMClient"
 import type { Profile } from "../profile/types"
 import { fillPageWithAssistant } from "./fillPageWithAssistant"
 
 const profile: Profile = {
-  personal: { firstName: "Pranav", lastName: "Pattanashetty", email: "pranav@example.com", phone: "5551234567", country: "United States", links: {} },
+  personal: {
+    firstName: "Pranav",
+    lastName: "Pattanashetty",
+    email: "pranav@example.com",
+    phone: "5551234567",
+    country: "United States",
+    links: {},
+  },
   experience: [{ company: "Acme", title: "Engineer", startDate: "2022", description: "Built the billing system" }],
   education: [],
   skills: ["TypeScript"],
   answers: { workAuthorization: "Citizen", needsSponsorship: false, isAuthorizedToWork: true, salaryExpectation: "123456" },
+  notes: "Male. Asian (South Asian). Not a veteran.",
 }
 
-const PRIVATE_VALUES = ["pranav@example.com", "5551234567", "123456", "Pattanashetty"]
+type Script = { answers?: { id: number; answer: string }[]; raw?: unknown; error?: Error }
 
-type Stage = "map" | "pick" | "answer"
-type Script = { map?: unknown; pick?: unknown; answer?: unknown; failOn?: Stage; error?: Error }
-
-// Works out which kind of request a prompt is from its opening sentence.
-function stageOf(prompt: string): Stage {
-  if (prompt.startsWith("You match fields")) return "map"
-  if (prompt.startsWith("You choose which option")) return "pick"
-  if (prompt.startsWith("You draft short answers")) return "answer"
-  throw new Error("Unexpected prompt")
-}
-
-// Builds a model stand-in that answers each kind of request from the script, and can fail one of them.
+// Builds a model stand-in that answers every request from the script, or fails.
 function scriptedLlm(script: Script) {
   const prompts: string[] = []
   const llm: LLMClient = {
     completeJson: vi.fn(async (prompt: string) => {
       prompts.push(prompt)
-      const stage = stageOf(prompt)
-      if (script.failOn === stage) throw script.error ?? new Error("The model failed")
-      if (stage === "map") return script.map ?? { matches: [] }
-      if (stage === "pick") return script.pick ?? { choices: [] }
-      return script.answer ?? { answers: [] }
+      if (script.error) throw script.error
+      return script.raw ?? { answers: script.answers ?? [] }
     }),
   }
   return { llm, prompts }
 }
 
 // Loads the page, runs the assisted fill, and returns the result with the prompts the model saw.
-async function run(html: string, script: Script = {}, jobContext?: string) {
+async function run(html: string, script: Script = {}, jobContext?: string, setup = DEFAULT_SETUP) {
   document.body.innerHTML = html
   const { llm, prompts } = scriptedLlm(script)
-  const result = await fillPageWithAssistant(document, profile, llm, { jobContext })
+  const result = await fillPageWithAssistant(document, profile, llm, { jobContext, setup })
   return { result, prompts, llm }
 }
 
@@ -63,10 +59,17 @@ function valueOf(id: string): string {
   return (document.getElementById(id) as HTMLInputElement).value
 }
 
-// Returns the prompt of the given kind that the model saw, if any.
-function promptOf(prompts: string[], stage: Stage): string | undefined {
-  return prompts.find((prompt) => stageOf(prompt) === stage)
-}
+const GENDER_SELECT = `
+  <label for="g">Gender</label>
+  <select id="g">
+    <option value="">Select…</option>
+    <option>Male</option>
+    <option>Female</option>
+    <option>Decline to self-identify</option>
+  </select>`
+
+const REFERRAL = `<label for="r">Referral code</label><input id="r" />`
+const QUESTION = `<label for="w">Why do you want to work here?</label><textarea id="w"></textarea>`
 
 const SPONSORSHIP_SELECT = `
   <label for="s">Do you require visa sponsorship?</label>
@@ -76,243 +79,210 @@ const SPONSORSHIP_SELECT = `
     <option value="2">I do not require sponsorship</option>
   </select>`
 
-const QUESTION = `<label for="w">Why do you want to work here?</label><textarea id="w"></textarea>`
-
 describe("fillPageWithAssistant: when the rules are enough", () => {
-  test("does not call the model and adds no notes", async () => {
+  test("never calls the model when the rules fill everything", async () => {
     const { result, llm } = await run(
-      `<label for="a">First name</label><input id="a" /><label for="b">Email</label><input id="b" type="email" />`,
+      `<label for="f">First name</label><input id="f" /><label for="e">Email</label><input id="e" />`,
     )
 
     expect(llm.completeJson).not.toHaveBeenCalled()
     expect(result.notes).toEqual([])
-    expect(result.reports.every((report) => report.source === undefined)).toBe(true)
-    expect(valueOf("a")).toBe("Pranav")
-  })
-
-  test("keeps the reports in page order", async () => {
-    const { result } = await run(`<label for="a">First name</label><input id="a" />${QUESTION}<label for="b">Email</label><input id="b" />`)
-
-    expect(result.reports.map((report) => report.field.element.id)).toEqual(["a", "w", "b"])
+    expect(valueOf("f")).toBe("Pranav")
   })
 })
 
-describe("fillPageWithAssistant: matching unrecognised fields", () => {
-  const CONTACT = `<label for="c">Contact number</label><input id="c" />`
+describe("fillPageWithAssistant: answering what is left", () => {
+  test("asks once for all the leftovers, with the fields in page order", async () => {
+    const { llm, prompts } = await run(`${GENDER_SELECT}${REFERRAL}${QUESTION}`)
 
-  test("fills a field the model matched to a profile key, and marks it as AI work", async () => {
-    const { result } = await run(CONTACT, { map: { matches: [{ id: 0, key: "phone" }] } })
-
-    expect(valueOf("c")).toBe("5551234567")
-    expect(reportFor(result.reports, "c")).toMatchObject({ profileKey: "phone", outcome: { status: "filled" }, source: "ai" })
+    expect(llm.completeJson).toHaveBeenCalledTimes(1)
+    const prompt = prompts[0]!
+    expect(prompt.indexOf("Gender")).toBeLessThan(prompt.indexOf("Referral code"))
+    expect(prompt.indexOf("Referral code")).toBeLessThan(prompt.indexOf("Why do you want"))
   })
 
-  test("leaves a field alone when the model says none", async () => {
-    const { result } = await run(CONTACT, { map: { matches: [{ id: 0, key: "none" }] } })
+  test("fills a dropdown with the option the model chose and marks it as the AI's work", async () => {
+    const { result } = await run(GENDER_SELECT, { answers: [{ id: 0, answer: "Male" }] })
 
-    expect(valueOf("c")).toBe("")
-    expect(reportFor(result.reports, "c").outcome).toEqual({ status: "unmatched" })
+    expect(valueOf("g")).toBe("Male")
+    expect(reportFor(result.reports, "g")).toMatchObject({ outcome: { status: "filled" }, source: "ai" })
   })
 
-  test("ignores a key that does not exist", async () => {
-    const { result } = await run(CONTACT, { map: { matches: [{ id: 0, key: "favouriteColour" }] } })
+  test("fills a plain text field with the model's answer", async () => {
+    const { result } = await run(REFERRAL, { answers: [{ id: 0, answer: "FRIEND42" }] })
 
-    expect(valueOf("c")).toBe("")
-    expect(reportFor(result.reports, "c").outcome).toEqual({ status: "unmatched" })
+    expect(valueOf("r")).toBe("FRIEND42")
+    expect(reportFor(result.reports, "r").source).toBe("ai")
   })
 
-  test("reports no-value when the matched key has nothing in the profile", async () => {
-    const { result } = await run(`<label for="p">Profile page</label><input id="p" />`, {
-      map: { matches: [{ id: 0, key: "linkedin" }] },
+  test("picks the option for a question the rules recognised but could not match to an option", async () => {
+    const { result } = await run(SPONSORSHIP_SELECT, { answers: [{ id: 0, answer: "I do not require sponsorship" }] })
+
+    expect(valueOf("s")).toBe("2")
+    expect(reportFor(result.reports, "s")).toMatchObject({ profileKey: "needsSponsorship", outcome: { status: "filled" }, source: "ai" })
+  })
+
+  test("fills a radio group and a group of checkboxes", async () => {
+    const { result } = await run(
+      `<fieldset><legend>Are you Hispanic or Latino?</legend>
+        <label><input id="yes" type="radio" name="h" /> Yes</label>
+        <label><input id="no" type="radio" name="h" /> No</label></fieldset>
+       <fieldset><legend>Which regions interest you?</legend>
+        <label><input id="na" type="checkbox" name="reg[]" /> North America</label>
+        <label><input id="eu" type="checkbox" name="reg[]" /> Europe</label></fieldset>`,
+      {
+        answers: [
+          { id: 0, answer: "No" },
+          { id: 1, answer: "North America" },
+        ],
+      },
+    )
+
+    expect((document.getElementById("no") as HTMLInputElement).checked).toBe(true)
+    expect((document.getElementById("na") as HTMLInputElement).checked).toBe(true)
+    expect(reportFor(result.reports, "yes").source).toBe("ai")
+    expect(reportFor(result.reports, "na").source).toBe("ai")
+  })
+
+  test("asks about a field the profile had no value for, and fills it if the model can answer", async () => {
+    const { result } = await run(`<label for="n">Notice period</label><input id="n" />`, { answers: [{ id: 0, answer: "Two weeks" }] })
+
+    expect(valueOf("n")).toBe("Two weeks")
+    expect(reportFor(result.reports, "n")).toMatchObject({ outcome: { status: "filled" }, source: "ai" })
+  })
+
+  test("leaves a field untouched when the model gives no answer for it", async () => {
+    const { result } = await run(GENDER_SELECT, { answers: [{ id: 0, answer: "" }] })
+
+    expect(valueOf("g")).toBe("")
+    expect(reportFor(result.reports, "g").outcome).toEqual({ status: "unmatched" })
+  })
+
+  test("ignores a choice the model made that the page does not offer", async () => {
+    const { result } = await run(GENDER_SELECT, { answers: [{ id: 0, answer: "Non-binary" }] })
+
+    expect(valueOf("g")).toBe("")
+    expect(reportFor(result.reports, "g").outcome).toEqual({ status: "unmatched" })
+  })
+
+  test("reports a failed fill honestly when the model's answer cannot be put in the field", async () => {
+    const { result } = await run(`<label for="r">Referral code</label><input id="r" readonly />`, { answers: [{ id: 0, answer: "X" }] })
+
+    expect(reportFor(result.reports, "r").outcome).toMatchObject({ status: "skipped" })
+    expect(reportFor(result.reports, "r").source).toBeUndefined()
+  })
+})
+
+describe("fillPageWithAssistant: written questions", () => {
+  test("fills a long question with the draft and marks it for review", async () => {
+    const { result } = await run(QUESTION, { answers: [{ id: 0, answer: "Because I like billing." }] })
+
+    expect(valueOf("w")).toBe("Because I like billing.")
+    expect(reportFor(result.reports, "w")).toMatchObject({ outcome: { status: "drafted" }, source: "ai" })
+  })
+
+  test("sends the job page text only when there is a written question", async () => {
+    const withQuestion = await run(QUESTION, {}, "We build billing tools.")
+    const withoutQuestion = await run(GENDER_SELECT, {}, "We build billing tools.")
+
+    expect(withQuestion.prompts[0]).toContain("We build billing tools.")
+    expect(withoutQuestion.prompts[0]).not.toContain("We build billing tools.")
+  })
+})
+
+describe("fillPageWithAssistant: what the model sees", () => {
+  test("sees the whole profile, because the user chose to share it for unresolved questions", async () => {
+    const { prompts } = await run(GENDER_SELECT)
+
+    for (const fact of ["pranav@example.com", "5551234567", "123456", "Asian (South Asian)", "Built the billing system"]) {
+      expect(prompts[0]).toContain(fact)
+    }
+  })
+
+  test("treats the form and job page text as untrusted", async () => {
+    const { prompts } = await run(GENDER_SELECT)
+
+    expect(prompts[0]).toMatch(/untrusted/i)
+  })
+})
+
+describe("fillPageWithAssistant: fields the model is never asked about", () => {
+  test("a single checkbox such as a consent is never ticked by the model", async () => {
+    const { prompts } = await run(`${GENDER_SELECT}<label><input id="agree" type="checkbox" /> I agree to the terms</label>`, {
+      answers: [{ id: 0, answer: "Male" }],
     })
 
-    expect(reportFor(result.reports, "p")).toMatchObject({ outcome: { status: "no-value", profileKey: "linkedin" }, source: "ai" })
+    expect(prompts[0]).not.toContain("I agree to the terms")
+    expect((document.getElementById("agree") as HTMLInputElement).checked).toBe(false)
   })
 
-  test("sends only labels, names and options, never the profile's values", async () => {
-    const { prompts } = await run(`<label for="a">First name</label><input id="a" />${CONTACT}`)
+  test("a file upload is not asked about", async () => {
+    const { prompts } = await run(`${GENDER_SELECT}<label for="c">Cover letter</label><input id="c" type="file" />`)
 
-    const prompt = promptOf(prompts, "map")!
-    expect(prompt).toContain('"label": "Contact number"')
-    expect(prompt).not.toContain('"label": "First name"')
-    for (const secret of [...PRIVATE_VALUES, "Pranav"]) expect(prompt).not.toContain(secret)
+    expect(prompts[0]).not.toContain("Cover letter")
   })
 
-  test("asks only about fields that something can fill and that have a label or name", async () => {
-    const { prompts } = await run(`
-      <label for="r">Resume</label><input id="r" type="file" />
-      <input />
-      <label for="ref">Referral code</label><input id="ref" />`)
+  test("a text field the user already filled is left alone", async () => {
+    document.body.innerHTML = `${REFERRAL}${GENDER_SELECT}`
+    ;(document.getElementById("r") as HTMLInputElement).value = "MINE"
+    const { llm } = scriptedLlm({})
+    const result = await fillPageWithAssistant(document, profile, llm)
 
-    const prompt = promptOf(prompts, "map")!
-    expect(prompt).toContain('"label": "Referral code"')
-    expect(prompt).not.toContain('"label": "Resume"')
-    expect(prompt.match(/"id": \d+,\n\s+"label"/g)).toHaveLength(1)
+    expect(valueOf("r")).toBe("MINE")
+    expect(JSON.stringify((llm.completeJson as ReturnType<typeof vi.fn>).mock.calls)).not.toContain("Referral code")
+    expect(result.notes).toEqual([])
   })
 
-  test("does not call the model at all when nothing unrecognised could be asked about", async () => {
+  test("a field with neither a label nor a name is not asked about", async () => {
     const { llm } = await run(`<input />`)
 
     expect(llm.completeJson).not.toHaveBeenCalled()
   })
 
-  test("does not ask about a field the user has already filled in", async () => {
-    const { llm } = await run(`<label for="c">Contact number</label><input id="c" value="mine" />`)
-
-    expect(llm.completeJson).not.toHaveBeenCalled()
-    expect(valueOf("c")).toBe("mine")
-  })
-})
-
-describe("fillPageWithAssistant: choosing an option", () => {
-  test("lets the model pick the option that means the known answer, then fills it", async () => {
-    const { result } = await run(SPONSORSHIP_SELECT, {
-      pick: { choices: [{ id: 0, option: "I do not require sponsorship" }] },
-    })
-
-    expect(valueOf("s")).toBe("2")
-    expect(reportFor(result.reports, "s")).toMatchObject({
-      profileKey: "needsSponsorship",
-      outcome: { status: "filled" },
-      source: "ai",
-    })
-  })
-
-  test("works for radio groups too", async () => {
-    const { result } = await run(
-      `<fieldset><legend>Are you legally authorized to work in the US?</legend>
-        <label><input id="y" type="radio" name="a" /> I am authorized to work</label>
-        <label><input id="n" type="radio" name="a" /> I am not authorized to work</label>
-      </fieldset>`,
-      { pick: { choices: [{ id: 0, option: "I am authorized to work" }] } },
+  test("a dropdown that failed for a reason the model cannot fix is not asked about", async () => {
+    const fast = { ...DEFAULT_SETUP, fillers: [...DEFAULT_SETUP.fillers.filter((filler) => !(filler instanceof ComboboxFiller)), new ComboboxFiller({ timeoutMs: 20, pollMs: 5 })] }
+    const { prompts, result } = await run(
+      `<label for="country">Country</label><input id="country" role="combobox" />${REFERRAL}`,
+      { answers: [{ id: 0, answer: "FRIEND42" }] },
+      undefined,
+      fast,
     )
 
-    expect((document.getElementById("y") as HTMLInputElement).checked).toBe(true)
-    expect(reportFor(result.reports, "y").source).toBe("ai")
+    expect(reportFor(result.reports, "country").outcome).toMatchObject({ status: "failed", reason: "No options appeared" })
+    expect(prompts[0]).not.toContain("Country")
   })
 
-  test("works for a group of checkboxes too", async () => {
-    const { result } = await run(
-      `<fieldset><legend>Please select the country or countries you anticipate working in</legend>
-        <label><input id="us" type="checkbox" name="c[]" /> US</label>
-        <label><input id="uk" type="checkbox" name="c[]" /> UK</label>
-      </fieldset>`,
-      { pick: { choices: [{ id: 0, option: "US" }] } },
-    )
+  test("asks about at most forty fields", async () => {
+    const many = Array.from({ length: 55 }, (_unused, index) => `<label for="f${index}">Question ${index}</label><input id="f${index}" />`).join("")
 
-    expect((document.getElementById("us") as HTMLInputElement).checked).toBe(true)
-    expect((document.getElementById("uk") as HTMLInputElement).checked).toBe(false)
-    expect(reportFor(result.reports, "us")).toMatchObject({ profileKey: "country", outcome: { status: "filled" }, source: "ai" })
-  })
+    const { prompts } = await run(many)
 
-  test("sends the question, the options and the one known answer, and nothing else private", async () => {
-    const { prompts } = await run(SPONSORSHIP_SELECT)
-
-    const prompt = promptOf(prompts, "pick")!
-    expect(prompt).toContain("Do you require visa sponsorship?")
-    expect(prompt).toContain("I do not require sponsorship")
-    expect(prompt).toContain('"answer": "No"')
-    for (const secret of PRIVATE_VALUES) expect(prompt).not.toContain(secret)
-  })
-
-  test("leaves the field failed when the model picks an option that was not offered", async () => {
-    const { result } = await run(SPONSORSHIP_SELECT, { pick: { choices: [{ id: 0, option: "Maybe" }] } })
-
-    expect(valueOf("s")).toBe("")
-    expect(reportFor(result.reports, "s").outcome).toMatchObject({ status: "failed", code: "no-option-match" })
-    expect(reportFor(result.reports, "s").source).toBeUndefined()
-  })
-})
-
-describe("fillPageWithAssistant: drafting answers", () => {
-  const ANSWER = { answers: [{ id: 0, answer: "I admire how Example Co builds billing tools." }] }
-
-  test("fills a free-text question with a draft and marks it for review", async () => {
-    const { result } = await run(QUESTION, { answer: ANSWER })
-
-    expect(valueOf("w")).toBe("I admire how Example Co builds billing tools.")
-    expect(reportFor(result.reports, "w")).toMatchObject({ outcome: { status: "drafted" }, source: "ai" })
-  })
-
-  test("gives the model the skills, jobs and job page text but nothing private", async () => {
-    const { prompts } = await run(QUESTION, { answer: ANSWER }, "Software Engineer at Example Co.")
-
-    const prompt = promptOf(prompts, "answer")!
-    expect(prompt).toContain("TypeScript")
-    expect(prompt).toContain("Acme")
-    expect(prompt).toContain("Software Engineer at Example Co.")
-    for (const secret of PRIVATE_VALUES) expect(prompt).not.toContain(secret)
-  })
-
-  test("says there is no job page text when none was given", async () => {
-    const { prompts } = await run(QUESTION, { answer: ANSWER })
-
-    expect(promptOf(prompts, "answer")).toContain("(none)")
-  })
-
-  test("leaves the question unmatched when the model has no answer", async () => {
-    const { result } = await run(QUESTION, { answer: { answers: [{ id: 0, answer: "" }] } })
-
-    expect(valueOf("w")).toBe("")
-    expect(reportFor(result.reports, "w").outcome).toEqual({ status: "unmatched" })
-  })
-
-  test("only asks about real questions, not short ordinary fields", async () => {
-    const { prompts } = await run(`<label for="ref">Referral code</label><input id="ref" />${QUESTION}`, { answer: ANSWER })
-
-    const prompt = promptOf(prompts, "answer")!
-    expect(prompt).toContain("Why do you want to work here?")
-    expect(prompt).not.toContain("Referral code")
-  })
-
-  test("does not touch a question the user has already answered", async () => {
-    const { llm } = await run(`<label for="w">Why do you want to work here?</label><textarea id="w">My own words</textarea>`, {
-      answer: ANSWER,
-    })
-
-    expect(llm.completeJson).not.toHaveBeenCalled()
-    expect(valueOf("w")).toBe("My own words")
+    expect(prompts[0]).toContain("Question 39")
+    expect(prompts[0]).not.toContain("Question 40")
   })
 })
 
 describe("fillPageWithAssistant: when the model is not available", () => {
-  const RATE_LIMITED = new Error("Gemini returned 429: Resource exhausted")
-
-  test("keeps what the rules did, adds a note, and stops asking after the first failure", async () => {
-    const { result, llm } = await run(
-      `<label for="a">First name</label><input id="a" /><label for="c">Contact number</label><input id="c" />${SPONSORSHIP_SELECT}${QUESTION}`,
-      { failOn: "map", error: RATE_LIMITED },
+  test("keeps what the rules filled and adds a note when the call fails", async () => {
+    const { result } = await run(
+      `<label for="f">First name</label><input id="f" />${GENDER_SELECT}`,
+      { error: new Error("Gemini returned 503: busy; Groq returned 429: slow down") },
     )
 
-    expect(result.notes).toEqual(["AI help skipped: Gemini returned 429: Resource exhausted"])
-    expect(llm.completeJson).toHaveBeenCalledTimes(1)
-    expect(valueOf("a")).toBe("Pranav")
-    expect(reportFor(result.reports, "c").outcome).toEqual({ status: "unmatched" })
-    expect(reportFor(result.reports, "s").outcome).toMatchObject({ status: "failed", code: "no-option-match" })
+    expect(valueOf("f")).toBe("Pranav")
+    expect(valueOf("g")).toBe("")
+    expect(result.notes).toEqual(["AI help skipped: Gemini returned 503: busy; Groq returned 429: slow down"])
   })
 
-  test("a failure while choosing options stops the drafting of answers", async () => {
-    const { result, prompts } = await run(`${SPONSORSHIP_SELECT}${QUESTION}`, { failOn: "pick", error: RATE_LIMITED })
+  test("adds a note and changes nothing when the answer is not in the expected shape", async () => {
+    const { result } = await run(GENDER_SELECT, { raw: { nonsense: true } })
 
-    expect(result.notes).toEqual(["AI help skipped: Gemini returned 429: Resource exhausted"])
-    expect(promptOf(prompts, "answer")).toBeUndefined()
-    expect(valueOf("w")).toBe("")
+    expect(valueOf("g")).toBe("")
+    expect(result.notes[0]).toMatch(/AI help skipped: .*format/i)
   })
 
-  test("a failure while drafting keeps the work done by the earlier steps", async () => {
-    const { result } = await run(`<label for="c">Contact number</label><input id="c" />${QUESTION}`, {
-      map: { matches: [{ id: 0, key: "phone" }] },
-      failOn: "answer",
-      error: RATE_LIMITED,
-    })
-
-    expect(result.notes).toHaveLength(1)
-    expect(valueOf("c")).toBe("5551234567")
-    expect(valueOf("w")).toBe("")
-  })
-
-  test("turns a failure that is not an Error into a generic note", async () => {
-    document.body.innerHTML = `<label for="c">Contact number</label><input id="c" />`
+  test("uses a generic reason when something other than an error is thrown", async () => {
+    document.body.innerHTML = GENDER_SELECT
     const llm: LLMClient = {
       completeJson: async () => {
         throw "weird"

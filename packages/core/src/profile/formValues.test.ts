@@ -197,3 +197,29 @@ describe("location in the form", () => {
     expect(profile.ok && fromFormValues(toFormValues(profile.profile))).toEqual(profile)
   })
 })
+
+describe("notes in the form", () => {
+  test("start blank", () => {
+    expect(emptyFormValues().notes).toBe("")
+  })
+
+  test("are trimmed and kept, with their line breaks", () => {
+    const result = fromFormValues({ ...filledValues, notes: "  Male.\nSouth Asian.  " })
+
+    expect(result.ok && result.profile.notes).toBe("Male.\nSouth Asian.")
+  })
+
+  test("are left out of the profile when blank", () => {
+    const result = fromFormValues({ ...filledValues, notes: "   " })
+
+    expect(result.ok && result.profile.notes).toBeUndefined()
+  })
+
+  test("come back as form text, blank when the profile has none, and round-trip", () => {
+    const profile = fromFormValues({ ...filledValues, notes: "Not a veteran." })
+
+    expect(profile.ok && toFormValues(profile.profile).notes).toBe("Not a veteran.")
+    expect(toFormValues(existingProfile).notes).toBe("")
+    expect(profile.ok && fromFormValues(toFormValues(profile.profile))).toEqual(profile)
+  })
+})

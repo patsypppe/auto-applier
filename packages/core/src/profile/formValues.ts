@@ -23,6 +23,7 @@ export type ProfileFormValues = {
   isAuthorizedToWork: "yes" | "no"
   noticePeriod: string
   salaryExpectation: string
+  notes: string
 }
 
 // The parts of a profile the form does not edit, which are kept when the form is saved.
@@ -55,6 +56,7 @@ export function emptyFormValues(): ProfileFormValues {
     isAuthorizedToWork: "yes",
     noticePeriod: "",
     salaryExpectation: "",
+    notes: "",
   }
 }
 
@@ -87,6 +89,7 @@ export function toFormValues(profile: Profile): ProfileFormValues {
     isAuthorizedToWork: answers.isAuthorizedToWork ? "yes" : "no",
     noticePeriod: answers.noticePeriod ?? "",
     salaryExpectation: answers.salaryExpectation ?? "",
+    notes: profile.notes ?? "",
   }
 }
 
@@ -123,6 +126,7 @@ export function fromFormValues(values: ProfileFormValues, existing?: CarriedOver
       noticePeriod: optionalText(values.noticePeriod),
       salaryExpectation: optionalText(values.salaryExpectation),
     },
+    notes: optionalText(values.notes),
     resume: existing?.resume,
   })
 }

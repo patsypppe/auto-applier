@@ -193,3 +193,29 @@ describe("ProfileForm: location", () => {
     )
   })
 })
+
+describe("ProfileForm: notes for the AI", () => {
+  test("shows a multi-line box with the saved notes and a hint about what to put in it", async () => {
+    await mountForm({ ...SAVED, notes: "Male.\nAsian (South Asian)." })
+
+    const box = field("notes")
+    expect(box.tagName).toBe("TEXTAREA")
+    expect(box.value).toBe("Male.\nAsian (South Asian).")
+    expect(document.querySelector(".field-hint")?.textContent).toContain("equal-opportunity")
+  })
+
+  test("saves typed notes with their line breaks", async () => {
+    const { store } = await mountForm(SAVED)
+
+    field("notes").value = "Not a veteran.\nNo disability."
+    await submit()
+
+    expect(store.save).toHaveBeenCalledWith(expect.objectContaining({ notes: "Not a veteran.\nNo disability." }))
+  })
+
+  test("starts empty when nothing is saved", async () => {
+    await mountForm(SAVED)
+
+    expect(field("notes").value).toBe("")
+  })
+})

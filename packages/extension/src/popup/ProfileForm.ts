@@ -11,13 +11,21 @@ export type ProfileFormHandle = {
   showDraft(values: ProfileFormValues, carried: CarriedOver, errors: string[]): void
 }
 
-// Creates the input control for one field: a yes/no select or a text-like input.
-function createControl(spec: FieldSpec, value: string): HTMLInputElement | HTMLSelectElement {
+const NOTES_ROWS = 5
+
+// Creates the input control for one field: a yes/no select, a multi-line box or a text-like input.
+function createControl(spec: FieldSpec, value: string): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement {
   if (spec.type === "yesno") {
     const select = document.createElement("select")
     select.append(new Option("No", "no"), new Option("Yes", "yes"))
     select.value = value
     return select
+  }
+  if (spec.type === "textarea") {
+    const area = document.createElement("textarea")
+    area.rows = NOTES_ROWS
+    area.value = value
+    return area
   }
 
   const input = document.createElement("input")
@@ -40,6 +48,12 @@ function createField(spec: FieldSpec, value: string): HTMLElement {
   const wrapper = document.createElement("div")
   wrapper.className = "field"
   wrapper.append(label, control)
+  if (spec.hint) {
+    const hint = document.createElement("small")
+    hint.className = "field-hint"
+    hint.textContent = spec.hint
+    wrapper.append(hint)
+  }
   return wrapper
 }
 
@@ -55,7 +69,7 @@ function readValues(form: HTMLFormElement): ProfileFormValues {
 // Puts the given values into the form's fields.
 function writeValues(form: HTMLFormElement, values: ProfileFormValues): void {
   for (const spec of PROFILE_FIELDS) {
-    const control = form.elements.namedItem(spec.key) as HTMLInputElement | HTMLSelectElement | null
+    const control = form.elements.namedItem(spec.key) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null
     if (control) control.value = values[spec.key]
   }
 }

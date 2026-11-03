@@ -55,5 +55,6 @@ export type Profile = {
   education: Education[]
   skills: string[]
   answers: StandardAnswers
+  notes?: string
   resume?: ResumeFile
 }

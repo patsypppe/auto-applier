@@ -45,6 +45,13 @@ describe("validateProfile", () => {
     expect(validateProfile({ ...validProfile, personal: { ...validProfile.personal, city: "Seattle" } }).ok).toBe(true)
   })
 
+  test("accepts notes for the AI, and rejects notes that are not text", () => {
+    const withNotes = { ...validProfile, notes: "Male. Asian. Not a veteran." }
+
+    expect(validateProfile(withNotes)).toEqual({ ok: true, profile: withNotes })
+    expect(validateProfile({ ...validProfile, notes: 5 }).ok).toBe(false)
+  })
+
   test("rejects a city that is not text", () => {
     const result = validateProfile({ ...validProfile, personal: { ...validProfile.personal, city: 5 } })
 

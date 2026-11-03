@@ -4,8 +4,9 @@ import type { ProfileFormValues } from "@auto-applier/core"
 export type FieldSpec = {
   key: keyof ProfileFormValues
   label: string
-  type: "text" | "email" | "tel" | "yesno"
+  type: "text" | "email" | "tel" | "yesno" | "textarea"
   required?: boolean
+  hint?: string
 }
 
 export const PROFILE_FIELDS: FieldSpec[] = [
@@ -28,4 +29,10 @@ export const PROFILE_FIELDS: FieldSpec[] = [
   { key: "needsSponsorship", label: "Needs visa sponsorship", type: "yesno" },
   { key: "noticePeriod", label: "Notice period", type: "text" },
   { key: "salaryExpectation", label: "Salary expectation", type: "text" },
+  {
+    key: "notes",
+    label: "Other facts the AI may use",
+    type: "textarea",
+    hint: "Used to answer questions the form fields above cannot, such as equal-opportunity questions (gender, ethnicity, veteran or disability status), earlier employers and preferences. Shared with the AI whenever a form has questions the rules could not answer.",
+  },
 ]

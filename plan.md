@@ -44,7 +44,7 @@ The user can also type or edit the profile by hand at any time, and a later resu
 ```
 discoverFields → matcher chain → resolveValue → validate against field
    → filler per field kind → report
-        └─ unmatched fields → background worker → LLM fallback (Call A / Call B)
+        └─ leftover fields → background worker → ONE LLM call with the whole profile
 ```
 - Each field gets a result: filled, skipped (with a reason) or failed (with a reason). Fields the extension could not fill are highlighted for the user.
 - It stops before submit. The user reviews and presses submit.
@@ -95,9 +95,9 @@ Patterns in use: Strategy (fillers, adapters), Chain of Responsibility (matchers
 - Behind `LLMClient.completeJson(prompt)`, one implementation per provider. **Provider: Google Gemini (chosen by the user)**, through the `generateContent` endpoint with the key in an `x-goog-api-key` header. The model name is a setting. The user supplies their own API key, kept in local storage. **Backup: Groq** (OpenAI-compatible chat API), tried only when Gemini fails, each with its own key and model in the popup.
 - All LLM calls run in the background worker, never in the content script, so page scripts never see the key.
 - **Resume parsing:** plain code extracts the text; the LLM turns it into JSON; `validateProfile` checks it; it becomes a draft. **(Proposed)** if validation fails, the error list can be sent back to the LLM once for a fix. Scanned (image-only) PDFs have no text and will not work.
-- **Call A, map fields:** for fields the chain could not match. Sends only field metadata and the list of key names, never the user's values. Returns a key or `none` per field. One batched call per page.
-- **Call B, free-text answers:** for long free-text questions. Sends the question, the relevant slice of the profile and the job description. Returns a draft answer the user reviews.
-- **Call C, pick an option (built in step 10a):** when the key is known but no single option in a select or radio group matches the value (for example "No" versus "I do not require sponsorship"), the field goes to the LLM. Sends the field's label, its options and only that one value; returns the option that fits, or `none`. This is the decided rule: any ambiguity the deterministic steps cannot resolve is handed to the LLM, and `none` or no answer leaves the field flagged.
+- **One call for the leftovers (replaced the earlier Calls A, B and C after the first real-form test):** for every field the rules left unmatched, without a value, or without a matching option. Sends the whole profile (including the free-text notes), the fields with their options, and the job page text when a written answer is wanted. Returns an answer per field; choices must be one of the options. The user chose this for answer quality and fewer failure points, accepting that contact details reach the model.
+- Written questions are drafted in the same call and outlined for review.
+- Single consent checkboxes, file uploads and dropdowns that failed for another reason are never sent to the model.
 - Never sent to the LLM: credentials, the vault, the API key.
 
 ## 8. Handling sites that resist an extension

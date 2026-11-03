@@ -9,7 +9,7 @@ It is built for personal use (the author and a friend), not for the public. It f
 - Keeps one profile: name, contact details, links, skills, work authorization answers, and your work history and education.
 - Builds that profile from your resume (PDF or text file) using an AI model.
 - Fills the fields it recognises on an application page: text boxes, dropdowns, radio buttons, checkboxes and search-as-you-type boxes.
-- For fields it does not recognise, asks the AI to match them to your profile, to pick the right option for a known answer, or to draft short answers to free-text questions using your skills, jobs and the job page.
+- For everything the rules cannot answer (equal-opportunity questions, "ever employed by…", opt-ins, written questions), asks the AI once, giving it your whole profile and the free-text notes you keep in the popup. It never ticks single consent checkboxes for you.
 - Outlines what needs you: **red** failed, **amber** not filled (unknown field or nothing saved for it), **blue** written or chosen by the AI (please check it).
 
 ## Status (read this)
@@ -52,6 +52,7 @@ Load it into Chrome:
    - **Upload a resume** with "Fill your profile from a resume (PDF or text)". If the profile is complete it is saved automatically. Otherwise the form is filled in and lists what is missing. Work authorization is usually missing on the first run, because a resume does not say it.
    - Or **type it in** and press **Save profile**.
 5. Check the form (especially the work authorization answers) and press **Save profile** again if you changed anything.
+6. Fill in City, State and Country (a resume often gives no country), and the **Other facts the AI may use** box: for example "Male. Asian (South Asian). Not a veteran. No disability. Not previously employed at the companies I apply to." The AI uses this for equal-opportunity and yes/no questions. Leave it blank if you would rather answer those yourself.
 
 ## Using it on an application
 
@@ -73,7 +74,7 @@ Then open `http://localhost:8000/simple-application.html`, save a profile in the
 
 - Your profile and API keys are stored in the browser (`chrome.storage.local`, plain text). The keys are used only by the extension's background worker, never by the web page.
 - Rules fill everything they can without sending anything. The AI is called only when something is left undecided.
-- What is sent when it is called: the labels, names and options of unrecognised fields; one answer value for an option question; and, for free-text questions, your skills, jobs and degrees plus up to 4,000 characters of the page's text. Your name, contact details, links, salary and work-authorization answers are not sent for drafting answers.
+- **What is sent when it is called: your whole profile** (name, email, phone, links, jobs and their descriptions, education, skills, work-authorization and salary answers, and your notes), the labels and options of the unresolved fields, and for written questions up to 4,000 characters of the job page's text. It is sent in one call.
 - **Resume upload sends the resume text** to the AI.
 - Prompts go to Google (Gemini), and to Groq only if you added a Groq key and Gemini failed.
 - If you use Gemini's free tier, check Google's terms on how free-tier content is used.

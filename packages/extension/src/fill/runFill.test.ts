@@ -25,8 +25,8 @@ function storeHolding(profile: unknown): ProfileStore {
   return { load: async () => profile as Profile | undefined, save: async () => undefined }
 }
 
-// Builds a model stand-in whose answer works for every kind of request, so each step reads its own part.
-function llmAnswering(answer: unknown = { matches: [], choices: [], answers: [{ id: 0, answer: "Because I like billing." }] }) {
+// Builds a model stand-in with one fixed answer: field 0 is the referral code, field 1 the written question.
+function llmAnswering(answer: unknown = { answers: [{ id: 1, answer: "Because I like billing." }] }) {
   const prompts: string[] = []
   const llm: LLMClient = {
     completeJson: vi.fn(async (prompt: string) => {
@@ -104,10 +104,10 @@ describe("runFill: filling the page", () => {
 
     await runFill(storeHolding(PROFILE), llm)
 
-    const drafting = prompts.find((prompt) => prompt.startsWith("You draft short answers"))!
-    expect(drafting).toContain("Software Engineer at Example Co.")
-    expect(drafting).toContain("We build billing tools.")
-    expect(drafting).not.toContain("Referral code")
+    const jobSection = prompts[0]!.split("Job page text")[1]!.split("Fields (JSON)")[0]!
+    expect(jobSection).toContain("Software Engineer at Example Co.")
+    expect(jobSection).toContain("We build billing tools.")
+    expect(jobSection).not.toContain("Referral code")
   })
 
   test("outlines fields that need the user and fields the AI wrote", async () => {
