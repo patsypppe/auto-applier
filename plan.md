@@ -149,7 +149,7 @@ Steps are built one at a time: tests first, diff shown, approval, commit. `CLAUD
 | 6c | Combobox filler | `ComboboxFiller` | done |
 | 7 | `fillPage`, `content.ts`, "Fill this page" button, highlight flagged fields | `fill/fillPage.ts`, `ui/highlightFlagged.ts` | done (checked by hand in Chrome on the fixture form; not yet on a real site). **First end-to-end result.** |
 | 8 | LLM client and settings | `SettingsStore`, `GeminiLLMClient`, `BackgroundLLMClient`, `messaging.ts`, manifest `host_permissions` | 8a and 8b done (not yet confirmed against the real Gemini API) |
-| 9 | Resume parsing and file upload | `extractText` (`pdfjs-dist`), a DOCX reader (to be chosen), `ResumeParser`, `ResumeUpload`, `IndexedDbResumeStore`, `FileFiller` | 9a (`parseResume`, `applyDraft`) done; 9b in progress |
+| 9 | Resume parsing and file upload | `extractText` (`pdfjs-dist`), a DOCX reader (to be chosen), `ResumeParser`, `ResumeUpload`, `IndexedDbResumeStore`, `FileFiller` | 9a done; 9b-i (engine: `importResume`, resume store, PDF and text reading) done; 9b-ii (popup upload and review) in progress |
 | 10 | LLM fallback | prompt files for Calls A, B and C (option picking), background handlers, a machine-readable code on failed fills so ambiguity can be routed to the LLM, wired into `fillPage` | planned |
 | 11 | Site adapters | `detectAdapter`, `GenericAdapter`, `GreenhouseAdapter`, then others | planned. The `SiteAdapter` interface will grow when the first adapter needs it. |
 | 12 | Multi-step flow and login | `FlowRunner`, `CredentialVault`, `AuthHandler` | later |

@@ -28,9 +28,10 @@ A Chrome extension (Manifest V3) that autofills job applications from a saved pr
 - Load in Chrome: `chrome://extensions` → Developer mode → Load unpacked → `packages/extension/dist`. After changes: build, then reload the extension.
 - DOM tests need `// @vitest-environment jsdom` on the second line of the test file (after the header comment).
 - Do not `cd` into `node_modules` and leave the shell there.
-- TypeScript 7 loads no `@types/*` unless the tsconfig lists them: core's tsconfig has `types: ["node"]`, the extension's has `["chrome"]`.
+- TypeScript 7 loads no `@types/*` unless the tsconfig lists them: core's tsconfig has `types: ["node"]`, the extension's has `["chrome", "node"]`.
 - **Bundle size matters.** The content script is injected into every frame of every page. Import Zod only as `import * as z from "zod/mini"` plus `import en from "zod/v4/locales/en.js"` (the `.js` is required). A plain `import { z } from "zod"` pulls in every language and made `content.js` 820 KB; it is now about 70 KB. Check `ls -l packages/extension/dist` after adding any dependency.
 - jsdom replaces the global `URL`, so tests read files with `join(import.meta.dirname, ...)`, not `new URL(..., import.meta.url)`.
+- **pdf.js (`pdfjs-dist` 6.x):** import it only from popup code (about 435 KB minified; its worker `pdf.worker.min.mjs` is a separate 1.27 MB file loaded only when a PDF is read). Cleanup is `loadingTask.destroy()`; the document object has no `destroy`. PDFs that use standard fonts without embedding them need `standardFontDataUrl` pointing at the package's `standard_fonts/` folder (816 KB). The CJK `cmaps/` folder (1.6 MB) is not shipped, so Chinese, Japanese and Korean resumes will read poorly. `createPdfTextReader` takes the library as an argument and is tested against the legacy build in Node; it is cast to a structural `PdfLibrary` type, so check the real types in `node_modules/pdfjs-dist/types` when changing it.
 - To try the extension by hand: `python3 -m http.server 8000 -d fixtures`, open `http://localhost:8000/simple-application.html`, save a profile in the popup, press "Fill this page".
 
 ## Architecture
@@ -46,19 +47,20 @@ packages/core/src/
               TextFiller, SelectFiller, RadioFiller, CheckboxFiller, ComboboxFiller
   fill/       fillPage (the orchestrator), summary (counts, needsAttention, formatSummary)
   adapters/   types only (SiteAdapter interface)
-  ports/      ProfileStore, LLMClient, SettingsStore
+  ports/      ProfileStore, LLMClient, SettingsStore, ResumeStore
   llm/        settings (LLMSettings, DEFAULT_MODEL, isLLMSettings, mergeSettings), GeminiLLMClient
-  resume/     types (ProfileDraft), resumePrompt, parseResume, applyDraft
+  resume/     types (ProfileDraft), resumePrompt, parseResume, applyDraft, importResume (ready to save vs needs review)
   testing/    makeField, fieldFromHtml (test helpers, need a DOM)
 packages/extension/
   public/manifest.json    MV3, permission: storage, host permission for generativelanguage.googleapis.com, content script on <all_urls> with all_frames
   src/background.ts       answers `llm-complete` messages from this extension (only the background worker uses the API key)
   src/llm/                answerLlmRequest (saved settings → client → reply), BackgroundLLMClient (proxy that popup and content code use)
   src/content.ts          on a "fill-page" message: loads and validates the saved profile, runs fillPage, outlines flagged fields, replies with a summary
+  src/resume/             extractResumeText (PDF or text file to text), pdfText (createPdfTextReader: pdf.js reader factory)
   src/messaging.ts        message types between popup, content scripts and the background worker, with type guards
   src/ui/                 highlightFlagged (red outline for failed, amber for unmatched or no-value)
   src/popup/              popup.html, popup.ts, ProfileForm.ts, profileFields.ts, FillPanel.ts, SettingsPanel.ts (API key, model, Test connection)
-  src/storage/            ChromeStorageProfileStore, ChromeStorageSettingsStore (implement the core's stores)
+  src/storage/            ChromeStorageProfileStore, ChromeStorageSettingsStore, IndexedDbResumeStore (implement the core's stores)
   build.mjs               esbuild: background, content, popup entries as single iife files
 fixtures/simple-application.html   test form used by fillPage.test.ts and for trying the extension by hand
 ```
@@ -110,7 +112,7 @@ fixtures/simple-application.html   test form used by fillPage.test.ts and for tr
 6. Fillers: **6a** `setNativeValue` + `TextFiller` ✅ committed; **6b** `SelectFiller`, `RadioFiller`, `CheckboxFiller` ✅ committed; **6c** `ComboboxFiller` ✅ committed (`FileFiller` is proposed to move to step 9, because it needs the resume store; not yet agreed)
 7. `fillPage` orchestrator + `content.ts` + "Fill this page" popup button → first end-to-end result ✅ committed (tested in jsdom and by hand in Chrome on the fixture form; not yet tried on a real job site)
 8. LLM client and settings: **8a** `GeminiLLMClient` + settings types and `SettingsStore` port ✅ committed; **8b** background handler, API-key panel with a "Test connection" button in the popup, `BackgroundLLMClient` proxy, manifest `host_permissions` ✅ committed (tests pass with a fake network and fake chrome; not yet confirmed against the real Gemini API)
-9. Resume parsing: **9a** `parseResume` (prompt, validated and cleaned draft with warnings) `applyDraftToFormValues` and `buildProfileFromDraft` ✅ committed; **9b** `extractText` (PDF, size of the PDF library to be checked first), `ResumeUpload`, IndexedDB resume store, read-only experience/education review, auto-save when valid or else fill the form and list what is missing (in progress)
+9. Resume parsing: **9a** `parseResume` (prompt, validated and cleaned draft with warnings) `applyDraftToFormValues` and `buildProfileFromDraft` ✅ committed; **9b** in two parts: **9b-i** the engine (`importResume`, `carryOverFromDraft`, the `CarriedOver` type, `ResumeStore` + `IndexedDbResumeStore`, `extractResumeText`, `createPdfTextReader`; ✅ committed) and **9b-ii** the popup (upload control, auto-save when valid or else fill the form and list what is missing, read-only experience/education review, browser pdf.js wiring, copy `pdf.worker.min.mjs` and `standard_fonts/` into dist; in progress). Risk to check in 9b-ii: Chrome may close a popup when the file picker opens, and a closed popup stops the parse; components are written as `mountX(container, ...)` so they can move to an options page.
 10. LLM fallback (Calls A and B)
 11. Site adapters (`SiteAdapter` interface exists): Greenhouse first, then others, plus a generic fallback
 12. Later: multi-step flow runner (Workday), credential vault and login handling
