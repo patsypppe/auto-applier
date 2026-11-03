@@ -1,6 +1,6 @@
 // Tests that stored LLM settings are recognised only when they hold a usable key and model.
 import { describe, expect, test } from "vitest"
-import { DEFAULT_MODEL, isLLMSettings, mergeSettings } from "./settings"
+import { DEFAULT_MODEL, DEFAULT_MODELS, isLLMSettings, mergeSettings } from "./settings"
 
 describe("mergeSettings", () => {
   const saved = { apiKey: "saved-key", model: "saved-model" }
@@ -38,6 +38,18 @@ describe("mergeSettings", () => {
 describe("DEFAULT_MODEL", () => {
   test("is a non-empty model name", () => {
     expect(DEFAULT_MODEL.length).toBeGreaterThan(0)
+  })
+})
+
+describe("default models per provider", () => {
+  test("every provider has a non-empty default and Gemini's is the main default", () => {
+    expect(DEFAULT_MODELS.gemini).toBe(DEFAULT_MODEL)
+    expect(DEFAULT_MODELS.groq.length).toBeGreaterThan(0)
+  })
+
+  test("mergeSettings uses the given provider's default model", () => {
+    expect(mergeSettings(undefined, "typed-key", "", "groq")?.model).toBe(DEFAULT_MODELS.groq)
+    expect(mergeSettings(undefined, "typed-key", "", "gemini")?.model).toBe(DEFAULT_MODELS.gemini)
   })
 })
 

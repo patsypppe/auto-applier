@@ -4,18 +4,26 @@ export type LLMSettings = {
   model: string
 }
 
-export const DEFAULT_MODEL = "gemini-3.1-flash-lite"
+export type ProviderId = "gemini" | "groq"
 
-// Combines saved settings with what was typed: a blank key keeps the saved one, a blank model uses the default, and no key at all gives undefined.
+export const DEFAULT_MODELS: Record<ProviderId, string> = {
+  gemini: "gemini-3.1-flash-lite",
+  groq: "llama-3.3-70b-versatile",
+}
+
+export const DEFAULT_MODEL = DEFAULT_MODELS.gemini
+
+// Combines saved settings with what was typed: a blank key keeps the saved one, a blank model uses the provider's default, and no key at all gives undefined.
 export function mergeSettings(
   saved: LLMSettings | undefined,
   keyInput: string,
   modelInput: string,
+  provider: ProviderId = "gemini",
 ): LLMSettings | undefined {
   const apiKey = keyInput.trim() || saved?.apiKey || ""
   if (apiKey === "") return undefined
 
-  return { apiKey, model: modelInput.trim() || DEFAULT_MODEL }
+  return { apiKey, model: modelInput.trim() || DEFAULT_MODELS[provider] }
 }
 
 // Returns true when an unknown value is an object with a non-empty key and model.
