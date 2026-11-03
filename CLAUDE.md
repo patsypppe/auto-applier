@@ -7,7 +7,7 @@ A Chrome extension (Manifest V3) that autofills job applications from a saved pr
 - **The user proposes the design; Claude assists.** Do not redesign things or offer a competing architecture. Answer questions, point out problems, and build what was agreed.
 - **One step at a time.** After each step: show the diff in the chat message itself (the user cannot see tool output), list the choices made, then wait for approval. Commit only when the user says "commit", then start the next step.
 - **Tests first (TDD).** Write the test, run it and see it fail for the right reason, then implement, then run tests, `npm run typecheck` and `npm run build`.
-- **Be honest about what is not verified.** The popup and content script have never been loaded into Chrome. Say so rather than implying they were tested.
+- **Be honest about what is not verified.** The popup and content script were checked by hand in Chrome on `fixtures/simple-application.html` only (saving a profile, filling, outlining the fields that need the user). They have not been tried on a real job site. Say so rather than implying more was tested.
 - **Do not guess.** If this file does not answer a design question, ask. Do not invent files, keys or behavior.
 - Ask at most one or two blocking questions. Pick sensible defaults, state them, and let the user correct them.
 
@@ -105,7 +105,7 @@ fixtures/simple-application.html   test form used by fillPage.test.ts and for tr
 4. `discoverFields` ✅ committed
 5. `matchField`, `AttributeMatcher`, `BareNameMatcher` ✅ committed
 6. Fillers: **6a** `setNativeValue` + `TextFiller` ✅ committed; **6b** `SelectFiller`, `RadioFiller`, `CheckboxFiller` ✅ committed; **6c** `ComboboxFiller` ✅ committed (`FileFiller` is proposed to move to step 9, because it needs the resume store; not yet agreed)
-7. `fillPage` orchestrator + `content.ts` + "Fill this page" popup button → first end-to-end result ✅ committed (tested in jsdom; not yet run in real Chrome)
+7. `fillPage` orchestrator + `content.ts` + "Fill this page" popup button → first end-to-end result ✅ committed (tested in jsdom and by hand in Chrome on the fixture form; not yet tried on a real job site)
 8. LLM client, settings (API key), manifest `host_permissions`
 9. Resume parsing: `extractText`, `ResumeParser`, `ResumeUpload`, IndexedDB resume store
 10. LLM fallback (Calls A and B)
