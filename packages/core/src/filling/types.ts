@@ -8,5 +8,5 @@ export type FillResult =
 
 export interface Filler {
   canFill(field: FormField): boolean
-  fill(field: FormField, value: string): FillResult
+  fill(field: FormField, value: string): FillResult | Promise<FillResult>
 }
