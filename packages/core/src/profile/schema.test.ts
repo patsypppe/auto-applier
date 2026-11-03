@@ -110,3 +110,22 @@ describe("validateProfile", () => {
     if (!result.ok) expect(result.errors).toHaveLength(2)
   })
 })
+
+describe("validateProfile: plansToWorkRemotely", () => {
+  test("is optional, so a profile saved before it existed is still valid", () => {
+    expect(validateProfile(validProfile).ok).toBe(true)
+  })
+
+  test("accepts a boolean and keeps it", () => {
+    const result = validateProfile({ ...validProfile, answers: { ...validProfile.answers, plansToWorkRemotely: false } })
+
+    expect(result.ok && result.profile.answers.plansToWorkRemotely).toBe(false)
+  })
+
+  test("rejects anything that is not a boolean", () => {
+    const result = validateProfile({ ...validProfile, answers: { ...validProfile.answers, plansToWorkRemotely: "no" } })
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.errors.join(" ")).toContain("answers.plansToWorkRemotely")
+  })
+})

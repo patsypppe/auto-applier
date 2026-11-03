@@ -50,6 +50,7 @@ const RULES: Rule[] = [
   },
   { key: "workAuthorization", patterns: [/\bwork authori[sz]ation\b/] },
   { key: "needsSponsorship", patterns: [/\bsponsor(ship)?\b/] },
+  { key: "plansToWorkRemotely", patterns: [/\b(plan|intend|prefer|want|like)s? to work (remotely|from a remote)\b/] },
   {
     key: "currentCompany",
     patterns: [/\b(current|previous|most recent|latest|last)( or (current|previous))? (company|employer)\b/, /\bemployer\b/],

@@ -15,6 +15,8 @@ import type { Matcher } from "../matching/types"
 import type { ProfileKey } from "../profile/keys"
 import { resolveValue } from "../profile/resolveValue"
 import type { Profile } from "../profile/types"
+import { countFilled } from "./progress"
+import type { ProgressListener } from "./progress"
 
 export type FieldOutcome =
   | FillResult
@@ -81,18 +83,21 @@ async function processField(
   return { field, profileKey, outcome: await fillWith(fillers, field, value) }
 }
 
-// Fills every field it can find inside the root, one at a time in page order, and reports each field's outcome.
+// Fills every field it can find inside the root, one at a time in page order, and reports each field's outcome; the listener hears the total first and then after every field.
 export async function fillPage(
   root: ParentNode,
   profile: Profile,
   setup: FillSetup = DEFAULT_SETUP,
+  onProgress?: ProgressListener,
 ): Promise<FieldReport[]> {
   const fields = discoverFields(root)
   const matchers = setup.matchersFor(fields)
+  onProgress?.({ total: fields.length, filled: 0, phase: "rules" })
 
   const reports: FieldReport[] = []
   for (const field of fields) {
     reports.push(await processField(field, profile, matchers, setup.fillers))
+    onProgress?.({ total: fields.length, filled: countFilled(reports), phase: "rules" })
   }
   return reports
 }

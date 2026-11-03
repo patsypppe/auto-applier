@@ -123,6 +123,32 @@ describe("buildAnswerFieldsPrompt: rules for common yes/no questions", () => {
 
     expect(prompt).toMatch(/remote[^\n]*notes/i)
   })
+
+  test("tells the model that answers.plansToWorkRemotely being false means on-site", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+
+    expect(prompt).toMatch(/plansToWorkRemotely[^\n]*false[^\n]*on-site/i)
+  })
+
+  test("tells the model which option to choose when the notes say the applicant wants to work on-site", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+
+    expect(prompt).toMatch(/notes say[^\n]*on-site[^\n]*(office|in-person)[^\n]*not remote/i)
+  })
+
+  test("tells the model to answer 'which countries will you work in' from the applicant's country, even for an abbreviation", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+
+    expect(prompt).toMatch(/country or countries[^\n]*personal\.country/i)
+    expect(prompt).toMatch(/abbreviat[^\n]*"US"/i)
+  })
+
+  test("does not make the work-country question depend on the notes", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+    const countryRule = prompt.split("\n").find((line) => /country or countries/i.test(line)) ?? ""
+
+    expect(countryRule).not.toMatch(/only from "notes"/i)
+  })
 })
 
 describe("parseFieldAnswers", () => {

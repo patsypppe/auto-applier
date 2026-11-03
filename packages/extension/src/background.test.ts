@@ -240,3 +240,22 @@ describe("background worker: handing out the saved resume", () => {
     expect(sendResponse).not.toHaveBeenCalled()
   })
 })
+
+describe("background worker: progress", () => {
+  test("saves a frame's progress under its tab and frame, for the popup", async () => {
+    const { listener, saved } = await loadWorker({})
+    const progress = { total: 10, filled: 4, phase: "rules" }
+
+    listener({ type: "fill-progress", progress }, { id: EXTENSION_ID, tab: { id: 7 }, frameId: 2 }, vi.fn())
+
+    await vi.waitFor(() => expect(saved.get("fill-progress:7:2")).toEqual(progress))
+  })
+
+  test("ignores progress from anyone but this extension", async () => {
+    const { listener, saved } = await loadWorker({})
+
+    listener({ type: "fill-progress", progress: { total: 1, filled: 0, phase: "rules" } }, { id: "someone-else", tab: { id: 7 } }, vi.fn())
+
+    expect([...saved.keys()].some((key) => key.startsWith("fill-progress:"))).toBe(false)
+  })
+})

@@ -41,7 +41,7 @@ const existingProfile: Profile = {
   experience: [{ company: "Old Co", title: "Dev", startDate: "2015", description: "" }],
   education: [{ school: "Old U", degree: "BA", startDate: "2010" }],
   skills: ["COBOL"],
-  answers: { workAuthorization: "Citizen", needsSponsorship: false, isAuthorizedToWork: true },
+  answers: { workAuthorization: "Citizen", needsSponsorship: false, isAuthorizedToWork: true, plansToWorkRemotely: false },
   resume: { name: "resume.pdf", mimeType: "application/pdf", storageKey: "resume-1" },
 }
 

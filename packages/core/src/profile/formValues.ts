@@ -21,6 +21,7 @@ export type ProfileFormValues = {
   workAuthorization: string
   needsSponsorship: "yes" | "no"
   isAuthorizedToWork: "yes" | "no"
+  plansToWorkRemotely: "yes" | "no"
   noticePeriod: string
   salaryExpectation: string
   notes: string
@@ -54,6 +55,7 @@ export function emptyFormValues(): ProfileFormValues {
     workAuthorization: "",
     needsSponsorship: "no",
     isAuthorizedToWork: "yes",
+    plansToWorkRemotely: "no",
     noticePeriod: "",
     salaryExpectation: "",
     notes: "",
@@ -87,6 +89,7 @@ export function toFormValues(profile: Profile): ProfileFormValues {
     workAuthorization: answers.workAuthorization,
     needsSponsorship: answers.needsSponsorship ? "yes" : "no",
     isAuthorizedToWork: answers.isAuthorizedToWork ? "yes" : "no",
+    plansToWorkRemotely: answers.plansToWorkRemotely ? "yes" : "no",
     noticePeriod: answers.noticePeriod ?? "",
     salaryExpectation: answers.salaryExpectation ?? "",
     notes: profile.notes ?? "",
@@ -123,6 +126,7 @@ export function fromFormValues(values: ProfileFormValues, existing?: CarriedOver
       workAuthorization: values.workAuthorization.trim(),
       needsSponsorship: values.needsSponsorship === "yes",
       isAuthorizedToWork: values.isAuthorizedToWork === "yes",
+      plansToWorkRemotely: values.plansToWorkRemotely === "yes",
       noticePeriod: optionalText(values.noticePeriod),
       salaryExpectation: optionalText(values.salaryExpectation),
     },

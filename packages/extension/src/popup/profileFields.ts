@@ -27,6 +27,7 @@ export const PROFILE_FIELDS: FieldSpec[] = [
   { key: "workAuthorization", label: "Work authorization", type: "text", required: true },
   { key: "isAuthorizedToWork", label: "Legally authorized to work", type: "yesno" },
   { key: "needsSponsorship", label: "Needs visa sponsorship", type: "yesno" },
+  { key: "plansToWorkRemotely", label: "Plans to work remotely (No = on-site)", type: "yesno" },
   { key: "noticePeriod", label: "Notice period", type: "text" },
   { key: "salaryExpectation", label: "Salary expectation", type: "text" },
   {

@@ -167,3 +167,16 @@ describe("runFill: the resume upload", () => {
     expect(loadResume).not.toHaveBeenCalled()
   })
 })
+
+describe("runFill: progress", () => {
+  test("reports progress to the listener while it fills, ending with what the AI added", async () => {
+    const { llm } = llmAnswering()
+    const seen: { total: number; filled: number; phase: string }[] = []
+
+    await runFill(storeHolding(PROFILE), llm, undefined, (progress) => seen.push(progress))
+
+    expect(seen[0]).toMatchObject({ total: 3, filled: 0, phase: "rules" })
+    expect(seen.map((progress) => progress.phase)).toContain("asking")
+    expect(seen[seen.length - 1]?.filled).toBeGreaterThanOrEqual(2)
+  })
+})

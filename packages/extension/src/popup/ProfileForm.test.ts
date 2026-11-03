@@ -56,6 +56,12 @@ describe("ProfileForm: showing what is saved", () => {
     expect(field("needsSponsorship").value).toBe("yes")
   })
 
+  test("has a Plans to work remotely choice, set from the saved profile", async () => {
+    await mountForm({ ...SAVED, answers: { ...SAVED.answers, plansToWorkRemotely: true } })
+
+    expect(field("plansToWorkRemotely").value).toBe("yes")
+  })
+
   test("starts empty, with sponsorship set to No, when nothing is saved", async () => {
     const { handle } = await mountForm(undefined)
 

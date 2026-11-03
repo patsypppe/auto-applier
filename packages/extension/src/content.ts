@@ -3,11 +3,17 @@ import { runFill } from "./fill/runFill"
 import { BackgroundLLMClient } from "./llm/BackgroundLLMClient"
 import { isFillPageRequest } from "./messaging"
 import { loadResumeFromBackground } from "./resume/loadResumeFromBackground"
-import type { FillResultMessage, PageLoadedMessage } from "./messaging"
+import type { FillProgressMessage, FillResultMessage, PageLoadedMessage } from "./messaging"
 import { ChromeStorageProfileStore } from "./storage/ChromeStorageProfileStore"
 
 // Sends the result to the extension, where the background worker saves it for the popup, open or not.
 function reportResult(message: FillResultMessage): void {
+  chrome.runtime.sendMessage(message).catch(() => undefined)
+}
+
+// Sends how far the fill has got to the extension, where the background worker saves it for the popup's progress bar.
+function reportProgress(progress: FillProgressMessage["progress"]): void {
+  const message: FillProgressMessage = { type: "fill-progress", progress }
   chrome.runtime.sendMessage(message).catch(() => undefined)
 }
 
@@ -19,5 +25,5 @@ if (window === window.top) {
 
 chrome.runtime.onMessage.addListener((message: unknown) => {
   if (!isFillPageRequest(message)) return
-  void runFill(new ChromeStorageProfileStore(), new BackgroundLLMClient(), loadResumeFromBackground).then(reportResult)
+  void runFill(new ChromeStorageProfileStore(), new BackgroundLLMClient(), loadResumeFromBackground, reportProgress).then(reportResult)
 })

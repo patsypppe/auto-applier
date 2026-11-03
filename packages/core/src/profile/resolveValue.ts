@@ -21,6 +21,10 @@ const RESOLVERS: Record<ProfileKey, (profile: Profile) => string | undefined> = 
   workAuthorization: (profile) => profile.answers.workAuthorization,
   needsSponsorship: (profile) => (profile.answers.needsSponsorship ? "Yes" : "No"),
   isAuthorizedToWork: (profile) => (profile.answers.isAuthorizedToWork ? "Yes" : "No"),
+  plansToWorkRemotely: (profile) => {
+    const { plansToWorkRemotely } = profile.answers
+    return plansToWorkRemotely === undefined ? undefined : plansToWorkRemotely ? "Yes" : "No"
+  },
   noticePeriod: (profile) => profile.answers.noticePeriod,
   salaryExpectation: (profile) => profile.answers.salaryExpectation,
   currentCompany: (profile) => currentJob(profile.experience)?.company,

@@ -1,6 +1,6 @@
 // Defines the messages sent between the popup and the content scripts, with guards that check them on arrival.
-import { PROVIDER_ORDER, isReportSummary } from "@auto-applier/core"
-import type { ProviderId, ReportSummary } from "@auto-applier/core"
+import { PROVIDER_ORDER, isFillProgress, isReportSummary } from "@auto-applier/core"
+import type { FillProgress, ProviderId, ReportSummary } from "@auto-applier/core"
 
 export type FillPageRequest = { type: "fill-page" }
 
@@ -15,6 +15,8 @@ export type ResumeResponse =
 export type LlmRequest = { type: "llm-complete"; prompt: string; provider?: ProviderId }
 
 export type LlmResponse = { ok: true; data: unknown } | { ok: false; error: string }
+
+export type FillProgressMessage = { type: "fill-progress"; progress: FillProgress }
 
 export type FillResultMessage = {
   type: "fill-result"
@@ -53,6 +55,14 @@ export function isResumeResponse(value: unknown): value is ResumeResponse {
 
   const { name, mimeType, data } = resume as { name?: unknown; mimeType?: unknown; data?: unknown }
   return typeof name === "string" && typeof mimeType === "string" && typeof data === "string"
+}
+
+// Returns true when an unknown value is a well-formed progress report from a content script.
+export function isFillProgressMessage(message: unknown): message is FillProgressMessage {
+  if (typeof message !== "object" || message === null) return false
+
+  const { type, progress } = message as { type?: unknown; progress?: unknown }
+  return type === "fill-progress" && isFillProgress(progress)
 }
 
 // Returns true when an unknown value is a well-formed fill result.

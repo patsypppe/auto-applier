@@ -20,7 +20,7 @@ afterEach(() => {
 
 describe("ChromeSessionFillStore: loading", () => {
   test("has nothing for a tab that never filled", async () => {
-    expect(await new ChromeSessionFillStore().load(7)).toEqual({ running: false, results: [] })
+    expect(await new ChromeSessionFillStore().load(7)).toEqual({ running: false, results: [], progress: [] })
   })
 
   test("returns the saved results of a tab in frame order", async () => {
@@ -64,7 +64,7 @@ describe("ChromeSessionFillStore: a run", () => {
 
     await store.start(7)
 
-    expect(await store.load(7)).toEqual({ running: true, results: [] })
+    expect(await store.load(7)).toEqual({ running: true, results: [], progress: [] })
     expect((await store.load(8)).results).toEqual([okResult(5)])
   })
 
@@ -76,7 +76,7 @@ describe("ChromeSessionFillStore: a run", () => {
 
     await store.clear(7)
 
-    expect(await store.load(7)).toEqual({ running: false, results: [] })
+    expect(await store.load(7)).toEqual({ running: false, results: [], progress: [] })
     expect((await store.load(8)).results).toEqual([okResult(2)])
   })
 })
@@ -112,5 +112,49 @@ describe("ChromeSessionFillStore: change notifications", () => {
     await store.saveResult(7, 0, okResult(1))
 
     expect(listener).not.toHaveBeenCalled()
+  })
+})
+
+describe("ChromeSessionFillStore: progress", () => {
+  const step = (filled: number) => ({ total: 10, filled, phase: "rules" as const })
+
+  test("returns each frame's latest progress in frame order", async () => {
+    const store = new ChromeSessionFillStore()
+    await store.saveProgress(7, 1, step(2))
+    await store.saveProgress(7, 0, step(1))
+    await store.saveProgress(7, 0, step(4))
+
+    expect((await store.load(7)).progress).toEqual([step(4), step(2)])
+  })
+
+  test("keeps tabs apart and ignores values that are not progress", async () => {
+    const store = new ChromeSessionFillStore()
+    await store.saveProgress(7, 0, step(1))
+    await store.saveProgress(8, 0, step(9))
+    fake.items.set("fill-progress:7:3", { nonsense: true })
+
+    expect((await store.load(7)).progress).toEqual([step(1)])
+  })
+
+  test("start and clear forget the tab's progress", async () => {
+    const store = new ChromeSessionFillStore()
+    await store.saveProgress(7, 0, step(1))
+
+    await store.start(7)
+    expect((await store.load(7)).progress).toEqual([])
+
+    await store.saveProgress(7, 0, step(2))
+    await store.clear(7)
+    expect((await store.load(7)).progress).toEqual([])
+  })
+
+  test("tells a listener when progress is saved", async () => {
+    const store = new ChromeSessionFillStore()
+    const listener = vi.fn()
+    store.onChange(7, listener)
+
+    await store.saveProgress(7, 0, step(1))
+
+    expect(listener).toHaveBeenCalled()
   })
 })

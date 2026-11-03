@@ -25,7 +25,7 @@ const existingProfile: Profile = {
   experience: [{ company: "Acme", title: "Engineer", startDate: "2022-01", description: "Built things" }],
   education: [{ school: "State U", degree: "BSc", startDate: "2018-09" }],
   skills: ["TypeScript", "React"],
-  answers: { workAuthorization: "Citizen", needsSponsorship: true, isAuthorizedToWork: false, noticePeriod: "2 weeks" },
+  answers: { workAuthorization: "Citizen", needsSponsorship: true, isAuthorizedToWork: false, plansToWorkRemotely: false, noticePeriod: "2 weeks" },
   resume: { name: "resume.pdf", mimeType: "application/pdf", storageKey: "resume-1" },
 }
 
@@ -221,5 +221,27 @@ describe("notes in the form", () => {
     expect(profile.ok && toFormValues(profile.profile).notes).toBe("Not a veteran.")
     expect(toFormValues(existingProfile).notes).toBe("")
     expect(profile.ok && fromFormValues(toFormValues(profile.profile))).toEqual(profile)
+  })
+})
+
+describe("form values: plansToWorkRemotely", () => {
+  test("an empty form says No, since most people apply to on-site roles by default", () => {
+    expect(emptyFormValues().plansToWorkRemotely).toBe("no")
+  })
+
+  test("shows a saved answer, and No when the profile never had one", () => {
+    const withAnswer = (plansToWorkRemotely?: boolean): Profile => ({ ...existingProfile, answers: { ...existingProfile.answers, plansToWorkRemotely } })
+
+    expect(toFormValues(withAnswer(true)).plansToWorkRemotely).toBe("yes")
+    expect(toFormValues(withAnswer(false)).plansToWorkRemotely).toBe("no")
+    expect(toFormValues(withAnswer(undefined)).plansToWorkRemotely).toBe("no")
+  })
+
+  test("saves the choice as a boolean", () => {
+    const yes = fromFormValues({ ...filledValues, plansToWorkRemotely: "yes" })
+    const no = fromFormValues({ ...filledValues, plansToWorkRemotely: "no" })
+
+    expect(yes.ok && yes.profile.answers.plansToWorkRemotely).toBe(true)
+    expect(no.ok && no.profile.answers.plansToWorkRemotely).toBe(false)
   })
 })

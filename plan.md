@@ -98,6 +98,7 @@ Patterns in use: Strategy (fillers, adapters), Chain of Responsibility (matchers
 - **One call for the leftovers (replaced the earlier Calls A, B and C after the first real-form test):** for every field the rules left unmatched, without a value, or without a matching option. Sends the whole profile (including the free-text notes), the fields with their options, and the job page text when a written answer is wanted. Returns an answer per field; choices must be one of the options. The user chose this for answer quality and fewer failure points, accepting that contact details reach the model.
 - Written questions are drafted in the same call and outlined for review.
 - Single consent checkboxes, file uploads and dropdowns that failed for another reason are never sent to the model.
+- A progress bar in the popup follows the fill in real time (fields filled out of all fields, plus the current step); a saved "plans to work remotely" answer settles the remote-work question without the AI.
 - Search-backed dropdowns retry with shorter prefixes of the value, and an education dropdown with no match falls back to "Other" (blue, to check).
 - Dropdown options are read by opening each leftover dropdown before the call, so the model picks a real option; a phone number the page reformats counts as filled.
 - Never sent to the LLM: credentials, the vault, the API key.

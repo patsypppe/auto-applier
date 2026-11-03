@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from "vitest"
 import { ComboboxFiller } from "../filling/ComboboxFiller"
 import { DEFAULT_SETUP } from "../fill/fillPage"
 import type { FieldReport } from "../fill/fillPage"
+import type { FillProgress } from "../fill/progress"
 import type { LLMClient } from "../ports/LLMClient"
 import type { Profile } from "../profile/types"
 import { fillPageWithAssistant } from "./fillPageWithAssistant"
@@ -473,5 +474,37 @@ describe("fillPageWithAssistant: schools and other education dropdowns", () => {
 
     expect(wired.v?.chosen()).toBe("")
     expect(reportFor(result.reports, "v").outcome.status).toBe("unmatched")
+  })
+})
+
+describe("fillPageWithAssistant: progress", () => {
+  // Runs the assisted fill and returns every progress report.
+  async function progressOf(html: string, script: Script) {
+    document.body.innerHTML = html
+    const { llm } = scriptedLlm(script)
+    const seen: FillProgress[] = []
+    await fillPageWithAssistant(document, profile, llm, { onProgress: (progress) => seen.push(progress) })
+    return seen
+  }
+
+  test("goes through reading, asking and answering when the rules leave something, ending with the AI's fills counted", async () => {
+    const seen = await progressOf(GENDER_SELECT, { answers: [{ id: 0, answer: "Male" }] })
+
+    const phases = [...new Set(seen.map((progress) => progress.phase))]
+    expect(phases).toEqual(["rules", "reading", "asking", "answering"])
+    expect(seen[seen.length - 1]).toEqual({ total: 1, filled: 1, phase: "answering" })
+  })
+
+  test("stays in the rules phase when nothing is left for the AI", async () => {
+    const seen = await progressOf(`<label for="e">Email</label><input id="e" />`, {})
+
+    expect([...new Set(seen.map((progress) => progress.phase))]).toEqual(["rules"])
+  })
+
+  test("counts what the rules filled while the AI is still working", async () => {
+    const seen = await progressOf(`<label for="e">Email</label><input id="e" />${GENDER_SELECT}`, { answers: [] })
+
+    const asking = seen.find((progress) => progress.phase === "asking")
+    expect(asking).toEqual({ total: 2, filled: 1, phase: "asking" })
   })
 })

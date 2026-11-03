@@ -1,5 +1,7 @@
-// Renders the "Fill this page" button and shows the saved results and notes of the page's frames, also after the popup is reopened.
+// Renders the "Fill this page" button and shows the progress, saved results and notes of the page's frames, also after the popup is reopened.
 import { formatSummary } from "@auto-applier/core"
+import type { FillPhase, ReportSummary } from "@auto-applier/core"
+import { combineProgress } from "../fill/combineProgress"
 import { combineResults } from "../fill/combineResults"
 import type { FillPageRequest } from "../messaging"
 import type { ChromeSessionFillStore, FillRun } from "../storage/ChromeSessionFillStore"
@@ -18,6 +20,34 @@ async function requestFill(tabId: number): Promise<void> {
   await chrome.tabs.sendMessage(tabId, request)
 }
 
+const PHASE_LABELS: Record<FillPhase, string> = {
+  rules: "filling fields…",
+  reading: "reading dropdown options…",
+  asking: "asking the AI…",
+  answering: "filling the AI's answers…",
+}
+
+type Bar = { total: number; filled: number; phase?: FillPhase }
+
+// Returns the bar for a finished fill: how many of all its fields were filled or drafted.
+function barFromSummary(summary: ReportSummary): Bar | undefined {
+  const filled = summary.filled + summary.aiFilled + summary.drafted
+  const total = filled + summary.skipped + summary.failed + summary.unmatched + summary.noValue
+  return total > 0 ? { total, filled } : undefined
+}
+
+// Shows the bar and its caption, or hides them when there is nothing to show.
+function showBar(bar: HTMLProgressElement, caption: HTMLElement, shown: Bar | undefined): void {
+  bar.hidden = shown === undefined
+  caption.hidden = shown === undefined
+  if (!shown) return
+
+  bar.max = shown.total
+  bar.value = shown.filled
+  const count = `${shown.filled} of ${shown.total} filled`
+  caption.textContent = shown.phase ? `${count} · ${PHASE_LABELS[shown.phase]}` : count
+}
+
 // Replaces the contents of a list element with one item per note.
 function showNotes(list: HTMLElement, notes: string[]): void {
   const items = notes.map((note) => {
@@ -28,11 +58,18 @@ function showNotes(list: HTMLElement, notes: string[]): void {
   list.replaceChildren(...items)
 }
 
-// Adds the button, a status line and a notes list to the container, shows what is saved for the tab, and updates as frames report in.
+// Adds the button, a progress bar, a status line and a notes list to the container, shows what is saved for the tab, and updates as frames report in.
 export async function mountFillPanel(container: HTMLElement, store: ChromeSessionFillStore): Promise<void> {
   const button = document.createElement("button")
   button.type = "button"
   button.textContent = "Fill this page"
+
+  const bar = document.createElement("progress")
+  bar.hidden = true
+
+  const caption = document.createElement("p")
+  caption.className = "progress-caption"
+  caption.hidden = true
 
   const status = document.createElement("p")
   status.setAttribute("role", "status")
@@ -40,7 +77,7 @@ export async function mountFillPanel(container: HTMLElement, store: ChromeSessio
   const notesList = document.createElement("ul")
   notesList.className = "notes"
 
-  container.append(button, status, notesList)
+  container.append(button, bar, caption, status, notesList)
 
   const tabId = await activeTabId()
   let failure: string | undefined
@@ -53,6 +90,10 @@ export async function mountFillPanel(container: HTMLElement, store: ChromeSessio
     else if (combined.error) status.textContent = combined.error
     else status.textContent = run.running ? "Filling…" : ""
     showNotes(notesList, combined.notes)
+
+    if (failure) showBar(bar, caption, undefined)
+    else if (combined.summary) showBar(bar, caption, barFromSummary(combined.summary))
+    else showBar(bar, caption, run.running ? combineProgress(run.progress) : undefined)
   }
 
   // Loads what is saved for the tab and shows it.
@@ -69,7 +110,7 @@ export async function mountFillPanel(container: HTMLElement, store: ChromeSessio
     } catch {
       failure = UNREACHABLE_MESSAGE
       if (tabId !== undefined) await store.clear(tabId).catch(() => undefined)
-      render({ running: false, results: [] })
+      render({ running: false, results: [], progress: [] })
     }
   })
 

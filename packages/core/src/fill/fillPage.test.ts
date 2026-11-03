@@ -7,6 +7,7 @@ import type { FormField } from "../fields/types"
 import type { Filler, FillResult } from "../filling/types"
 import type { Profile } from "../profile/types"
 import { DEFAULT_SETUP, fillPage } from "./fillPage"
+import type { FillProgress } from "./progress"
 import { summarizeReports } from "./summary"
 
 const profile: Profile = {
@@ -237,5 +238,41 @@ describe("fillPage: the fixture application form", () => {
       unmatched: 2,
       noValue: 3,
     })
+  })
+})
+
+describe("fillPage: progress", () => {
+  const PAGE = `
+    <label for="a">First name</label><input id="a" />
+    <label for="b">Last name</label><input id="b" />
+    <label for="c">Referral code</label><input id="c" />`
+
+  test("reports the total up front, then one more step for every field, counting what was filled", async () => {
+    setPage(PAGE)
+    const seen: FillProgress[] = []
+
+    await fillPage(document, profile, DEFAULT_SETUP, (progress) => seen.push(progress))
+
+    expect(seen).toEqual([
+      { total: 3, filled: 0, phase: "rules" },
+      { total: 3, filled: 1, phase: "rules" },
+      { total: 3, filled: 2, phase: "rules" },
+      { total: 3, filled: 2, phase: "rules" },
+    ])
+  })
+
+  test("reports nothing to count on a page without fields beyond the starting step", async () => {
+    setPage("<p>No form here</p>")
+    const seen: FillProgress[] = []
+
+    await fillPage(document, profile, DEFAULT_SETUP, (progress) => seen.push(progress))
+
+    expect(seen).toEqual([{ total: 0, filled: 0, phase: "rules" }])
+  })
+
+  test("works without a listener", async () => {
+    setPage(PAGE)
+
+    await expect(fillPage(document, profile)).resolves.toHaveLength(3)
   })
 })

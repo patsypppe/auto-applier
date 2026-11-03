@@ -1,7 +1,7 @@
-// Service worker: answers LLM requests (only this script uses the API keys) and keeps each tab's fill results for the popup.
+// Service worker: answers LLM requests (only this script uses the API keys) and keeps each tab's fill progress and results for the popup.
 import { createFallbackClient, createProviderClient } from "@auto-applier/core"
 import { answerLlmRequest } from "./llm/answerLlmRequest"
-import { isFillResultMessage, isGetResumeRequest, isLlmRequest, isPageLoadedMessage } from "./messaging"
+import { isFillProgressMessage, isFillResultMessage, isGetResumeRequest, isLlmRequest, isPageLoadedMessage } from "./messaging"
 import { answerResumeRequest } from "./resume/answerResumeRequest"
 import { ChromeSessionFillStore } from "./storage/ChromeSessionFillStore"
 import { ChromeStorageSettingsStore } from "./storage/ChromeStorageSettingsStore"
@@ -11,13 +11,17 @@ const settingsStore = new ChromeStorageSettingsStore()
 const fillStore = new ChromeSessionFillStore()
 const resumeStore = new IndexedDbResumeStore()
 
-// Saves fill results and forgets them on page loads (no reply); returns true (keeping the reply channel open) for LLM and resume requests. Everything is ignored unless it comes from this extension.
+// Saves fill progress and results and forgets them on page loads (no reply); returns true (keeping the reply channel open) for LLM and resume requests. Everything is ignored unless it comes from this extension.
 chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false
 
   const tabId = sender.tab?.id
   if (isFillResultMessage(message)) {
     if (tabId !== undefined) void fillStore.saveResult(tabId, sender.frameId ?? 0, message.result)
+    return false
+  }
+  if (isFillProgressMessage(message)) {
+    if (tabId !== undefined) void fillStore.saveProgress(tabId, sender.frameId ?? 0, message.progress)
     return false
   }
   if (isPageLoadedMessage(message)) {

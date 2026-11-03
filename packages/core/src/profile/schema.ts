@@ -49,6 +49,7 @@ const standardAnswersSchema = z.object({
   workAuthorization: requiredText,
   needsSponsorship: z.boolean(),
   isAuthorizedToWork: z.boolean(),
+  plansToWorkRemotely: z.optional(z.boolean()),
   noticePeriod: optionalText,
   salaryExpectation: optionalText,
 })

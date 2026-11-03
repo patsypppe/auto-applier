@@ -39,6 +39,7 @@ export type StandardAnswers = {
   workAuthorization: string
   needsSponsorship: boolean
   isAuthorizedToWork: boolean
+  plansToWorkRemotely?: boolean
   noticePeriod?: string
   salaryExpectation?: string
 }

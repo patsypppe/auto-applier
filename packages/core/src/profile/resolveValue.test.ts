@@ -28,6 +28,7 @@ const completeProfile: Profile = {
     workAuthorization: "Citizen",
     needsSponsorship: false,
     isAuthorizedToWork: true,
+    plansToWorkRemotely: false,
     noticePeriod: "2 weeks",
     salaryExpectation: "120000",
   },
@@ -150,5 +151,15 @@ describe("resolveValue", () => {
     for (const key of PROFILE_KEYS) {
       expect(resolveValue(completeProfile, key), key).toEqual(expect.any(String))
     }
+  })
+})
+
+describe("resolveValue: plansToWorkRemotely", () => {
+  test("is Yes or No once the profile says, and nothing before that", () => {
+    const withAnswer = (plansToWorkRemotely?: boolean): Profile => ({ ...minimalProfile, answers: { ...minimalProfile.answers, plansToWorkRemotely } })
+
+    expect(resolveValue(withAnswer(true), "plansToWorkRemotely")).toBe("Yes")
+    expect(resolveValue(withAnswer(false), "plansToWorkRemotely")).toBe("No")
+    expect(resolveValue(withAnswer(undefined), "plansToWorkRemotely")).toBeUndefined()
   })
 })

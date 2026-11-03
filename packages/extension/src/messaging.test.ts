@@ -3,6 +3,7 @@ import { emptySummary } from "@auto-applier/core"
 import { describe, expect, test } from "vitest"
 import {
   isFillPageRequest,
+  isFillProgressMessage,
   isFillResultMessage,
   isGetResumeRequest,
   isLlmRequest,
@@ -150,5 +151,18 @@ describe("isResumeResponse", () => {
     expect(isResumeResponse({ ok: false })).toBe(false)
     expect(isResumeResponse({ nothing: true })).toBe(false)
     for (const value of NOT_OBJECTS) expect(isResumeResponse(value)).toBe(false)
+  })
+})
+
+describe("isFillProgressMessage", () => {
+  test("accepts a progress report", () => {
+    expect(isFillProgressMessage({ type: "fill-progress", progress: { total: 22, filled: 5, phase: "rules" } })).toBe(true)
+  })
+
+  test("rejects other messages and malformed progress", () => {
+    expect(isFillProgressMessage({ type: "fill-result" })).toBe(false)
+    expect(isFillProgressMessage({ type: "fill-progress" })).toBe(false)
+    expect(isFillProgressMessage({ type: "fill-progress", progress: { total: "x", filled: 1, phase: "rules" } })).toBe(false)
+    for (const value of NOT_OBJECTS) expect(isFillProgressMessage(value)).toBe(false)
   })
 })
