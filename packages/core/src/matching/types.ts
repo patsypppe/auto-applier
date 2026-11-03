@@ -1,3 +1,4 @@
+// Defines the result of matching a form field to a profile key, and the Matcher contract.
 import type { FormField } from "../fields/types"
 
 export type MatchResult = {

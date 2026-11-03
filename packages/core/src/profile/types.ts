@@ -1,3 +1,4 @@
+// Defines the shape of the user's profile and the entities inside it.
 export type Links = {
   linkedin?: string
   github?: string

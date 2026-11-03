@@ -1,3 +1,4 @@
+// Defines the outcome of filling a field, and the Filler contract.
 import type { FormField } from "../fields/types"
 
 export type FillResult =

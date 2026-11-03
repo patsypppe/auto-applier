@@ -1,3 +1,4 @@
+// Derives full, legal and preferred names from the stored name parts.
 import type { PersonalInfo } from "./types"
 
 // Joins first, middle (if any) and last name into one string.

@@ -1,3 +1,4 @@
+// Stores the profile in chrome.storage.local, implementing the core's ProfileStore.
 import type { Profile, ProfileStore } from "@auto-applier/core"
 
 const PROFILE_KEY = "profile"

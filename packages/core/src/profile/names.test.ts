@@ -1,3 +1,4 @@
+// Tests the derived name functions, including their fallback rules.
 import { describe, expect, test } from "vitest"
 import { fullName, legalName, preferredName } from "./names"
 import type { PersonalInfo } from "./types"

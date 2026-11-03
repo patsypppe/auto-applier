@@ -1,3 +1,4 @@
+// Popup script: shows the current profile status when the extension icon is clicked.
 import { fullName } from "@auto-applier/core"
 import { ChromeStorageProfileStore } from "../storage/ChromeStorageProfileStore"
 

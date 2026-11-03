@@ -1,3 +1,4 @@
+// Bundles the extension's scripts with esbuild and copies static files into dist.
 import { build } from "esbuild"
 import { cp, mkdir, rm } from "node:fs/promises"
 

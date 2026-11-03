@@ -1,3 +1,4 @@
+// Defines how a form field found on a page is represented.
 export type FieldKind =
   | "text"
   | "select"
