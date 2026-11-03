@@ -1,6 +1,7 @@
 // Public entry point of the core package: re-exports everything other packages may use.
 export * from "./profile/types"
 export * from "./profile/names"
+export * from "./profile/schema"
 export * from "./fields/types"
 export * from "./matching/types"
 export * from "./filling/types"
