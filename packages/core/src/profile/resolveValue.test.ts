@@ -13,6 +13,9 @@ const completeProfile: Profile = {
     preferredName: "Pran",
     email: "pranav@example.com",
     phone: "5551234567",
+    city: "San Francisco",
+    state: "California",
+    country: "United States",
     links: { linkedin: "linkedin.com/in/pranav", github: "github.com/pranav", portfolio: "pranav.dev" },
   },
   experience: [
@@ -105,6 +108,22 @@ describe("resolveValue", () => {
 
     expect(resolveValue(noField, "fieldOfStudy")).toBeUndefined()
     expect(resolveValue(noField, "degree")).toBe("BSc")
+  })
+
+  test("returns the stored city, state and country", () => {
+    expect(resolveValue(completeProfile, "city")).toBe("San Francisco")
+    expect(resolveValue(completeProfile, "state")).toBe("California")
+    expect(resolveValue(completeProfile, "country")).toBe("United States")
+  })
+
+  test("derives the location from the city, state and country", () => {
+    expect(resolveValue(completeProfile, "location")).toBe("San Francisco, California, United States")
+  })
+
+  test("returns undefined for location values the profile does not have", () => {
+    for (const key of ["city", "state", "country", "location"] as const) {
+      expect(resolveValue(minimalProfile, key), key).toBeUndefined()
+    }
   })
 
   test("joins skills with commas", () => {

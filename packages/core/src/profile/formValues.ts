@@ -11,6 +11,9 @@ export type ProfileFormValues = {
   preferredName: string
   email: string
   phone: string
+  city: string
+  state: string
+  country: string
   linkedin: string
   github: string
   portfolio: string
@@ -40,6 +43,9 @@ export function emptyFormValues(): ProfileFormValues {
     preferredName: "",
     email: "",
     phone: "",
+    city: "",
+    state: "",
+    country: "",
     linkedin: "",
     github: "",
     portfolio: "",
@@ -69,6 +75,9 @@ export function toFormValues(profile: Profile): ProfileFormValues {
     preferredName: personal.preferredName ?? "",
     email: personal.email,
     phone: personal.phone,
+    city: personal.city ?? "",
+    state: personal.state ?? "",
+    country: personal.country ?? "",
     linkedin: personal.links.linkedin ?? "",
     github: personal.links.github ?? "",
     portfolio: personal.links.portfolio ?? "",
@@ -92,6 +101,9 @@ export function fromFormValues(values: ProfileFormValues, existing?: CarriedOver
       preferredName: optionalText(values.preferredName),
       email: values.email.trim(),
       phone: values.phone.trim(),
+      city: optionalText(values.city),
+      state: optionalText(values.state),
+      country: optionalText(values.country),
       links: {
         linkedin: optionalText(values.linkedin),
         github: optionalText(values.github),

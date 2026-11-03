@@ -23,6 +23,9 @@ const personalInfoSchema = z.object({
   preferredName: optionalText,
   email: z.email(),
   phone: requiredText,
+  city: optionalText,
+  state: optionalText,
+  country: optionalText,
   links: linksSchema,
 })
 

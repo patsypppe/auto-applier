@@ -172,3 +172,24 @@ describe("ProfileForm: saving", () => {
     expect(shownErrors()).toEqual(["storage is full"])
   })
 })
+
+describe("ProfileForm: location", () => {
+  test("shows the saved city, state and country", async () => {
+    await mountForm({ ...SAVED, personal: { ...SAVED.personal, city: "Seattle", state: "WA", country: "United States" } })
+
+    expect([field("city").value, field("state").value, field("country").value]).toEqual(["Seattle", "WA", "United States"])
+  })
+
+  test("saves a typed city, state and country", async () => {
+    const { store } = await mountForm(SAVED)
+
+    field("city").value = "Austin"
+    field("state").value = "TX"
+    field("country").value = "United States"
+    await submit()
+
+    expect(store.save).toHaveBeenCalledWith(
+      expect.objectContaining({ personal: expect.objectContaining({ city: "Austin", state: "TX", country: "United States" }) }),
+    )
+  })
+})

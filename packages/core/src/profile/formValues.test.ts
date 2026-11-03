@@ -161,3 +161,39 @@ describe("toFormValues", () => {
     expect(result).toEqual({ ok: true, profile: existingProfile })
   })
 })
+
+describe("location in the form", () => {
+  const located: ProfileFormValues = { ...filledValues, city: " Seattle ", state: "WA", country: "United States" }
+
+  test("starts blank", () => {
+    const values = emptyFormValues()
+
+    expect([values.city, values.state, values.country]).toEqual(["", "", ""])
+  })
+
+  test("is trimmed and kept in the profile", () => {
+    const result = fromFormValues(located)
+
+    expect(result.ok && result.profile.personal).toMatchObject({ city: "Seattle", state: "WA", country: "United States" })
+  })
+
+  test("is left out of the profile when blank", () => {
+    const result = fromFormValues(filledValues)
+
+    expect(result.ok && result.profile.personal.city).toBeUndefined()
+    expect(result.ok && result.profile.personal.country).toBeUndefined()
+  })
+
+  test("comes back as form text, and blank when the profile has none", () => {
+    const profile = fromFormValues(located)
+
+    expect(profile.ok && toFormValues(profile.profile)).toMatchObject({ city: "Seattle", state: "WA", country: "United States" })
+    expect(toFormValues(existingProfile)).toMatchObject({ city: "", state: "", country: "" })
+  })
+
+  test("round-trips through the form values", () => {
+    const profile = fromFormValues(located)
+
+    expect(profile.ok && fromFormValues(toFormValues(profile.profile))).toEqual(profile)
+  })
+})

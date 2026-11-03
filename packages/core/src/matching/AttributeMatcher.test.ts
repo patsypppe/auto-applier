@@ -77,6 +77,18 @@ describe("AttributeMatcher: label", () => {
     ["Degree", "degree"],
     ["Field of study", "fieldOfStudy"],
     ["Major", "fieldOfStudy"],
+    ["City", "city"],
+    ["Location (City)", "city"],
+    ["State", "state"],
+    ["State / Province", "state"],
+    ["Country", "country"],
+    ["Please select the country where you currently reside", "country"],
+    ["Country of residence", "country"],
+    ["City and state of residence", "location"],
+    ["If in the US, please enter your city and state of residence", "location"],
+    ["Location", "location"],
+    ["Current location", "location"],
+    ["Where are you based?", "location"],
   ])("maps the label %s to %s", (label, profileKey) => {
     expect(matcher.match(makeField({ label }))).toEqual({ profileKey, confidence: CONFIDENCE.label })
   })
@@ -163,6 +175,58 @@ describe("AttributeMatcher: work and education history", () => {
 
   test("does not match the employer for a select", () => {
     expect(matcher.match(makeField({ label: "Current employer", kind: "select" }))).toBeNull()
+  })
+})
+
+describe("AttributeMatcher: location", () => {
+  test.each([
+    ["address-level2", "city"],
+    ["address-level1", "state"],
+    ["country", "country"],
+    ["country-name", "country"],
+  ])("maps autocomplete %s to %s", (autocomplete, profileKey) => {
+    expect(matcher.match(makeField({ autocomplete }))).toEqual({ profileKey, confidence: CONFIDENCE.autocomplete })
+  })
+
+  test.each([
+    ["city", "city"],
+    ["state", "state"],
+    ["country", "country"],
+    ["location", "location"],
+  ])("maps the name attribute %s to %s", (name, profileKey) => {
+    expect(matcher.match(makeField({ name }))).toEqual({ profileKey, confidence: CONFIDENCE.name })
+  })
+
+  test("does not mistake the verb 'state' for the state field", () => {
+    expect(matcher.match(makeField({ label: "Please state your notice period" }))?.profileKey).toBe("noticePeriod")
+    expect(matcher.match(makeField({ label: "State your salary expectations" }))?.profileKey).toBe("salaryExpectation")
+  })
+
+  test("does not match the plural 'states' or 'countries'", () => {
+    expect(matcher.match(makeField({ label: "Are you authorized to work in the United States?" }))?.profileKey).toBe(
+      "isAuthorizedToWork",
+    )
+    expect(matcher.match(makeField({ label: "Countries you anticipate working in" }))).toBeNull()
+  })
+
+  test("does not treat a phone country code or country of citizenship as the country", () => {
+    expect(matcher.match(makeField({ label: "Phone country code", kind: "select" }))).toBeNull()
+    expect(matcher.match(makeField({ label: "Country of citizenship" }))).toBeNull()
+    expect(matcher.match(makeField({ label: "Country of birth" }))).toBeNull()
+  })
+
+  test("does not treat a preference or office location as the home location", () => {
+    expect(matcher.match(makeField({ label: "Preferred work location" }))).toBeNull()
+    expect(matcher.match(makeField({ label: "Office location", kind: "select" }))).toBeNull()
+  })
+
+  test("matches city, state and country for a text input, a combobox or a select, but the location only for text or a combobox", () => {
+    for (const kind of ["text", "combobox", "select"] as const) {
+      expect(matcher.match(makeField({ label: "Country", kind }))?.profileKey).toBe("country")
+      expect(matcher.match(makeField({ label: "State", kind }))?.profileKey).toBe("state")
+    }
+    expect(matcher.match(makeField({ label: "Location", kind: "combobox" }))?.profileKey).toBe("location")
+    expect(matcher.match(makeField({ label: "Location", kind: "select" }))).toBeNull()
   })
 })
 

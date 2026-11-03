@@ -38,6 +38,20 @@ describe("validateProfile", () => {
     expect(validateProfile(full)).toEqual({ ok: true, profile: full })
   })
 
+  test("accepts a city, state and country, all optional", () => {
+    const located = { ...validProfile, personal: { ...validProfile.personal, city: "Seattle", state: "WA", country: "United States" } }
+
+    expect(validateProfile(located)).toEqual({ ok: true, profile: located })
+    expect(validateProfile({ ...validProfile, personal: { ...validProfile.personal, city: "Seattle" } }).ok).toBe(true)
+  })
+
+  test("rejects a city that is not text", () => {
+    const result = validateProfile({ ...validProfile, personal: { ...validProfile.personal, city: 5 } })
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.errors.join(" ")).toContain("personal.city")
+  })
+
   test("rejects an invalid email and names the field", () => {
     const bad = { ...validProfile, personal: { ...validProfile.personal, email: "not-an-email" } }
 

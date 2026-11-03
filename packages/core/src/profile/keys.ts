@@ -22,6 +22,10 @@ export const PROFILE_KEYS = [
   "school",
   "degree",
   "fieldOfStudy",
+  "city",
+  "state",
+  "country",
+  "location",
 ] as const
 
 export type ProfileKey = (typeof PROFILE_KEYS)[number]

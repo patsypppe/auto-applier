@@ -24,4 +24,8 @@ export const PROFILE_KEY_HELP: Record<ProfileKey, string> = {
   school: "the school or university the applicant attends or most recently attended",
   degree: "the degree the applicant earned or is earning, for example BSc",
   fieldOfStudy: "the applicant's field of study or major",
+  city: "the city where the applicant lives",
+  state: "the state, province or region where the applicant lives",
+  country: "the country where the applicant lives",
+  location: "where the applicant lives, as city, state and country in one text",
 }

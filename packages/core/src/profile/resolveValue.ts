@@ -1,6 +1,7 @@
 // Turns a profile key into the text value to put in a form field.
 import { currentEducation, currentJob } from "./history"
 import type { ProfileKey } from "./keys"
+import { locationText } from "./location"
 import { fullName, legalName, preferredName } from "./names"
 import type { Profile } from "./types"
 
@@ -27,6 +28,10 @@ const RESOLVERS: Record<ProfileKey, (profile: Profile) => string | undefined> = 
   school: (profile) => currentEducation(profile.education)?.school,
   degree: (profile) => currentEducation(profile.education)?.degree,
   fieldOfStudy: (profile) => currentEducation(profile.education)?.field,
+  city: (profile) => profile.personal.city,
+  state: (profile) => profile.personal.state,
+  country: (profile) => profile.personal.country,
+  location: (profile) => locationText(profile.personal),
 }
 
 // Returns the profile's value for the key, or undefined when the profile has none.

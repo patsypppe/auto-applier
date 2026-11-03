@@ -13,6 +13,9 @@ export type PersonalInfo = {
   preferredName?: string
   email: string
   phone: string
+  city?: string
+  state?: string
+  country?: string
   links: Links
 }
 

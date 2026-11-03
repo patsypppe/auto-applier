@@ -13,6 +13,8 @@ type Rule = {
 
 const TEXT_ONLY: FieldKind[] = ["text"]
 const SCHOOL_KINDS: FieldKind[] = ["text", "combobox", "select"]
+const PLACE_KINDS: FieldKind[] = ["text", "combobox", "select"]
+const LOCATION_KINDS: FieldKind[] = ["text", "combobox"]
 
 const AUTOCOMPLETE_KEYS = new Map<string, ProfileKey>([
   ["given-name", "firstName"],
@@ -21,6 +23,10 @@ const AUTOCOMPLETE_KEYS = new Map<string, ProfileKey>([
   ["name", "fullName"],
   ["email", "email"],
   ["tel", "phone"],
+  ["address-level2", "city"],
+  ["address-level1", "state"],
+  ["country", "country"],
+  ["country-name", "country"],
 ])
 
 // Rules are checked in order, so specific names come before generic ones.
@@ -58,6 +64,19 @@ const RULES: Rule[] = [
   { key: "degree", patterns: [/\bdegree\b/], kinds: SCHOOL_KINDS },
   { key: "noticePeriod", patterns: [/\bnotice period\b/] },
   { key: "salaryExpectation", patterns: [/\b(salary|compensation)\b/] },
+  { key: "location", patterns: [/\bcity\b.*\b(state|province)\b/, /\b(state|province)\b.*\bcity\b/], kinds: LOCATION_KINDS },
+  { key: "city", patterns: [/\bcity\b/], kinds: PLACE_KINDS },
+  { key: "state", patterns: [/\b(state|province|region)\b/], kinds: PLACE_KINDS },
+  {
+    key: "country",
+    patterns: [/\bcountry\b(?! of (citizenship|birth|origin))(?!.*\b(code|dial|calling)\b)/],
+    kinds: PLACE_KINDS,
+  },
+  {
+    key: "location",
+    patterns: [/^(current |your |home |candidate )?location\b/, /\bwhere (are|do) you (based|live|located|reside)\b/],
+    kinds: LOCATION_KINDS,
+  },
 ]
 
 // Reads the last token of the autocomplete attribute, which names the field's purpose.
