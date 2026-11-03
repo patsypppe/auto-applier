@@ -2,6 +2,7 @@
 export * from "./profile/types"
 export * from "./profile/names"
 export * from "./profile/schema"
+export * from "./profile/formValues"
 export * from "./fields/types"
 export * from "./matching/types"
 export * from "./filling/types"
