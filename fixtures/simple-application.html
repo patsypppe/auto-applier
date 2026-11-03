@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- Test job application form used by the fill tests and for trying the extension by hand. -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Software Engineer, Example Co.</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 560px; margin: 2rem auto; padding: 0 1rem; }
+      label { display: block; font-weight: 600; margin-top: 1rem; }
+      input[type="text"], input[type="email"], input[type="tel"], input[type="file"], select, textarea {
+        width: 100%; padding: 0.4rem; box-sizing: border-box;
+      }
+      fieldset { margin-top: 1rem; border: 1px solid #ccc; }
+      fieldset label, label.inline { display: inline; font-weight: normal; margin-right: 1rem; }
+      button { margin-top: 1.5rem; padding: 0.6rem 1.2rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Software Engineer, Example Co.</h1>
+    <form onsubmit="return false">
+      <label for="first_name">First name *</label>
+      <input id="first_name" name="first_name" type="text" required />
+
+      <label for="last_name">Last name *</label>
+      <input id="last_name" name="last_name" type="text" required />
+
+      <label for="email">Email *</label>
+      <input id="email" name="email" type="email" required />
+
+      <label for="phone">Phone</label>
+      <input id="phone" name="phone" type="tel" />
+
+      <label for="linkedin">LinkedIn Profile</label>
+      <input id="linkedin" name="linkedin_url" type="text" />
+
+      <label for="website">Website / Portfolio</label>
+      <input id="website" name="website" type="text" />
+
+      <fieldset>
+        <legend>Are you legally authorized to work in the United States?</legend>
+        <label><input id="auth_yes" type="radio" name="work_auth" value="yes" /> Yes</label>
+        <label><input id="auth_no" type="radio" name="work_auth" value="no" /> No</label>
+      </fieldset>
+
+      <label for="sponsorship">Do you require visa sponsorship now or in the future?</label>
+      <select id="sponsorship" name="sponsorship">
+        <option value="">Select…</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+
+      <label for="notice">Notice period</label>
+      <input id="notice" name="notice" type="text" />
+
+      <label for="salary">Salary expectations</label>
+      <input id="salary" name="salary" type="text" />
+
+      <label for="resume">Resume/CV</label>
+      <input id="resume" name="resume" type="file" />
+
+      <label for="why">Why do you want to work here?</label>
+      <textarea id="why" name="why" rows="4"></textarea>
+
+      <label class="inline"><input id="privacy" type="checkbox" name="privacy" /> I agree to the privacy policy</label>
+
+      <button type="submit">Submit application</button>
+    </form>
+  </body>
+</html>

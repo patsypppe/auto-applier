@@ -1,21 +1,26 @@
 // Zod schema for the profile, used to validate user input and LLM output before it is saved.
-import { z } from "zod"
+import * as z from "zod/mini"
+import en from "zod/v4/locales/en.js"
 import type { Profile } from "./types"
 
-const requiredText = z.string().min(1)
+// Only the English messages are loaded: the full set of languages would add about 400 KB to every page.
+z.config(en())
+
+const requiredText = z.string().check(z.minLength(1))
+const optionalText = z.optional(z.string())
 
 const linksSchema = z.object({
-  linkedin: z.string().optional(),
-  github: z.string().optional(),
-  portfolio: z.string().optional(),
+  linkedin: optionalText,
+  github: optionalText,
+  portfolio: optionalText,
 })
 
 const personalInfoSchema = z.object({
   firstName: requiredText,
-  middleName: z.string().optional(),
+  middleName: optionalText,
   lastName: requiredText,
-  legalName: z.string().optional(),
-  preferredName: z.string().optional(),
+  legalName: optionalText,
+  preferredName: optionalText,
   email: z.email(),
   phone: requiredText,
   links: linksSchema,
@@ -25,24 +30,24 @@ const workExperienceSchema = z.object({
   company: requiredText,
   title: requiredText,
   startDate: requiredText,
-  endDate: z.string().optional(),
+  endDate: optionalText,
   description: z.string(),
 })
 
 const educationSchema = z.object({
   school: requiredText,
   degree: requiredText,
-  field: z.string().optional(),
+  field: optionalText,
   startDate: requiredText,
-  endDate: z.string().optional(),
+  endDate: optionalText,
 })
 
 const standardAnswersSchema = z.object({
   workAuthorization: requiredText,
   needsSponsorship: z.boolean(),
   isAuthorizedToWork: z.boolean(),
-  noticePeriod: z.string().optional(),
-  salaryExpectation: z.string().optional(),
+  noticePeriod: optionalText,
+  salaryExpectation: optionalText,
 })
 
 const resumeFileSchema = z.object({
@@ -57,7 +62,7 @@ export const profileSchema = z.object({
   education: z.array(educationSchema),
   skills: z.array(z.string()),
   answers: standardAnswersSchema,
-  resume: resumeFileSchema.optional(),
+  resume: z.optional(resumeFileSchema),
 })
 
 export type ValidationResult =
