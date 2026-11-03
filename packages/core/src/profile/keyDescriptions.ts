@@ -19,4 +19,9 @@ export const PROFILE_KEY_HELP: Record<ProfileKey, string> = {
   isAuthorizedToWork: "yes or no: whether the applicant is legally authorized to work in the country",
   noticePeriod: "how much notice the applicant must give a current employer",
   salaryExpectation: "the salary the applicant expects",
+  currentCompany: "the company where the applicant works now or worked most recently",
+  currentTitle: "the applicant's job title at their current or most recent job",
+  school: "the school or university the applicant attends or most recently attended",
+  degree: "the degree the applicant earned or is earning, for example BSc",
+  fieldOfStudy: "the applicant's field of study or major",
 }

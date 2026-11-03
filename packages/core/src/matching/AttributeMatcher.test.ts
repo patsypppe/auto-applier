@@ -63,6 +63,20 @@ describe("AttributeMatcher: label", () => {
     ["Do you require visa sponsorship?", "needsSponsorship"],
     ["Notice period", "noticePeriod"],
     ["Salary expectations", "salaryExpectation"],
+    ["Current or previous employer", "currentCompany"],
+    ["Current company", "currentCompany"],
+    ["Most recent employer", "currentCompany"],
+    ["Employer", "currentCompany"],
+    ["Current or previous job title", "currentTitle"],
+    ["Current job title", "currentTitle"],
+    ["Job title", "currentTitle"],
+    ["Most recent position", "currentTitle"],
+    ["School", "school"],
+    ["University", "school"],
+    ["School or university", "school"],
+    ["Degree", "degree"],
+    ["Field of study", "fieldOfStudy"],
+    ["Major", "fieldOfStudy"],
   ])("maps the label %s to %s", (label, profileKey) => {
     expect(matcher.match(makeField({ label }))).toEqual({ profileKey, confidence: CONFIDENCE.label })
   })
@@ -110,6 +124,45 @@ describe("AttributeMatcher: name attribute", () => {
 
   test("returns null for a name it does not recognise", () => {
     expect(matcher.match(makeField({ name: "input-23" }))).toBeNull()
+  })
+})
+
+describe("AttributeMatcher: work and education history", () => {
+  test.each([
+    ["current_company", "currentCompany"],
+    ["employer", "currentCompany"],
+    ["job_title", "currentTitle"],
+    ["school", "school"],
+    ["degree", "degree"],
+    ["field_of_study", "fieldOfStudy"],
+  ])("maps the name attribute %s to %s", (name, profileKey) => {
+    expect(matcher.match(makeField({ name }))).toEqual({ profileKey, confidence: CONFIDENCE.name })
+  })
+
+  test("does not treat questions that merely mention employment as the employer field", () => {
+    expect(matcher.match(makeField({ label: "Have you ever been employed by Stripe or a Stripe affiliate?" }))).toBeNull()
+    expect(matcher.match(makeField({ label: "Are you currently employed?" }))).toBeNull()
+  })
+
+  test("does not treat a bare title or position as the job title", () => {
+    expect(matcher.match(makeField({ label: "Title" }))).toBeNull()
+    expect(matcher.match(makeField({ label: "Position you are applying for" }))).toBeNull()
+  })
+
+  test("matches school and degree for a text input, a combobox or a select", () => {
+    for (const kind of ["text", "combobox", "select"] as const) {
+      expect(matcher.match(makeField({ label: "School", kind }))?.profileKey).toBe("school")
+      expect(matcher.match(makeField({ label: "Degree", kind }))?.profileKey).toBe("degree")
+    }
+  })
+
+  test("does not match school or degree for a radio group or checkbox", () => {
+    expect(matcher.match(makeField({ label: "Degree", kind: "radio" }))).toBeNull()
+    expect(matcher.match(makeField({ label: "School", kind: "checkbox" }))).toBeNull()
+  })
+
+  test("does not match the employer for a select", () => {
+    expect(matcher.match(makeField({ label: "Current employer", kind: "select" }))).toBeNull()
   })
 })
 

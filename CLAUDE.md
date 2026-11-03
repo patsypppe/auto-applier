@@ -138,7 +138,7 @@ fixtures/simple-application.html   test form used by fillPage.test.ts and for tr
 - Every unmatched field is outlined amber, including search boxes and cookie checkboxes; this may be noisy on real pages.
 - `FileFiller` does not exist yet, so file inputs are always reported as unmatched.
 - Not handled yet: shadow DOM, custom dropdowns that are not `input[role=combobox]`, checkbox groups (each checkbox is its own field), password fields (skipped; they return with the login feature).
-- Keys like `currentCompany` / `currentTitle` are deferred until the experience editor exists.
+- `currentCompany`, `currentTitle`, `school`, `degree` and `fieldOfStudy` are derived, not stored: `profile/history.ts` picks the first job (or education) with no end date, else the first in the list (resumes list the newest first; dates are free text so they are not compared). They match labels like "Current or previous employer", "Job title", "School", "Degree", "Field of study" (school, degree and field also accept selects and comboboxes; employer and title accept text only). A bare "Title" or "Position you are applying for" is deliberately not matched. Not yet handled: a location (city, state, country) is not in the profile at all.
 - A profile saved before `isAuthorizedToWork` existed will show "No" for it in the form. The user was told to re-check it and save.
 - Making a form field fail on a real site is expected; the `FillResult` must say so instead of failing silently.
 

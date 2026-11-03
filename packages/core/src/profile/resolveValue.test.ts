@@ -15,8 +15,11 @@ const completeProfile: Profile = {
     phone: "5551234567",
     links: { linkedin: "linkedin.com/in/pranav", github: "github.com/pranav", portfolio: "pranav.dev" },
   },
-  experience: [],
-  education: [],
+  experience: [
+    { company: "Acme", title: "Backend Engineer", startDate: "2022", description: "" },
+    { company: "Old Co", title: "Intern", startDate: "2020", endDate: "2021", description: "" },
+  ],
+  education: [{ school: "State University", degree: "BSc", field: "Computer Science", startDate: "2018", endDate: "2022" }],
   skills: ["TypeScript", "React"],
   answers: {
     workAuthorization: "Citizen",
@@ -75,6 +78,33 @@ describe("resolveValue", () => {
   test("turns the authorized-to-work boolean into Yes or No", () => {
     expect(resolveValue(completeProfile, "isAuthorizedToWork")).toBe("Yes")
     expect(resolveValue(minimalProfile, "isAuthorizedToWork")).toBe("No")
+  })
+
+  test("takes the employer and job title from the current job", () => {
+    expect(resolveValue(completeProfile, "currentCompany")).toBe("Acme")
+    expect(resolveValue(completeProfile, "currentTitle")).toBe("Backend Engineer")
+  })
+
+  test("takes the school, degree and field of study from the current education", () => {
+    expect(resolveValue(completeProfile, "school")).toBe("State University")
+    expect(resolveValue(completeProfile, "degree")).toBe("BSc")
+    expect(resolveValue(completeProfile, "fieldOfStudy")).toBe("Computer Science")
+  })
+
+  test("returns undefined for history values when there is no history", () => {
+    for (const key of ["currentCompany", "currentTitle", "school", "degree", "fieldOfStudy"] as const) {
+      expect(resolveValue(minimalProfile, key), key).toBeUndefined()
+    }
+  })
+
+  test("returns undefined for the field of study when the degree has none", () => {
+    const noField = {
+      ...completeProfile,
+      education: [{ school: "State University", degree: "BSc", startDate: "2018" }],
+    }
+
+    expect(resolveValue(noField, "fieldOfStudy")).toBeUndefined()
+    expect(resolveValue(noField, "degree")).toBe("BSc")
   })
 
   test("joins skills with commas", () => {

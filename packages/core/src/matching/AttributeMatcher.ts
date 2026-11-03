@@ -12,6 +12,7 @@ type Rule = {
 }
 
 const TEXT_ONLY: FieldKind[] = ["text"]
+const SCHOOL_KINDS: FieldKind[] = ["text", "combobox", "select"]
 
 const AUTOCOMPLETE_KEYS = new Map<string, ProfileKey>([
   ["given-name", "firstName"],
@@ -42,6 +43,19 @@ const RULES: Rule[] = [
   },
   { key: "workAuthorization", patterns: [/\bwork authori[sz]ation\b/] },
   { key: "needsSponsorship", patterns: [/\bsponsor(ship)?\b/] },
+  {
+    key: "currentCompany",
+    patterns: [/\b(current|previous|most recent|latest|last)( or (current|previous))? (company|employer)\b/, /\bemployer\b/],
+    kinds: TEXT_ONLY,
+  },
+  {
+    key: "currentTitle",
+    patterns: [/\bjob title\b/, /\b(current|previous|most recent|latest|last)( or (current|previous))? (title|position|role)\b/],
+    kinds: TEXT_ONLY,
+  },
+  { key: "fieldOfStudy", patterns: [/\bfield of study\b/, /\b(major|discipline)\b/], kinds: SCHOOL_KINDS },
+  { key: "school", patterns: [/\b(school|university|college|institution)\b/], kinds: SCHOOL_KINDS },
+  { key: "degree", patterns: [/\bdegree\b/], kinds: SCHOOL_KINDS },
   { key: "noticePeriod", patterns: [/\bnotice period\b/] },
   { key: "salaryExpectation", patterns: [/\b(salary|compensation)\b/] },
 ]

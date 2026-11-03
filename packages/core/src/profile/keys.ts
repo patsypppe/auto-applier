@@ -17,6 +17,11 @@ export const PROFILE_KEYS = [
   "isAuthorizedToWork",
   "noticePeriod",
   "salaryExpectation",
+  "currentCompany",
+  "currentTitle",
+  "school",
+  "degree",
+  "fieldOfStudy",
 ] as const
 
 export type ProfileKey = (typeof PROFILE_KEYS)[number]
