@@ -1,8 +1,9 @@
 // Defines the result of matching a form field to a profile key, and the Matcher contract.
 import type { FormField } from "../fields/types"
+import type { ProfileKey } from "../profile/keys"
 
 export type MatchResult = {
-  profileKey: string
+  profileKey: ProfileKey
   confidence: number
 }
 
