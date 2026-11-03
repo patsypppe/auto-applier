@@ -78,16 +78,53 @@ describe("createFallbackClient", () => {
   test("falls back to Groq when Gemini is overloaded", async () => {
     const fetchFn = routedFetch(503, 200)
 
-    const result = await createFallbackClient({ gemini, groq }, { fetchFn }).completeJson("hi")
+    const result = await createFallbackClient({ gemini, groq }, { fetchFn, retryDelaysMs: [] }).completeJson("hi")
 
     expect(result).toEqual({ from: "groq" })
     expect(calledUrls(fetchFn)).toHaveLength(2)
   })
 
+  test("retries a busy Gemini before falling back to Groq", async () => {
+    const fetchFn = routedFetch(503, 200)
+
+    const result = await createFallbackClient({ gemini, groq }, { fetchFn, retryDelaysMs: [0, 0] }).completeJson("hi")
+
+    expect(result).toEqual({ from: "groq" })
+    expect(calledUrls(fetchFn).filter((url) => url.includes("generativelanguage"))).toHaveLength(3)
+    expect(calledUrls(fetchFn).filter((url) => url.includes("api.groq.com"))).toHaveLength(1)
+  })
+
+  test("answers from Gemini when a retry works, without touching Groq", async () => {
+    let geminiCalls = 0
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      if (!String(input).includes("generativelanguage")) throw new Error("Groq should not be called")
+      geminiCalls += 1
+      return geminiCalls === 1
+        ? new Response(JSON.stringify({ error: { message: "busy" } }), { status: 503 })
+        : new Response(
+            JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"from":"gemini"}' }] }, finishReason: "STOP" }] }),
+          )
+    })
+
+    const result = await createFallbackClient({ gemini, groq }, { fetchFn, retryDelaysMs: [0] }).completeJson("hi")
+
+    expect(result).toEqual({ from: "gemini" })
+    expect(geminiCalls).toBe(2)
+  })
+
+  test("does not retry a permanent failure such as a missing model", async () => {
+    const fetchFn = routedFetch(200, 404)
+
+    await expect(createFallbackClient({ groq }, { fetchFn, retryDelaysMs: [0, 0] }).completeJson("hi")).rejects.toThrow(
+      "Groq returned 404",
+    )
+    expect(calledUrls(fetchFn)).toHaveLength(1)
+  })
+
   test("reports both reasons when both providers fail", async () => {
     const fetchFn = routedFetch(503, 429)
 
-    await expect(createFallbackClient({ gemini, groq }, { fetchFn }).completeJson("hi")).rejects.toThrow(
+    await expect(createFallbackClient({ gemini, groq }, { fetchFn, retryDelaysMs: [] }).completeJson("hi")).rejects.toThrow(
       /Gemini returned 503.*; Groq returned 429/,
     )
   })

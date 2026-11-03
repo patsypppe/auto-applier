@@ -10,7 +10,7 @@ const DISTINCT_INPUT_KINDS = new Set(["radio", "checkbox", "file", "date"])
 
 // Returns the kind of a control, or undefined when it should not be filled.
 function kindOf(control: Control): FieldKind | undefined {
-  if (control.disabled) return undefined
+  if (control.disabled || control.getAttribute("aria-hidden") === "true") return undefined
   if (control instanceof HTMLSelectElement) return "select"
   if (control instanceof HTMLTextAreaElement) return "text"
   if (SKIPPED_INPUT_TYPES.has(control.type)) return undefined

@@ -1,6 +1,7 @@
 // Tests that GeminiLLMClient sends the right request, parses the answer, and fails with clear messages.
 import { describe, expect, test, vi } from "vitest"
 import { GeminiLLMClient } from "./GeminiLLMClient"
+import { LLMRequestError } from "./LLMRequestError"
 
 const API_KEY = "test-key-123"
 const MODEL = "gemini-test-model"
@@ -144,6 +145,50 @@ describe("GeminiLLMClient: errors from the API", () => {
     const error = await client.completeJson("hello").catch((caught: Error) => caught)
 
     expect((error as Error).message).not.toContain(API_KEY)
+  })
+})
+
+describe("GeminiLLMClient: which failures are worth retrying", () => {
+  test("marks rate limits and server errors as retryable", async () => {
+    for (const status of [429, 500, 503]) {
+      const error = await clientWith(fakeFetch({ error: { message: "x" } }, status))
+        .completeJson("hello")
+        .catch((caught: unknown) => caught)
+
+      expect(error).toBeInstanceOf(LLMRequestError)
+      expect((error as LLMRequestError).retryable).toBe(true)
+    }
+  })
+
+  test("marks a bad request or key as not retryable", async () => {
+    const error = await clientWith(fakeFetch({ error: { message: "bad key" } }, 400))
+      .completeJson("hello")
+      .catch((caught: unknown) => caught)
+
+    expect((error as LLMRequestError).retryable).toBe(false)
+  })
+
+  test("marks a failed connection as retryable", async () => {
+    const fetchFn = vi.fn(async () => {
+      throw new TypeError("Failed to fetch")
+    })
+
+    const error = await clientWith(fetchFn).completeJson("hello").catch((caught: unknown) => caught)
+
+    expect((error as LLMRequestError).retryable).toBe(true)
+  })
+
+  test("does not mark a timeout as retryable, because waiting again would take another full timeout", async () => {
+    const hanging = vi.fn(
+      (_url: unknown, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")))
+        }),
+    )
+
+    const error = await clientWith(hanging as unknown as typeof fetch, 30).completeJson("hello").catch((c: unknown) => c)
+
+    expect((error as LLMRequestError).retryable).toBe(false)
   })
 })
 

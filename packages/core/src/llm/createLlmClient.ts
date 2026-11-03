@@ -3,6 +3,7 @@ import type { LLMClient } from "../ports/LLMClient"
 import { FallbackLLMClient } from "./FallbackLLMClient"
 import { GeminiLLMClient } from "./GeminiLLMClient"
 import { GroqLLMClient } from "./GroqLLMClient"
+import { RetryingLLMClient } from "./RetryingLLMClient"
 import { configuredProviders } from "./providerSettings"
 import type { ProviderSettings } from "./providerSettings"
 import type { LLMSettings, ProviderId } from "./settings"
@@ -10,16 +11,20 @@ import type { LLMSettings, ProviderId } from "./settings"
 export type ClientOptions = {
   fetchFn?: typeof fetch
   timeoutMs?: number
+  retryDelaysMs?: readonly number[]
 }
 
-const CLIENT_FACTORIES: Record<ProviderId, (settings: LLMSettings, options: ClientOptions) => LLMClient> = {
+type HttpOptions = Pick<ClientOptions, "fetchFn" | "timeoutMs">
+
+const CLIENT_FACTORIES: Record<ProviderId, (settings: LLMSettings, options: HttpOptions) => LLMClient> = {
   gemini: (settings, options) => new GeminiLLMClient(settings, options),
   groq: (settings, options) => new GroqLLMClient(settings, options),
 }
 
-// Creates the client for a single provider.
+// Creates the client for a single provider, which retries temporary failures (busy server, rate limit, dropped connection).
 export function createProviderClient(provider: ProviderId, settings: LLMSettings, options: ClientOptions = {}): LLMClient {
-  return CLIENT_FACTORIES[provider](settings, options)
+  const { retryDelaysMs, ...http } = options
+  return new RetryingLLMClient(CLIENT_FACTORIES[provider](settings, http), { delaysMs: retryDelaysMs })
 }
 
 // Creates a client that tries every provider with a saved key in order, so a backup answers when the main one fails.

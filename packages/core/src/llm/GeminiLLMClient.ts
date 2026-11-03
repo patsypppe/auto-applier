@@ -1,5 +1,6 @@
 // Asks Google's Gemini API for an answer and returns it parsed as JSON.
 import type { LLMClient } from "../ports/LLMClient"
+import { LLMRequestError, isRetryableStatus } from "./LLMRequestError"
 import type { LLMSettings } from "./settings"
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -29,7 +30,7 @@ async function readJson(response: Response): Promise<GeminiBody | undefined> {
 function apiError(response: Response, body: GeminiBody | undefined): Error {
   const message = body?.error?.message ?? (response.statusText || "no details")
   const hint = response.status === 429 ? " You may have hit the rate limit; wait a moment and try again." : ""
-  return new Error(`Gemini returned ${response.status}: ${message}${hint}`)
+  return new LLMRequestError(`Gemini returned ${response.status}: ${message}${hint}`, isRetryableStatus(response.status))
 }
 
 // Pulls the answer text out of a successful response, or throws a message saying why there is none.
@@ -96,8 +97,8 @@ export class GeminiLLMClient implements LLMClient {
         signal: controller.signal,
       })
     } catch (error: unknown) {
-      if (controller.signal.aborted) throw new Error("Gemini did not answer in time")
-      throw new Error(`Could not reach Gemini: ${error instanceof Error ? error.message : "unknown error"}`)
+      if (controller.signal.aborted) throw new LLMRequestError("Gemini did not answer in time", false)
+      throw new LLMRequestError(`Could not reach Gemini: ${error instanceof Error ? error.message : "unknown error"}`, true)
     } finally {
       clearTimeout(timer)
     }

@@ -28,6 +28,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
@@ -63,7 +64,7 @@ describe("background worker", () => {
     expect(fetchStub).not.toHaveBeenCalled()
   })
 
-  test("falls back to Groq when Gemini is overloaded", async () => {
+  test("falls back to Groq when Gemini fails for good", async () => {
     const stored = {
       "llm-settings": {
         gemini: { apiKey: "gemini-key", model: "gemini-model" },
@@ -72,7 +73,7 @@ describe("background worker", () => {
     }
     const { listener, fetchStub } = await loadWorker(stored, (url) =>
       url.includes("generativelanguage")
-        ? new Response(JSON.stringify({ error: { message: "busy" } }), { status: 503 })
+        ? new Response(JSON.stringify({ error: { message: "API key not valid." } }), { status: 400 })
         : new Response(JSON.stringify({ choices: [{ message: { content: '{"from":"groq"}' }, finish_reason: "stop" }] })),
     )
     const sendResponse = vi.fn()
@@ -80,6 +81,27 @@ describe("background worker", () => {
     listener({ type: "llm-complete", prompt: "hi" }, { id: EXTENSION_ID }, sendResponse)
 
     await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledWith({ ok: true, data: { from: "groq" } }))
+    expect(fetchStub).toHaveBeenCalledTimes(2)
+  })
+
+  test("retries Gemini after a temporary 503 before giving up on it", async () => {
+    vi.useFakeTimers()
+    let geminiCalls = 0
+    const { listener, fetchStub } = await loadWorker(
+      { "llm-settings": { gemini: { apiKey: "gemini-key", model: "gemini-model" } } },
+      () => {
+        geminiCalls += 1
+        return geminiCalls === 1
+          ? new Response(JSON.stringify({ error: { message: "busy" } }), { status: 503 })
+          : new Response(JSON.stringify(GEMINI_ANSWER))
+      },
+    )
+    const sendResponse = vi.fn()
+
+    listener({ type: "llm-complete", prompt: "hi" }, { id: EXTENSION_ID }, sendResponse)
+    await vi.advanceTimersByTimeAsync(5000)
+
+    expect(sendResponse).toHaveBeenCalledWith({ ok: true, data: { ok: true } })
     expect(fetchStub).toHaveBeenCalledTimes(2)
   })
 

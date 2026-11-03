@@ -1,6 +1,7 @@
 // Tests that GroqLLMClient sends the right request, parses the answer, and fails with clear messages.
 import { describe, expect, test, vi } from "vitest"
 import { GroqLLMClient } from "./GroqLLMClient"
+import { LLMRequestError } from "./LLMRequestError"
 
 const API_KEY = "gsk-test-key-123"
 const MODEL = "groq-test-model"
@@ -127,6 +128,39 @@ describe("GroqLLMClient: errors from the API", () => {
     const error = await client.completeJson("hello").catch((caught: Error) => caught)
 
     expect((error as Error).message).not.toContain(API_KEY)
+  })
+})
+
+describe("GroqLLMClient: which failures are worth retrying", () => {
+  test("marks rate limits and server errors as retryable", async () => {
+    for (const status of [429, 500, 503]) {
+      const error = await clientWith(fakeFetch({ error: { message: "x" } }, status))
+        .completeJson("hello")
+        .catch((caught: unknown) => caught)
+
+      expect(error).toBeInstanceOf(LLMRequestError)
+      expect((error as LLMRequestError).retryable).toBe(true)
+    }
+  })
+
+  test("marks a missing model or bad key as not retryable", async () => {
+    for (const status of [401, 404]) {
+      const error = await clientWith(fakeFetch({ error: { message: "x" } }, status))
+        .completeJson("hello")
+        .catch((caught: unknown) => caught)
+
+      expect((error as LLMRequestError).retryable).toBe(false)
+    }
+  })
+
+  test("marks a failed connection as retryable", async () => {
+    const fetchFn = vi.fn(async () => {
+      throw new TypeError("Failed to fetch")
+    })
+
+    const error = await clientWith(fetchFn).completeJson("hello").catch((caught: unknown) => caught)
+
+    expect((error as LLMRequestError).retryable).toBe(true)
   })
 })
 

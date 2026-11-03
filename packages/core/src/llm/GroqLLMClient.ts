@@ -1,5 +1,6 @@
 // Asks Groq's OpenAI-compatible chat API for an answer and returns it parsed as JSON.
 import type { LLMClient } from "../ports/LLMClient"
+import { LLMRequestError, isRetryableStatus } from "./LLMRequestError"
 import type { LLMSettings } from "./settings"
 
 const CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -28,7 +29,7 @@ async function readJson(response: Response): Promise<GroqBody | undefined> {
 function apiError(response: Response, body: GroqBody | undefined): Error {
   const message = body?.error?.message ?? (response.statusText || "no details")
   const hint = response.status === 429 ? " You may have hit the rate limit; wait a moment and try again." : ""
-  return new Error(`Groq returned ${response.status}: ${message}${hint}`)
+  return new LLMRequestError(`Groq returned ${response.status}: ${message}${hint}`, isRetryableStatus(response.status))
 }
 
 // Pulls the answer text out of a successful response, or throws a message saying why there is none.
@@ -92,8 +93,8 @@ export class GroqLLMClient implements LLMClient {
         signal: controller.signal,
       })
     } catch (error: unknown) {
-      if (controller.signal.aborted) throw new Error("Groq did not answer in time")
-      throw new Error(`Could not reach Groq: ${error instanceof Error ? error.message : "unknown error"}`)
+      if (controller.signal.aborted) throw new LLMRequestError("Groq did not answer in time", false)
+      throw new LLMRequestError(`Could not reach Groq: ${error instanceof Error ? error.message : "unknown error"}`, true)
     } finally {
       clearTimeout(timer)
     }

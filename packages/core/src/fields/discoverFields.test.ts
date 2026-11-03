@@ -34,6 +34,15 @@ describe("discoverFields: finding controls", () => {
     expect(discoverFields(root).map((field) => field.name)).toEqual(["inside"])
   })
 
+  test("skips controls marked aria-hidden, such as the invisible helper inputs some dropdown libraries add", () => {
+    const fields = discover(`
+      <input name="real" />
+      <input name="helper" aria-hidden="true" tabindex="-1" />
+    `)
+
+    expect(fields.map((field) => field.name)).toEqual(["real"])
+  })
+
   test("skips hidden, button, password and disabled controls", () => {
     const fields = discover(`
       <input type="hidden" name="csrf" />
