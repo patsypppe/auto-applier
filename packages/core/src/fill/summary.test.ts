@@ -14,7 +14,7 @@ import {
 } from "./summary"
 
 // Builds a report with the given outcome, optionally marked as AI work.
-function report(outcome: FieldOutcome, source?: "ai"): FieldReport {
+function report(outcome: FieldOutcome, source?: FieldReport["source"]): FieldReport {
   return { field: {} as FormField, outcome, source }
 }
 
@@ -157,5 +157,16 @@ describe("explainReport", () => {
 
   test("says a plain fill came from the profile", () => {
     expect(explainReport(report({ status: "filled" }))).toBe("Filled from your profile")
+  })
+})
+
+describe("a fill that fell back to Other", () => {
+  test("is explained, needs a check, and is counted with the AI's work", () => {
+    const fallback = report({ status: "filled" }, "fallback")
+
+    expect(explainReport(fallback)).toBe('Picked "Other": nothing in the list matched')
+    expect(needsReview(fallback)).toBe(true)
+    expect(needsAttention(fallback)).toBe(false)
+    expect(summarizeReports([fallback]).aiFilled).toBe(1)
   })
 })

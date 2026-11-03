@@ -398,3 +398,80 @@ describe("fillPageWithAssistant: marking the fields the model was asked about", 
     expect(reportFor(result.reports, "c").askedAi).toBeUndefined()
   })
 })
+
+const FAST_SETUP = { ...DEFAULT_SETUP, fillers: [...DEFAULT_SETUP.fillers.filter((filler) => !(filler instanceof ComboboxFiller)), new ComboboxFiller({ timeoutMs: 30, pollMs: 5 })] }
+
+// Loads a page with one School dropdown, wires it, and runs the assisted fill with the given school in the profile.
+async function runSchool(school: string, listed: string[], script: Script = {}) {
+  document.body.innerHTML = `<label for="sc">School</label><input id="sc" role="combobox" />`
+  const wired = wireDropdown("sc", listed)
+  const { llm, prompts } = scriptedLlm(script)
+  const withSchool = { ...profile, education: [{ school, degree: "MS", startDate: "2020" }] }
+  const result = await fillPageWithAssistant(document, withSchool, llm, { setup: FAST_SETUP })
+  return { result, prompts, llm, chosen: wired.chosen() }
+}
+
+describe("fillPageWithAssistant: schools and other education dropdowns", () => {
+  test("a school the page spells with a hyphen is found by the rules, with no AI call", async () => {
+    const { result, llm, chosen } = await runSchool("Indiana University Bloomington", ["Aalto University", "Indiana University - Bloomington"])
+
+    expect(chosen).toBe("Indiana University - Bloomington")
+    expect(reportFor(result.reports, "sc")).toMatchObject({ outcome: { status: "filled" } })
+    expect(reportFor(result.reports, "sc").source).toBeUndefined()
+    expect(llm.completeJson).not.toHaveBeenCalled()
+  })
+
+  test("the model is shown the schools found by searching for the profile's school", async () => {
+    const { prompts } = await runSchool("Indiana Institute of Tech", ["Aalto University", "Indiana Tech Academy", "Other"])
+
+    expect(prompts[0]).toContain("Indiana Tech Academy")
+  })
+
+  test("a school the model picks is used, and reported as the AI's", async () => {
+    const { result, chosen } = await runSchool("Indiana Institute of Tech", ["Aalto University", "Indiana Tech Academy", "Other"], {
+      answers: [{ id: 0, answer: "Indiana Tech Academy" }],
+    })
+
+    expect(chosen).toBe("Indiana Tech Academy")
+    expect(reportFor(result.reports, "sc")).toMatchObject({ outcome: { status: "filled" }, source: "ai" })
+  })
+
+  test("a school that is not in the list falls back to Other, marked for a check", async () => {
+    const { result, chosen } = await runSchool("Obscure Institute of Things", ["Aalto University", "Other"])
+
+    expect(chosen).toBe("Other")
+    expect(reportFor(result.reports, "sc")).toMatchObject({ outcome: { status: "filled" }, source: "fallback" })
+  })
+
+  test("falls back to Other even when the AI step failed", async () => {
+    const { result, chosen } = await runSchool("Obscure Institute of Things", ["Aalto University", "Other"], { error: new Error("Gemini returned 503") })
+
+    expect(chosen).toBe("Other")
+    expect(result.notes).toEqual(["AI help skipped: Gemini returned 503"])
+  })
+
+  test("stays flagged when the list has no Other option", async () => {
+    const { result, chosen } = await runSchool("Obscure Institute of Things", ["Aalto University", "PES University"])
+
+    expect(chosen).toBe("")
+    expect(reportFor(result.reports, "sc").outcome.status).toBe("failed")
+  })
+
+  test("a school the profile does not have is not replaced by Other", async () => {
+    document.body.innerHTML = `<label for="sc">School</label><input id="sc" role="combobox" />`
+    const wired = wireDropdown("sc", ["Aalto University", "Other"])
+    const { llm } = scriptedLlm({})
+
+    const result = await fillPageWithAssistant(document, { ...profile, education: [] }, llm, { setup: FAST_SETUP })
+
+    expect(wired.chosen()).toBe("")
+    expect(reportFor(result.reports, "sc").outcome.status).toBe("no-value")
+  })
+
+  test("a dropdown that is not about education is never filled with Other", async () => {
+    const { result, wired } = await runWithDropdowns(VETERAN, { v: ["I am a veteran", "Other"] }, {})
+
+    expect(wired.v?.chosen()).toBe("")
+    expect(reportFor(result.reports, "v").outcome.status).toBe("unmatched")
+  })
+})

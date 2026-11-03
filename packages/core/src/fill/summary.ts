@@ -40,10 +40,10 @@ export function needsAttention(report: FieldReport): boolean {
   return status === "failed" || status === "unmatched" || status === "no-value"
 }
 
-// Returns true when the field holds something the AI wrote or chose, which the user should check.
+// Returns true when the field holds something the AI wrote or chose, or a fallback pick, which the user should check.
 export function needsReview(report: FieldReport): boolean {
   const { status } = report.outcome
-  return status === "drafted" || (status === "filled" && report.source === "ai")
+  return status === "drafted" || (status === "filled" && report.source !== undefined)
 }
 
 // Returns the sentence that says what happened to a field and why, for the user or for a person checking the page.
@@ -61,6 +61,7 @@ export function explainReport(report: FieldReport): string {
     case "drafted":
       return "Written by the AI"
     case "filled":
+      if (report.source === "fallback") return 'Picked "Other": nothing in the list matched'
       return report.source === "ai" ? "Chosen by the AI" : "Filled from your profile"
   }
 }
@@ -68,7 +69,7 @@ export function explainReport(report: FieldReport): string {
 // Returns which count a report belongs to; fills that the AI helped with are counted separately.
 function summaryKey(report: FieldReport): keyof ReportSummary {
   const { status } = report.outcome
-  if (status === "filled") return report.source === "ai" ? "aiFilled" : "filled"
+  if (status === "filled") return report.source !== undefined ? "aiFilled" : "filled"
   return SUMMARY_KEY_BY_STATUS[status]
 }
 

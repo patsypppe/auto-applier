@@ -5,12 +5,14 @@ import { clickLikeUser } from "./events"
 import { findChoice } from "./findChoice"
 import type { OptionReader } from "./OptionReader"
 import { setNativeValue } from "./setNativeValue"
+import { shorterQueries } from "./shorterQueries"
 import type { FailureCode, Filler, FillResult } from "./types"
 import { waitUntil } from "./waitUntil"
 import type { WaitTiming } from "./waitUntil"
 
 const DEFAULT_TIMING: WaitTiming = { timeoutMs: 1500, pollMs: 50 }
 const SHOWN_CHOICE_SEARCH_DEPTH = 3
+const RETRY_TIMEOUT_MS = 700
 
 // Returns true when the element is an input.
 function isInput(element: HTMLElement): element is HTMLInputElement {
@@ -85,20 +87,41 @@ export class ComboboxFiller implements Filler, OptionReader {
     return field.kind === "combobox"
   }
 
-  // Opens the list without typing, returns its option texts, and closes it again; returns nothing for a locked or already-filled field or a list that stays empty.
-  async readOptions(field: FormField): Promise<string[]> {
+  // Types the text and returns the options the page shows for it, waiting up to the time given for some to appear.
+  private async search(input: HTMLInputElement, text: string, timeoutMs: number): Promise<HTMLElement[]> {
+    setNativeValue(input, text)
+    await waitUntil(() => findOptions(input).length > 0, { ...this.timing, timeoutMs })
+    return findOptions(input)
+  }
+
+  // Opens the list without typing and returns its option texts, then (given a hint) those a search for the hint finds, listed first; closes the list and clears the input.
+  // Returns nothing for a locked or already-filled field.
+  async readOptions(field: FormField, hint?: string): Promise<string[]> {
     const input = field.element
     if (!isInput(input) || input.readOnly || input.disabled || shownChoice(input) !== "") return []
 
     input.focus()
     if (input.getAttribute("aria-expanded") !== "true") clickLikeUser(input)
     const appeared = await waitUntil(() => findOptions(input).length > 0, this.timing)
-    const texts = appeared ? findOptions(input).map(optionText).filter((text) => text !== "") : []
+    const listed = appeared ? findOptions(input).map(optionText) : []
+
+    const searched: string[] = []
+    if (hint) {
+      const retryMs = Math.min(this.timing.timeoutMs, RETRY_TIMEOUT_MS)
+      for (const query of [hint, ...shorterQueries(hint)]) {
+        const found = await this.search(input, query, retryMs)
+        if (found.length > 0) {
+          searched.push(...found.map(optionText))
+          break
+        }
+      }
+      setNativeValue(input, "")
+    }
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }))
-    return [...new Set(texts)]
+    return [...new Set([...searched, ...listed].filter((text) => text !== ""))]
   }
 
-  // Opens the list with a full click if it is closed, types the value to filter it, clicks the matching option, and checks the list reacted.
+  // Opens the list with a full click if it is closed, types the value (then shorter prefixes of it) to filter the list, clicks the matching option, and checks the list reacted.
   async fill(field: FormField, value: string): Promise<FillResult> {
     const input = field.element
     if (!isInput(input)) return { status: "failed", reason: "Field is not a combobox input" }
@@ -116,13 +139,22 @@ export class ComboboxFiller implements Filler, OptionReader {
 
     input.focus()
     if (input.getAttribute("aria-expanded") !== "true") clickLikeUser(input)
-    setNativeValue(input, value)
 
-    const appeared = await waitUntil(() => findOptions(input).length > 0, this.timing)
-    if (!appeared) return giveUp(input, "No options appeared", "no-options")
+    const retryMs = Math.min(this.timing.timeoutMs, RETRY_TIMEOUT_MS)
+    let sawOptions = false
+    for (const query of [value, ...shorterQueries(value)]) {
+      const options = await this.search(input, query, query === value ? this.timing.timeoutMs : retryMs)
+      sawOptions = sawOptions || options.length > 0
+      const target = findChoice(value, options, optionText)
+      if (target) return this.pick(input, target)
+    }
+    return sawOptions
+      ? giveUp(input, `No single option matches "${value}"`, "no-option-match")
+      : giveUp(input, "No options appeared", "no-options")
+  }
 
-    const target = findChoice(value, findOptions(input), optionText)
-    if (!target) return giveUp(input, `No single option matches "${value}"`, "no-option-match")
+  // Clicks the chosen option and checks the list reacted; an option marked disabled is refused.
+  private async pick(input: HTMLInputElement, target: HTMLElement): Promise<FillResult> {
     if (target.getAttribute("aria-disabled") === "true") return giveUp(input, "Option is disabled")
 
     clickLikeUser(target)

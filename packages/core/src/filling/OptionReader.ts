@@ -3,7 +3,7 @@ import type { FormField } from "../fields/types"
 import type { Filler } from "./types"
 
 export interface OptionReader {
-  readOptions(field: FormField): Promise<string[]>
+  readOptions(field: FormField, hint?: string): Promise<string[]>
 }
 
 // Returns true when the filler can also read a field's options.

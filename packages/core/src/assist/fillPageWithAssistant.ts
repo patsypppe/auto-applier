@@ -4,6 +4,8 @@ import { DEFAULT_SETUP, fillPage, fillWith } from "../fill/fillPage"
 import type { FieldReport, FillSetup } from "../fill/fillPage"
 import { readsOptions } from "../filling/OptionReader"
 import type { LLMClient } from "../ports/LLMClient"
+import type { ProfileKey } from "../profile/keys"
+import { resolveValue } from "../profile/resolveValue"
 import type { Profile } from "../profile/types"
 import { buildAnswerFieldsPrompt, parseFieldAnswers } from "./answerFieldsPrompt"
 import type { FieldToAnswer } from "./answerFieldsPrompt"
@@ -22,6 +24,8 @@ export type AssistOptions = {
 const ANSWERABLE_KINDS = new Set<FieldKind>(["text", "select", "radio", "checkbox-group", "combobox"])
 const MAX_FIELDS = 40
 const MAX_QUESTION_CHARS = 300
+const EDUCATION_KEYS = new Set<ProfileKey>(["school", "degree", "fieldOfStudy"])
+const OTHER_OPTION = "Other"
 
 // Returns true when the user has already typed something into a text field.
 function hasUserValue(field: FormField): boolean {
@@ -45,11 +49,15 @@ function canAssist(field: FormField, setup: FillSetup): boolean {
   return ANSWERABLE_KINDS.has(field.kind) && fillable && (field.label !== "" || field.name !== "") && !hasUserValue(field)
 }
 
-// Returns the choices to offer for a field: the ones the page lists, or for a dropdown the ones read by opening it.
-async function optionsFor(field: FormField, setup: FillSetup): Promise<string[]> {
+// Returns the choices to offer for a field: the ones the page lists, or for a dropdown the ones read by opening it, with those a search for the profile's value finds first.
+async function optionsFor(report: FieldReport, profile: Profile, setup: FillSetup): Promise<string[]> {
+  const { field } = report
   if (field.options.length > 0) return field.options
   const reader = setup.fillers.find((filler) => filler.canFill(field) && readsOptions(filler))
-  return reader && readsOptions(reader) ? reader.readOptions(field) : []
+  if (!reader || !readsOptions(reader)) return []
+
+  const hint = report.profileKey ? resolveValue(profile, report.profileKey) : undefined
+  return reader.readOptions(field, hint)
 }
 
 // Fills one field with the model's answer: a written draft is reported as a draft to review, any other answer as the AI's fill.
@@ -77,12 +85,13 @@ async function answerLeftovers(
   if (leftovers.length === 0) return reports
 
   const items: FieldToAnswer[] = []
-  for (const { field } of leftovers) {
+  for (const report of leftovers) {
+    const { field } = report
     items.push({
       id: items.length,
       question: (field.label || field.name).slice(0, MAX_QUESTION_CHARS),
       kind: field.kind,
-      options: await optionsFor(field, setup),
+      options: await optionsFor(report, profile, setup),
       longAnswer: isFreeTextQuestion(field),
     })
   }
@@ -101,6 +110,32 @@ async function answerLeftovers(
   })
 }
 
+// Returns true for an education dropdown whose profile value could not be found in the page's list.
+function isMissingFromList(report: FieldReport): boolean {
+  const { outcome } = report
+  return (
+    report.field.kind === "combobox" &&
+    report.profileKey !== undefined &&
+    EDUCATION_KEYS.has(report.profileKey) &&
+    outcome.status === "failed" &&
+    (outcome.code === "no-option-match" || outcome.code === "no-options")
+  )
+}
+
+// Picks "Other" in each education dropdown that still has no match, reporting it for the user to check; a dropdown with no such option stays as it was.
+async function pickOtherWhereMissing(reports: FieldReport[], setup: FillSetup): Promise<FieldReport[]> {
+  const result: FieldReport[] = []
+  for (const report of reports) {
+    if (!isMissingFromList(report)) {
+      result.push(report)
+      continue
+    }
+    const outcome = await fillWith(setup.fillers, report.field, OTHER_OPTION)
+    result.push(outcome.status === "filled" ? { ...report, outcome, source: "fallback" } : report)
+  }
+  return result
+}
+
 // Fills the page with the rules, then makes one AI call for the rest; if it fails, what the rules filled is kept and a note says why.
 export async function fillPageWithAssistant(
   root: ParentNode,
@@ -112,9 +147,10 @@ export async function fillPageWithAssistant(
   const reports = await fillPage(root, profile, setup)
 
   try {
-    return { reports: await answerLeftovers(reports, profile, llm, setup, options.jobContext ?? ""), notes: [] }
+    const answered = await answerLeftovers(reports, profile, llm, setup, options.jobContext ?? "")
+    return { reports: await pickOtherWhereMissing(answered, setup), notes: [] }
   } catch (error: unknown) {
     const reason = error instanceof Error ? error.message : "The LLM request failed"
-    return { reports, notes: [`AI help skipped: ${reason}`] }
+    return { reports: await pickOtherWhereMissing(reports, setup), notes: [`AI help skipped: ${reason}`] }
   }
 }

@@ -489,3 +489,109 @@ describe("ComboboxFiller: readOptions", () => {
   })
 })
 
+describe("ComboboxFiller: shorter searches when the full text finds nothing", () => {
+  const SCHOOLS = ["Aalto University", "Indiana University - Bloomington", "Indiana University East", "PES University"]
+
+  // Records every text typed into the input.
+  function recordTyping(input: HTMLInputElement): string[] {
+    const typed: string[] = []
+    input.addEventListener("input", () => typed.push(input.value))
+    return typed
+  }
+
+  test("finds a school the page spells differently by searching for a shorter prefix", async () => {
+    const { field, input, state } = buildCombobox(SCHOOLS)
+    const typed = recordTyping(input)
+
+    const result = await filler.fill(field, "Indiana University Bloomington")
+
+    expect(result).toEqual({ status: "filled" })
+    expect(state.chosen).toBe("Indiana University - Bloomington")
+    expect(typed).toEqual(["Indiana University Bloomington", "Indiana University"])
+  })
+
+  test("goes on to the next shorter search until the options show up", async () => {
+    const { field, state } = buildCombobox(["PES University", "Corvinus University of Budapest"])
+
+    const result = await filler.fill(field, "PES University Bangalore Campus")
+
+    expect(result).toMatchObject({ status: "failed", code: "no-option-match" })
+    expect(state.chosen).toBe("")
+  })
+
+  test("does not search again once an option matched the full text", async () => {
+    const { field, input } = buildCombobox(SCHOOLS)
+    const typed = recordTyping(input)
+
+    await filler.fill(field, "PES University")
+
+    expect(typed).toEqual(["PES University"])
+  })
+
+  test("fails with no options, and leaves the input empty, when no search shows anything", async () => {
+    const { field, input } = buildCombobox(SCHOOLS)
+    const typed = recordTyping(input)
+
+    const result = await filler.fill(field, "Obscure Institute of Things")
+
+    expect(result).toEqual({ status: "failed", reason: "No options appeared", code: "no-options" })
+    expect(typed).toEqual(["Obscure Institute of Things", "Obscure Institute of", "Obscure Institute", "Obscure", ""])
+    expect(input.value).toBe("")
+  })
+
+  test("fails with no match when a shorter search shows options but none is the wanted one", async () => {
+    const { field, input } = buildCombobox(SCHOOLS)
+
+    const result = await filler.fill(field, "Indiana College of Arts")
+
+    expect(result).toMatchObject({ status: "failed", code: "no-option-match" })
+    expect(input.value).toBe("")
+  })
+
+  test("does not search again for a single word", async () => {
+    const { field, input } = buildCombobox(SCHOOLS)
+    const typed = recordTyping(input)
+
+    await filler.fill(field, "Zzz")
+
+    expect(typed).toEqual(["Zzz", ""])
+  })
+})
+
+describe("ComboboxFiller: readOptions with a hint", () => {
+  const SCHOOLS = ["Aalto University", "Indiana University - Bloomington", "Indiana University East"]
+
+  test("lists the options found by searching for the hint first, then the rest of the list", async () => {
+    const { field } = buildClickDropdown(SCHOOLS)
+
+    const options = await filler.readOptions(field, "Indiana University Bloomington")
+
+    expect(options).toEqual(["Indiana University - Bloomington", "Indiana University East", "Aalto University"])
+  })
+
+  test("leaves the input empty and the list closed afterwards", async () => {
+    const { field, input, listbox } = buildClickDropdown(SCHOOLS)
+
+    await filler.readOptions(field, "Indiana University Bloomington")
+
+    expect(input.value).toBe("")
+    expect(input.getAttribute("aria-expanded")).toBe("false")
+    expect(listbox.children).toHaveLength(0)
+  })
+
+  test("returns just the list when the hint finds nothing", async () => {
+    const { field } = buildClickDropdown(SCHOOLS)
+
+    expect(await filler.readOptions(field, "Obscure Institute")).toEqual(SCHOOLS)
+  })
+
+  test("types nothing when there is no hint", async () => {
+    const { field, input } = buildClickDropdown(SCHOOLS)
+    const typed: string[] = []
+    input.addEventListener("input", () => typed.push(input.value))
+
+    await filler.readOptions(field)
+
+    expect(typed).toEqual([])
+  })
+})
