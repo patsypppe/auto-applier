@@ -1,5 +1,5 @@
 // Fills a page with the rules first, then asks the LLM for help only with what the rules could not decide.
-import type { FormField } from "../fields/types"
+import type { FieldKind, FormField } from "../fields/types"
 import { DEFAULT_SETUP, fillPage, fillWith } from "../fill/fillPage"
 import type { FieldReport, FillSetup } from "../fill/fillPage"
 import type { LLMClient } from "../ports/LLMClient"
@@ -75,12 +75,14 @@ const mapUnmatched: Stage = async (context) => {
   return withUpdates(context.reports, updates)
 }
 
+const CHOICE_KINDS = new Set<FieldKind>(["select", "radio", "checkbox-group"])
+
 // Finds the choice fields whose key is known but whose option could not be matched, with the answer to match.
 function stuckOnOptions(context: Context): StuckOnOptions[] {
   return context.reports.flatMap((report) => {
     const { outcome, field, profileKey } = report
     if (outcome.status !== "failed" || outcome.code !== "no-option-match") return []
-    if ((field.kind !== "select" && field.kind !== "radio") || field.options.length === 0) return []
+    if (!CHOICE_KINDS.has(field.kind) || field.options.length === 0) return []
     if (profileKey === undefined) return []
 
     const answer = resolveValue(context.profile, profileKey)

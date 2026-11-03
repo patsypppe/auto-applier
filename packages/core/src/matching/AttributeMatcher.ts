@@ -43,6 +43,7 @@ const RULES: Rule[] = [
   { key: "github", patterns: [/\bgit ?hub\b/], kinds: TEXT_ONLY },
   { key: "portfolio", patterns: [/\b(portfolio|website|personal site)\b/], kinds: TEXT_ONLY },
   { key: "skills", patterns: [/\bskills?\b/], kinds: ["text", "combobox"] },
+  { key: "resume", patterns: [/\b(resume|cv|curriculum vitae)\b/], kinds: ["file"] },
   {
     key: "isAuthorizedToWork",
     patterns: [/\b(authori[sz]ed|eligible|permitted) to work\b/, /\bright to work\b/],
@@ -72,6 +73,7 @@ const RULES: Rule[] = [
     patterns: [/\bcountry\b(?! of (citizenship|birth|origin))(?!.*\b(code|dial|calling)\b)/],
     kinds: PLACE_KINDS,
   },
+  { key: "country", patterns: [/\bcountr(y|ies)\b/], kinds: ["checkbox-group"] },
   {
     key: "location",
     patterns: [/^(current |your |home |candidate )?location\b/, /\bwhere (are|do) you (based|live|located|reside)\b/],

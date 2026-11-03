@@ -230,6 +230,41 @@ describe("AttributeMatcher: location", () => {
   })
 })
 
+describe("AttributeMatcher: a group of checkboxes about countries", () => {
+  test("maps a countries question to the country", () => {
+    const label = "Please select the country or countries you anticipate working in"
+
+    expect(matcher.match(makeField({ label, kind: "checkbox-group" }))?.profileKey).toBe("country")
+    expect(matcher.match(makeField({ label: "Countries you anticipate working in", kind: "checkbox-group" }))?.profileKey).toBe("country")
+  })
+
+  test("only does so for a group of checkboxes", () => {
+    expect(matcher.match(makeField({ label: "Countries you anticipate working in", kind: "text" }))).toBeNull()
+  })
+
+  test("does not map other groups of checkboxes", () => {
+    expect(matcher.match(makeField({ label: "Which languages do you speak?", kind: "checkbox-group" }))).toBeNull()
+  })
+})
+
+describe("AttributeMatcher: resume uploads", () => {
+  test.each(["Resume", "Resume/CV", "Upload your CV", "Curriculum Vitae"])("maps the file field labelled %s to the resume", (label) => {
+    expect(matcher.match(makeField({ label, kind: "file" }))).toEqual({ profileKey: "resume", confidence: CONFIDENCE.label })
+  })
+
+  test("maps a file input whose name or id says resume, even when its label is just Attach", () => {
+    const field = makeField({ label: "Attach", name: "resume", kind: "file" })
+
+    expect(matcher.match(field)).toEqual({ profileKey: "resume", confidence: CONFIDENCE.name })
+  })
+
+  test("does not map a cover letter upload or a plain text field about a resume", () => {
+    expect(matcher.match(makeField({ label: "Attach", name: "cover_letter", kind: "file" }))).toBeNull()
+    expect(matcher.match(makeField({ label: "Cover letter", kind: "file" }))).toBeNull()
+    expect(matcher.match(makeField({ label: "Paste your resume here", kind: "text" }))).toBeNull()
+  })
+})
+
 describe("AttributeMatcher: field kinds", () => {
   test("does not match a select labelled 'Phone type' to the phone number", () => {
     expect(matcher.match(makeField({ label: "Phone type", kind: "select" }))).toBeNull()

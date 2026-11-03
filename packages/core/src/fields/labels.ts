@@ -40,9 +40,9 @@ export function labelFor(control: Control): string {
   )
 }
 
-// Returns the question text of a radio group, taken from its fieldset legend or radiogroup label.
-export function groupLabel(radio: HTMLInputElement): string {
-  const group = radio.closest("fieldset, [role='radiogroup']")
+// Returns the question text of a radio or checkbox group, taken from its fieldset legend or group label.
+export function groupLabel(input: HTMLInputElement): string {
+  const group = input.closest("fieldset, [role='radiogroup'], [role='group']")
   if (!group) return ""
 
   return (

@@ -1,4 +1,5 @@
 // Tests the background worker end to end: it answers LLM requests from this extension and nobody else.
+import "fake-indexeddb/auto"
 import { emptySummary } from "@auto-applier/core"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 import { createFakeSessionStorage } from "./testing/fakeSessionStorage"
@@ -206,5 +207,36 @@ describe("background worker: keeping fill results", () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(saved.has("fill-result:7:0")).toBe(true)
+  })
+})
+
+describe("background worker: handing out the saved resume", () => {
+  test("replies with the saved resume's bytes as text", async () => {
+    const { IndexedDbResumeStore } = await import("./storage/IndexedDbResumeStore")
+    await new IndexedDbResumeStore().save("resume", {
+      name: "resume.pdf",
+      mimeType: "application/pdf",
+      data: new TextEncoder().encode("%PDF").buffer as ArrayBuffer,
+    })
+    const { listener } = await loadWorker({})
+    const sendResponse = vi.fn()
+
+    const keepsChannelOpen = listener({ type: "get-resume" }, { id: EXTENSION_ID, tab: { id: 7 } }, sendResponse)
+
+    expect(keepsChannelOpen).toBe(true)
+    await vi.waitFor(() =>
+      expect(sendResponse).toHaveBeenCalledWith({
+        ok: true,
+        resume: { name: "resume.pdf", mimeType: "application/pdf", data: "JVBERg==" },
+      }),
+    )
+  })
+
+  test("ignores a resume request from another extension", async () => {
+    const { listener } = await loadWorker({})
+    const sendResponse = vi.fn()
+
+    expect(listener({ type: "get-resume" }, { id: "someone-else" }, sendResponse)).toBe(false)
+    expect(sendResponse).not.toHaveBeenCalled()
   })
 })

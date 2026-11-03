@@ -1,7 +1,15 @@
 // Tests that the message guards accept our own messages and reject anything else.
 import { emptySummary } from "@auto-applier/core"
 import { describe, expect, test } from "vitest"
-import { isFillPageRequest, isFillResultMessage, isLlmRequest, isLlmResponse, isPageLoadedMessage } from "./messaging"
+import {
+  isFillPageRequest,
+  isFillResultMessage,
+  isGetResumeRequest,
+  isLlmRequest,
+  isLlmResponse,
+  isPageLoadedMessage,
+  isResumeResponse,
+} from "./messaging"
 
 const NOT_OBJECTS = [null, undefined, "text", 42]
 
@@ -109,5 +117,38 @@ describe("isPageLoadedMessage", () => {
   test("rejects other types and non-objects", () => {
     expect(isPageLoadedMessage({ type: "fill-page" })).toBe(false)
     for (const value of NOT_OBJECTS) expect(isPageLoadedMessage(value)).toBe(false)
+  })
+})
+
+describe("isGetResumeRequest", () => {
+  test("accepts a get-resume request", () => {
+    expect(isGetResumeRequest({ type: "get-resume" })).toBe(true)
+  })
+
+  test("rejects other types and non-objects", () => {
+    expect(isGetResumeRequest({ type: "llm-complete" })).toBe(false)
+    for (const value of NOT_OBJECTS) expect(isGetResumeRequest(value)).toBe(false)
+  })
+})
+
+describe("isResumeResponse", () => {
+  const RESUME = { name: "resume.pdf", mimeType: "application/pdf", data: "JVBERg==" }
+
+  test("accepts a reply with a resume, a reply with none, and a failure with a reason", () => {
+    expect(isResumeResponse({ ok: true, resume: RESUME })).toBe(true)
+    expect(isResumeResponse({ ok: true })).toBe(true)
+    expect(isResumeResponse({ ok: false, error: "nope" })).toBe(true)
+  })
+
+  test("rejects a resume with missing or non-text parts", () => {
+    expect(isResumeResponse({ ok: true, resume: { ...RESUME, data: 5 } })).toBe(false)
+    expect(isResumeResponse({ ok: true, resume: { name: "x" } })).toBe(false)
+    expect(isResumeResponse({ ok: true, resume: "text" })).toBe(false)
+  })
+
+  test("rejects a failure without a reason, and non-replies", () => {
+    expect(isResumeResponse({ ok: false })).toBe(false)
+    expect(isResumeResponse({ nothing: true })).toBe(false)
+    for (const value of NOT_OBJECTS) expect(isResumeResponse(value)).toBe(false)
   })
 })

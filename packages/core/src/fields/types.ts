@@ -4,6 +4,7 @@ export type FieldKind =
   | "select"
   | "radio"
   | "checkbox"
+  | "checkbox-group"
   | "file"
   | "combobox"
   | "date"

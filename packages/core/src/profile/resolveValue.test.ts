@@ -31,6 +31,7 @@ const completeProfile: Profile = {
     noticePeriod: "2 weeks",
     salaryExpectation: "120000",
   },
+  resume: { name: "pranav-resume.pdf", mimeType: "application/pdf", storageKey: "resume" },
 }
 
 const minimalProfile: Profile = {
@@ -124,6 +125,11 @@ describe("resolveValue", () => {
     for (const key of ["city", "state", "country", "location"] as const) {
       expect(resolveValue(minimalProfile, key), key).toBeUndefined()
     }
+  })
+
+  test("gives the saved resume file's name, and nothing when no resume is saved", () => {
+    expect(resolveValue(completeProfile, "resume")).toBe("pranav-resume.pdf")
+    expect(resolveValue(minimalProfile, "resume")).toBeUndefined()
   })
 
   test("joins skills with commas", () => {

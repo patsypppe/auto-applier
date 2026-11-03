@@ -11,8 +11,9 @@ import type {
 } from "@auto-applier/core"
 import { extractResumeText, isPdf } from "./extractResumeText"
 import type { PdfReader } from "./extractResumeText"
+import { RESUME_KEY } from "./resumeKey"
 
-export const RESUME_KEY = "resume"
+export { RESUME_KEY }
 
 export type ImportDeps = {
   readPdf: PdfReader

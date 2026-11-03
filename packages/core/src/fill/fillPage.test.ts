@@ -224,7 +224,7 @@ describe("fillPage: the fixture application form", () => {
       sponsorship: "filled",
       notice: "no-value",
       salary: "no-value",
-      resume: "unmatched",
+      resume: "no-value",
       why: "unmatched",
       privacy: "unmatched",
     })
@@ -234,8 +234,8 @@ describe("fillPage: the fixture application form", () => {
       drafted: 0,
       skipped: 0,
       failed: 0,
-      unmatched: 3,
-      noValue: 2,
+      unmatched: 2,
+      noValue: 3,
     })
   })
 })

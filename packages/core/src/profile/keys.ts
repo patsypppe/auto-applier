@@ -26,6 +26,7 @@ export const PROFILE_KEYS = [
   "state",
   "country",
   "location",
+  "resume",
 ] as const
 
 export type ProfileKey = (typeof PROFILE_KEYS)[number]

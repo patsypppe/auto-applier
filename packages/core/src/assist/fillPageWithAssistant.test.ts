@@ -7,7 +7,7 @@ import type { Profile } from "../profile/types"
 import { fillPageWithAssistant } from "./fillPageWithAssistant"
 
 const profile: Profile = {
-  personal: { firstName: "Pranav", lastName: "Pattanashetty", email: "pranav@example.com", phone: "5551234567", links: {} },
+  personal: { firstName: "Pranav", lastName: "Pattanashetty", email: "pranav@example.com", phone: "5551234567", country: "United States", links: {} },
   experience: [{ company: "Acme", title: "Engineer", startDate: "2022", description: "Built the billing system" }],
   education: [],
   skills: ["TypeScript"],
@@ -189,6 +189,20 @@ describe("fillPageWithAssistant: choosing an option", () => {
 
     expect((document.getElementById("y") as HTMLInputElement).checked).toBe(true)
     expect(reportFor(result.reports, "y").source).toBe("ai")
+  })
+
+  test("works for a group of checkboxes too", async () => {
+    const { result } = await run(
+      `<fieldset><legend>Please select the country or countries you anticipate working in</legend>
+        <label><input id="us" type="checkbox" name="c[]" /> US</label>
+        <label><input id="uk" type="checkbox" name="c[]" /> UK</label>
+      </fieldset>`,
+      { pick: { choices: [{ id: 0, option: "US" }] } },
+    )
+
+    expect((document.getElementById("us") as HTMLInputElement).checked).toBe(true)
+    expect((document.getElementById("uk") as HTMLInputElement).checked).toBe(false)
+    expect(reportFor(result.reports, "us")).toMatchObject({ profileKey: "country", outcome: { status: "filled" }, source: "ai" })
   })
 
   test("sends the question, the options and the one known answer, and nothing else private", async () => {

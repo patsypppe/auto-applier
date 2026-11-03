@@ -134,3 +134,36 @@ describe("runFill: filling the page", () => {
     }
   })
 })
+
+describe("runFill: the resume upload", () => {
+  const PROFILE_WITH_RESUME: Profile = {
+    ...PROFILE,
+    resume: { name: "resume.pdf", mimeType: "application/pdf", storageKey: "resume" },
+  }
+
+  test("fetches the saved resume for a resume upload field", async () => {
+    document.body.innerHTML = `<form><label for="r">Resume/CV</label><input id="r" type="file" /></form>`
+    const loadResume = vi.fn(async () => undefined)
+
+    await runFill(storeHolding(PROFILE_WITH_RESUME), llmAnswering().llm, loadResume)
+
+    expect(loadResume).toHaveBeenCalledTimes(1)
+  })
+
+  test("does not fetch the resume when the page has no resume upload", async () => {
+    const loadResume = vi.fn(async () => undefined)
+
+    await runFill(storeHolding(PROFILE_WITH_RESUME), llmAnswering().llm, loadResume)
+
+    expect(loadResume).not.toHaveBeenCalled()
+  })
+
+  test("does not fetch the resume when the profile has none saved", async () => {
+    document.body.innerHTML = `<form><label for="r">Resume/CV</label><input id="r" type="file" /></form>`
+    const loadResume = vi.fn(async () => undefined)
+
+    await runFill(storeHolding(PROFILE), llmAnswering().llm, loadResume)
+
+    expect(loadResume).not.toHaveBeenCalled()
+  })
+})

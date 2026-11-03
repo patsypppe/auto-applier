@@ -32,6 +32,7 @@ const RESOLVERS: Record<ProfileKey, (profile: Profile) => string | undefined> = 
   state: (profile) => profile.personal.state,
   country: (profile) => profile.personal.country,
   location: (profile) => locationText(profile.personal),
+  resume: (profile) => profile.resume?.name,
 }
 
 // Returns the profile's value for the key, or undefined when the profile has none.

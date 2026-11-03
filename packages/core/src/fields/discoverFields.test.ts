@@ -164,3 +164,122 @@ describe("discoverFields: labels", () => {
     expect(fields[0]?.name).toBe("only_id")
   })
 })
+
+describe("discoverFields: fields that are not part of the application", () => {
+  test("skips search boxes", () => {
+    const fields = discover(`<input type="search" name="q" /><input name="real" />`)
+
+    expect(fields.map((field) => field.name)).toEqual(["real"])
+  })
+
+  test.each([
+    ["footer", "<footer><input name='email' /></footer>"],
+    ["nav", "<nav><input name='email' /></nav>"],
+    ["header", "<header><input name='email' /></header>"],
+    ["contentinfo role", "<div role='contentinfo'><input name='email' /></div>"],
+    ["navigation role", "<div role='navigation'><input name='email' /></div>"],
+    ["banner role", "<div role='banner'><input name='email' /></div>"],
+    ["search role", "<div role='search'><input name='email' /></div>"],
+  ])("skips a field inside a %s", (_landmark, html) => {
+    expect(discover(`${html}<main><input name="real" /></main>`).map((field) => field.name)).toEqual(["real"])
+  })
+
+  test.each([
+    ["an id on the field", `<input id="newsletter-email" name="email" />`],
+    ["a name on the field", `<input name="subscribe_email" />`],
+    ["a class on the form", `<form class="Newsletter-signup"><input name="email" /></form>`],
+    ["an id on a wrapper", `<div id="footer-newsletter"><input name="email" /></div>`],
+    ["a class naming a subscription", `<form class="subscription-box"><input name="email" /></form>`],
+  ])("skips a newsletter or subscription signup, found by %s", (_how, html) => {
+    expect(discover(`${html}<form id="apply"><input name="real" /></form>`).map((field) => field.name)).toEqual(["real"])
+  })
+
+  test("keeps the fields of a normal application form", () => {
+    const fields = discover(`<main><form id="application-form"><input name="email" /><input name="phone" /></form></main>`)
+
+    expect(fields.map((field) => field.name)).toEqual(["email", "phone"])
+  })
+})
+
+describe("discoverFields: hidden fields", () => {
+  // Marks an element as drawn or not, the way a browser's checkVisibility answers.
+  function setVisible(id: string, visible: boolean): void {
+    Object.assign(document.getElementById(id) as HTMLElement, { checkVisibility: () => visible })
+  }
+
+  test("skips a text field, select or combobox that is not rendered", () => {
+    document.body.innerHTML = `
+      <input id="t" name="t" /><select id="s" name="s"><option>A</option></select>
+      <input id="c" name="c" role="combobox" /><input id="shown" name="shown" />`
+    for (const id of ["t", "s", "c"]) setVisible(id, false)
+    setVisible("shown", true)
+
+    expect(discoverFields(document).map((field) => field.name)).toEqual(["shown"])
+  })
+
+  test("keeps checkboxes, radios and file inputs even when they are not rendered, because pages hide them behind styled controls", () => {
+    document.body.innerHTML = `
+      <input id="box" type="checkbox" name="agree" />
+      <input id="radio" type="radio" name="r" />
+      <input id="file" type="file" name="resume" />`
+    for (const id of ["box", "radio", "file"]) setVisible(id, false)
+
+    expect(discoverFields(document).map((field) => field.kind)).toEqual(["checkbox", "radio", "file"])
+  })
+
+  test("treats everything as visible when the browser cannot say", () => {
+    document.body.innerHTML = `<input id="t" name="t" />`
+
+    expect(discoverFields(document)).toHaveLength(1)
+  })
+})
+
+describe("discoverFields: groups of checkboxes", () => {
+  const GROUP = `
+    <fieldset>
+      <legend>Please select the countries you will work in. *</legend>
+      <label><input type="checkbox" name="countries[]" id="us" /> US</label>
+      <label><input type="checkbox" name="countries[]" id="uk" /> UK</label>
+      <label><input type="checkbox" name="countries[]" id="de" /> Germany</label>
+    </fieldset>`
+
+  test("describes checkboxes that share a name as one field with the question as its label", () => {
+    const fields = discover(GROUP)
+
+    expect(fields).toHaveLength(1)
+    expect(fields[0]).toMatchObject({
+      kind: "checkbox-group",
+      label: "Please select the countries you will work in.",
+      name: "countries[]",
+      groupId: "countries[]",
+      options: ["US", "UK", "Germany"],
+    })
+    expect(fields[0]?.element.id).toBe("us")
+  })
+
+  test("leaves a lone checkbox as a single checkbox", () => {
+    const fields = discover(`<label><input type="checkbox" name="agree" /> I agree</label>`)
+
+    expect(fields.map((field) => field.kind)).toEqual(["checkbox"])
+  })
+
+  test("leaves checkboxes without a name as separate checkboxes", () => {
+    const fields = discover(`<input type="checkbox" /><input type="checkbox" />`)
+
+    expect(fields.map((field) => field.kind)).toEqual(["checkbox", "checkbox"])
+  })
+
+  test("keeps checkboxes with the same name in different forms apart", () => {
+    const fields = discover(`
+      <form><input type="checkbox" name="x" /><input type="checkbox" name="x" /></form>
+      <form><input type="checkbox" name="x" /></form>`)
+
+    expect(fields.map((field) => field.kind)).toEqual(["checkbox-group", "checkbox"])
+  })
+
+  test("ignores disabled checkboxes when forming the group", () => {
+    const fields = discover(`<input type="checkbox" name="x" /><input type="checkbox" name="x" disabled />`)
+
+    expect(fields.map((field) => field.kind)).toEqual(["checkbox"])
+  })
+})

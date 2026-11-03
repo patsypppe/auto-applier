@@ -28,4 +28,5 @@ export const PROFILE_KEY_HELP: Record<ProfileKey, string> = {
   state: "the state, province or region where the applicant lives",
   country: "the country where the applicant lives",
   location: "where the applicant lives, as city, state and country in one text",
+  resume: "the applicant's resume file, for a file upload field",
 }

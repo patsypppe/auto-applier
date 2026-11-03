@@ -2,6 +2,7 @@
 import { discoverFields } from "../fields/discoverFields"
 import type { FormField } from "../fields/types"
 import { CheckboxFiller } from "../filling/CheckboxFiller"
+import { CheckboxGroupFiller } from "../filling/CheckboxGroupFiller"
 import { ComboboxFiller } from "../filling/ComboboxFiller"
 import { RadioFiller } from "../filling/RadioFiller"
 import { SelectFiller } from "../filling/SelectFiller"
@@ -35,7 +36,14 @@ export type FillSetup = {
 
 export const DEFAULT_SETUP: FillSetup = {
   matchersFor: (fields) => [new AttributeMatcher(), new BareNameMatcher(fields)],
-  fillers: [new TextFiller(), new SelectFiller(), new RadioFiller(), new CheckboxFiller(), new ComboboxFiller()],
+  fillers: [
+    new TextFiller(),
+    new SelectFiller(),
+    new RadioFiller(),
+    new CheckboxFiller(),
+    new CheckboxGroupFiller(),
+    new ComboboxFiller(),
+  ],
 }
 
 // Returns the message of an error, or a generic one when the thrown value is not an Error.

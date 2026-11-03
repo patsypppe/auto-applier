@@ -2,6 +2,7 @@
 import { runFill } from "./fill/runFill"
 import { BackgroundLLMClient } from "./llm/BackgroundLLMClient"
 import { isFillPageRequest } from "./messaging"
+import { loadResumeFromBackground } from "./resume/loadResumeFromBackground"
 import type { FillResultMessage, PageLoadedMessage } from "./messaging"
 import { ChromeStorageProfileStore } from "./storage/ChromeStorageProfileStore"
 
@@ -18,5 +19,5 @@ if (window === window.top) {
 
 chrome.runtime.onMessage.addListener((message: unknown) => {
   if (!isFillPageRequest(message)) return
-  void runFill(new ChromeStorageProfileStore(), new BackgroundLLMClient()).then(reportResult)
+  void runFill(new ChromeStorageProfileStore(), new BackgroundLLMClient(), loadResumeFromBackground).then(reportResult)
 })
