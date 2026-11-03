@@ -1,7 +1,10 @@
 // Tests the background worker end to end: it answers LLM requests from this extension and nobody else.
+import { emptySummary } from "@auto-applier/core"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
+import { createFakeSessionStorage } from "./testing/fakeSessionStorage"
 
-type Listener = (message: unknown, sender: { id?: string }, sendResponse: (response: unknown) => void) => boolean
+type Sender = { id?: string; tab?: { id?: number }; frameId?: number }
+type Listener = (message: unknown, sender: Sender, sendResponse: (response: unknown) => void) => boolean
 
 const EXTENSION_ID = "this-extension"
 const GEMINI_ANSWER = { candidates: [{ content: { parts: [{ text: '{"ok":true}' }] }, finishReason: "STOP" }] }
@@ -13,14 +16,15 @@ async function loadWorker(
 ) {
   const addListener = vi.fn()
   const fetchStub = vi.fn(async (input: RequestInfo | URL) => respond(String(input)))
+  const fake = createFakeSessionStorage()
   vi.stubGlobal("chrome", {
     runtime: { id: EXTENSION_ID, onMessage: { addListener } },
-    storage: { local: { get: vi.fn(async (key: string) => ({ [key]: stored[key] })) } },
+    storage: { ...fake.storage, local: { get: vi.fn(async (key: string) => ({ [key]: stored[key] })) } },
   })
   vi.stubGlobal("fetch", fetchStub)
 
   await import("./background")
-  return { listener: addListener.mock.calls[0]?.[0] as Listener, fetchStub }
+  return { listener: addListener.mock.calls[0]?.[0] as Listener, fetchStub, saved: fake.items }
 }
 
 beforeEach(() => {
@@ -145,5 +149,62 @@ describe("background worker", () => {
     expect(listener("nonsense", { id: EXTENSION_ID }, sendResponse)).toBe(false)
     expect(sendResponse).not.toHaveBeenCalled()
     expect(fetchStub).not.toHaveBeenCalled()
+  })
+})
+
+describe("background worker: keeping fill results", () => {
+  const RESULT = { ok: true, summary: { ...emptySummary(), filled: 3 }, notes: ["a note"] }
+  const MESSAGE = { type: "fill-result", result: RESULT }
+
+  test("saves a fill result from a content script under its tab and frame, without replying", async () => {
+    const { listener, saved } = await loadWorker({})
+    const sendResponse = vi.fn()
+
+    const keepsChannelOpen = listener(MESSAGE, { id: EXTENSION_ID, tab: { id: 7 }, frameId: 2 }, sendResponse)
+
+    expect(keepsChannelOpen).toBe(false)
+    await vi.waitFor(() => expect(saved.get("fill-result:7:2")).toEqual(RESULT))
+    expect(sendResponse).not.toHaveBeenCalled()
+  })
+
+  test("treats a missing frame id as the top frame", async () => {
+    const { listener, saved } = await loadWorker({})
+
+    listener(MESSAGE, { id: EXTENSION_ID, tab: { id: 7 } }, vi.fn())
+
+    await vi.waitFor(() => expect(saved.has("fill-result:7:0")).toBe(true))
+  })
+
+  test("ignores fill results from another extension or without a tab", async () => {
+    const { listener, saved } = await loadWorker({})
+
+    listener(MESSAGE, { id: "someone-else", tab: { id: 7 }, frameId: 0 }, vi.fn())
+    listener(MESSAGE, { id: EXTENSION_ID }, vi.fn())
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(saved.size).toBe(0)
+  })
+
+  test("forgets a tab's saved results when its top frame loads a new page", async () => {
+    const { listener, saved } = await loadWorker({})
+    listener(MESSAGE, { id: EXTENSION_ID, tab: { id: 7 }, frameId: 0 }, vi.fn())
+    listener(MESSAGE, { id: EXTENSION_ID, tab: { id: 8 }, frameId: 0 }, vi.fn())
+    await vi.waitFor(() => expect(saved.size).toBe(2))
+
+    listener({ type: "page-loaded" }, { id: EXTENSION_ID, tab: { id: 7 }, frameId: 0 }, vi.fn())
+
+    await vi.waitFor(() => expect(saved.has("fill-result:7:0")).toBe(false))
+    expect(saved.has("fill-result:8:0")).toBe(true)
+  })
+
+  test("keeps the saved results when only a sub-frame loads", async () => {
+    const { listener, saved } = await loadWorker({})
+    listener(MESSAGE, { id: EXTENSION_ID, tab: { id: 7 }, frameId: 0 }, vi.fn())
+    await vi.waitFor(() => expect(saved.size).toBe(1))
+
+    listener({ type: "page-loaded" }, { id: EXTENSION_ID, tab: { id: 7 }, frameId: 3 }, vi.fn())
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(saved.has("fill-result:7:0")).toBe(true)
   })
 })

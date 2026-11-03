@@ -4,6 +4,8 @@ import type { ProviderId, ReportSummary } from "@auto-applier/core"
 
 export type FillPageRequest = { type: "fill-page" }
 
+export type PageLoadedMessage = { type: "page-loaded" }
+
 export type LlmRequest = { type: "llm-complete"; prompt: string; provider?: ProviderId }
 
 export type LlmResponse = { ok: true; data: unknown } | { ok: false; error: string }
@@ -21,6 +23,11 @@ function isTextList(value: unknown): value is string[] {
 // Returns true when an unknown value is a fill-page request.
 export function isFillPageRequest(message: unknown): message is FillPageRequest {
   return typeof message === "object" && message !== null && (message as { type?: unknown }).type === "fill-page"
+}
+
+// Returns true when an unknown value is the note a content script sends when its page has loaded.
+export function isPageLoadedMessage(message: unknown): message is PageLoadedMessage {
+  return typeof message === "object" && message !== null && (message as { type?: unknown }).type === "page-loaded"
 }
 
 // Returns true when an unknown value is a well-formed fill result.

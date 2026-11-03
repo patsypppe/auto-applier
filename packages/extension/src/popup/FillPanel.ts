@@ -1,15 +1,21 @@
-// Renders the "Fill this page" button and shows the running totals and notes reported back by the page's frames.
-import { addSummaries, emptySummary, formatSummary } from "@auto-applier/core"
-import { isFillResultMessage } from "../messaging"
+// Renders the "Fill this page" button and shows the saved results and notes of the page's frames, also after the popup is reopened.
+import { formatSummary } from "@auto-applier/core"
+import { combineResults } from "../fill/combineResults"
 import type { FillPageRequest } from "../messaging"
+import type { ChromeSessionFillStore, FillRun } from "../storage/ChromeSessionFillStore"
 
-// Sends the fill request to every frame of the active tab.
-async function requestFill(): Promise<void> {
+const UNREACHABLE_MESSAGE = "Could not reach this page. Reload the tab and try again."
+
+// Returns the id of the tab the popup was opened on, if there is one.
+async function activeTabId(): Promise<number | undefined> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  if (tab?.id === undefined) throw new Error("No active tab")
+  return tab?.id
+}
 
+// Sends the fill request to every frame of the tab.
+async function requestFill(tabId: number): Promise<void> {
   const request: FillPageRequest = { type: "fill-page" }
-  await chrome.tabs.sendMessage(tab.id, request)
+  await chrome.tabs.sendMessage(tabId, request)
 }
 
 // Replaces the contents of a list element with one item per note.
@@ -22,8 +28,8 @@ function showNotes(list: HTMLElement, notes: string[]): void {
   list.replaceChildren(...items)
 }
 
-// Adds the button, a status line and a notes list to the container, and updates them as each frame reports in.
-export function mountFillPanel(container: HTMLElement): void {
+// Adds the button, a status line and a notes list to the container, shows what is saved for the tab, and updates as frames report in.
+export async function mountFillPanel(container: HTMLElement, store: ChromeSessionFillStore): Promise<void> {
   const button = document.createElement("button")
   button.type = "button"
   button.textContent = "Fill this page"
@@ -34,33 +40,40 @@ export function mountFillPanel(container: HTMLElement): void {
   const notesList = document.createElement("ul")
   notesList.className = "notes"
 
-  let totals = emptySummary()
-  let notes: string[] = []
+  container.append(button, status, notesList)
 
-  chrome.runtime.onMessage.addListener((message: unknown) => {
-    if (!isFillResultMessage(message)) return
+  const tabId = await activeTabId()
+  let failure: string | undefined
 
-    if (message.result.ok) {
-      totals = addSummaries(totals, message.result.summary)
-      notes = [...new Set([...notes, ...message.result.notes])]
-      status.textContent = formatSummary(totals)
-      showNotes(notesList, notes)
-    } else {
-      status.textContent = message.result.error
-    }
-  })
+  // Shows a run: the failure to start it, the combined result, "Filling…" while waiting, or nothing.
+  function render(run: FillRun): void {
+    const combined = combineResults(run.results)
+    if (failure) status.textContent = failure
+    else if (combined.summary) status.textContent = formatSummary(combined.summary)
+    else if (combined.error) status.textContent = combined.error
+    else status.textContent = run.running ? "Filling…" : ""
+    showNotes(notesList, combined.notes)
+  }
+
+  // Loads what is saved for the tab and shows it.
+  async function refresh(): Promise<void> {
+    if (tabId !== undefined) render(await store.load(tabId))
+  }
 
   button.addEventListener("click", async () => {
-    totals = emptySummary()
-    notes = []
-    showNotes(notesList, notes)
-    status.textContent = "Filling…"
+    failure = undefined
     try {
-      await requestFill()
+      if (tabId === undefined) throw new Error("No active tab")
+      await store.start(tabId)
+      await requestFill(tabId)
     } catch {
-      status.textContent = "Could not reach this page. Reload the tab and try again."
+      failure = UNREACHABLE_MESSAGE
+      if (tabId !== undefined) await store.clear(tabId).catch(() => undefined)
+      render({ running: false, results: [] })
     }
   })
 
-  container.append(button, status, notesList)
+  if (tabId === undefined) return
+  store.onChange(tabId, () => void refresh())
+  await refresh()
 }

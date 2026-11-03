@@ -3,6 +3,7 @@ import { BackgroundLLMClient } from "../llm/BackgroundLLMClient"
 import { readPdfInBrowser } from "../resume/browserPdfReader"
 import { importResumeFile } from "../resume/importResumeFile"
 import { ChromeStorageProfileStore } from "../storage/ChromeStorageProfileStore"
+import { ChromeSessionFillStore } from "../storage/ChromeSessionFillStore"
 import { ChromeStorageSettingsStore } from "../storage/ChromeStorageSettingsStore"
 import { IndexedDbResumeStore } from "../storage/IndexedDbResumeStore"
 import { mountFillPanel } from "./FillPanel"
@@ -15,7 +16,7 @@ async function start(): Promise<void> {
   const profiles = new ChromeStorageProfileStore()
 
   const fillPanel = document.getElementById("fill-panel")
-  if (fillPanel) mountFillPanel(fillPanel)
+  if (fillPanel) void mountFillPanel(fillPanel, new ChromeSessionFillStore())
 
   const settingsBody = document.getElementById("settings-body")
   if (settingsBody) void mountSettingsPanel(settingsBody, new ChromeStorageSettingsStore())

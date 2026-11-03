@@ -1,35 +1,36 @@
-// Tests the Fill this page panel: it asks the active tab to fill, adds up what each frame reports, and shows notes.
+// Tests the Fill this page panel: it starts a fill, shows the saved results of every frame, and still shows them after reopening.
 // @vitest-environment jsdom
 import { emptySummary } from "@auto-applier/core"
 import type { ReportSummary } from "@auto-applier/core"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
+import type { FrameResult } from "../fill/combineResults"
+import { ChromeSessionFillStore } from "../storage/ChromeSessionFillStore"
+import { createFakeSessionStorage } from "../testing/fakeSessionStorage"
 import { mountFillPanel } from "./FillPanel"
 
-type Listener = (message: unknown) => void
-
-let listeners: Listener[] = []
 let sendMessage: ReturnType<typeof vi.fn>
+let store: ChromeSessionFillStore
 
-// Replaces the chrome global with a fake tab list and message bus that the test can drive.
+// Replaces the chrome global with a fake tab list, session storage and message sending.
 function stubChrome(tabs: { id?: number }[] = [{ id: 7 }]): void {
-  listeners = []
+  const fake = createFakeSessionStorage()
   sendMessage = vi.fn(async () => undefined)
-  vi.stubGlobal("chrome", {
-    runtime: { onMessage: { addListener: (listener: Listener) => listeners.push(listener) } },
-    tabs: { query: vi.fn(async () => tabs), sendMessage },
-  })
+  vi.stubGlobal("chrome", { storage: fake.storage, tabs: { query: vi.fn(async () => tabs), sendMessage } })
+  store = new ChromeSessionFillStore()
 }
 
-// Delivers a result from one frame's content script to the panel.
-function frameReports(summary: Partial<ReportSummary>, notes: string[] = []): void {
-  const message = { type: "fill-result", result: { ok: true, summary: { ...emptySummary(), ...summary }, notes } }
-  for (const listener of listeners) listener(message)
+// Mounts a panel into a fresh page and waits until it has loaded what is saved.
+async function mountPanel(): Promise<void> {
+  document.body.innerHTML = '<div id="root"></div>'
+  await mountFillPanel(document.getElementById("root")!, store)
 }
 
-// Delivers a failure from one frame's content script to the panel.
-function frameFails(error: string): void {
-  for (const listener of listeners) listener({ type: "fill-result", result: { ok: false, error } })
-}
+// Builds a successful result for one frame.
+const ok = (summary: Partial<ReportSummary>, notes: string[] = []): FrameResult => ({
+  ok: true,
+  summary: { ...emptySummary(), ...summary },
+  notes,
+})
 
 // Presses the Fill this page button.
 function pressFill(): void {
@@ -39,19 +40,19 @@ function pressFill(): void {
 const status = () => document.querySelector('[role="status"]')?.textContent ?? ""
 const notes = () => Array.from(document.querySelectorAll(".notes li")).map((item) => item.textContent)
 
-beforeEach(() => {
+beforeEach(async () => {
   stubChrome()
-  document.body.innerHTML = '<div id="root"></div>'
-  mountFillPanel(document.getElementById("root")!)
+  await mountPanel()
 })
 
 afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe("FillPanel", () => {
-  test("shows a Fill this page button", () => {
+describe("FillPanel: filling", () => {
+  test("shows a Fill this page button and nothing else at first", () => {
     expect(document.querySelector("button")?.textContent).toBe("Fill this page")
+    expect(status()).toBe("")
   })
 
   test("asks the active tab to fill and says it is working", async () => {
@@ -65,60 +66,48 @@ describe("FillPanel", () => {
     pressFill()
     await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled())
 
-    frameReports({ filled: 3, unmatched: 1 })
-    frameReports({ filled: 2, skipped: 1 })
+    await store.saveResult(7, 0, ok({ filled: 3, unmatched: 1 }))
+    await store.saveResult(7, 1, ok({ filled: 2, skipped: 1 }))
 
-    expect(status()).toBe("Filled 5 · Left alone 1 · Needs you 1")
+    await vi.waitFor(() => expect(status()).toBe("Filled 5 · Left alone 1 · Needs you 1"))
   })
 
   test("counts the AI's work and says how many to check", async () => {
-    pressFill()
-    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled())
+    await store.saveResult(7, 0, ok({ filled: 2, aiFilled: 1, drafted: 1 }))
 
-    frameReports({ filled: 2, aiFilled: 1, drafted: 1 })
-
-    expect(status()).toBe("Filled 4 · Left alone 0 · Needs you 0 · Check the AI's work on 2")
+    await vi.waitFor(() => expect(status()).toBe("Filled 4 · Left alone 0 · Needs you 0 · Check the AI's work on 2"))
   })
 
   test("shows each note once, even when several frames send the same one", async () => {
-    pressFill()
-    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled())
+    await store.saveResult(7, 0, ok({ filled: 1 }, ["AI help skipped: No key."]))
+    await store.saveResult(7, 1, ok({ filled: 1 }, ["AI help skipped: No key.", "AI help skipped: other"]))
 
-    frameReports({ filled: 1 }, ["AI help skipped: No Gemini API key is set."])
-    frameReports({ filled: 1 }, ["AI help skipped: No Gemini API key is set.", "AI help skipped: other"])
-
-    expect(notes()).toEqual(["AI help skipped: No Gemini API key is set.", "AI help skipped: other"])
+    await vi.waitFor(() => expect(notes()).toEqual(["AI help skipped: No key.", "AI help skipped: other"]))
   })
 
   test("starts from zero again on the next press", async () => {
-    pressFill()
-    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1))
-    frameReports({ filled: 4 }, ["a note"])
+    await store.saveResult(7, 0, ok({ filled: 4 }, ["a note"]))
+    await vi.waitFor(() => expect(status()).toContain("Filled 4"))
 
     pressFill()
-    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(2))
-    frameReports({ filled: 1 })
+    await vi.waitFor(() => expect(status()).toBe("Filling…"))
+    await store.saveResult(7, 0, ok({ filled: 1 }))
 
-    expect(status()).toBe("Filled 1 · Left alone 0 · Needs you 0")
+    await vi.waitFor(() => expect(status()).toBe("Filled 1 · Left alone 0 · Needs you 0"))
     expect(notes()).toEqual([])
   })
 
-  test("shows the error a frame reports", async () => {
-    pressFill()
-    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled())
+  test("shows the error when every frame failed", async () => {
+    await store.saveResult(7, 0, { ok: false, error: "No saved profile yet. Fill in and save the form first." })
 
-    frameFails("No saved profile yet. Fill in and save the form in this popup first.")
-
-    expect(status()).toBe("No saved profile yet. Fill in and save the form in this popup first.")
+    await vi.waitFor(() => expect(status()).toBe("No saved profile yet. Fill in and save the form first."))
   })
 
-  test("ignores messages that are not fill results", async () => {
-    pressFill()
-    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalled())
+  test("ignores results from other tabs", async () => {
+    await store.saveResult(8, 0, ok({ filled: 9 }))
 
-    for (const listener of listeners) listener({ type: "llm-complete", prompt: "x" })
-
-    expect(status()).toBe("Filling…")
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(status()).toBe("")
   })
 
   test("says it could not reach the page when sending fails", async () => {
@@ -131,11 +120,47 @@ describe("FillPanel", () => {
 
   test("says it could not reach the page when there is no active tab", async () => {
     stubChrome([{}])
-    document.body.innerHTML = '<div id="root"></div>'
-    mountFillPanel(document.getElementById("root")!)
+    await mountPanel()
 
     pressFill()
 
     await vi.waitFor(() => expect(status()).toBe("Could not reach this page. Reload the tab and try again."))
+  })
+})
+
+describe("FillPanel: reopening the popup", () => {
+  test("shows the last result straight away when the popup is opened again", async () => {
+    await store.saveResult(7, 0, ok({ filled: 5, unmatched: 2 }, ["a note"]))
+
+    await mountPanel()
+
+    expect(status()).toBe("Filled 5 · Left alone 0 · Needs you 2")
+    expect(notes()).toEqual(["a note"])
+  })
+
+  test("says it is still filling when reopened before any frame has reported", async () => {
+    await store.start(7)
+
+    await mountPanel()
+
+    expect(status()).toBe("Filling…")
+  })
+
+  test("shows results that arrive after the popup was reopened", async () => {
+    await store.start(7)
+    await mountPanel()
+
+    await store.saveResult(7, 0, ok({ filled: 2 }))
+
+    await vi.waitFor(() => expect(status()).toBe("Filled 2 · Left alone 0 · Needs you 0"))
+  })
+
+  test("shows nothing when the page was reloaded and its results were cleared", async () => {
+    await store.saveResult(7, 0, ok({ filled: 5 }))
+    await store.clear(7)
+
+    await mountPanel()
+
+    expect(status()).toBe("")
   })
 })

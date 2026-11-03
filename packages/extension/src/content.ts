@@ -2,15 +2,21 @@
 import { runFill } from "./fill/runFill"
 import { BackgroundLLMClient } from "./llm/BackgroundLLMClient"
 import { isFillPageRequest } from "./messaging"
-import type { FillResultMessage } from "./messaging"
+import type { FillResultMessage, PageLoadedMessage } from "./messaging"
 import { ChromeStorageProfileStore } from "./storage/ChromeStorageProfileStore"
 
-// Sends the result to the popup; if the popup was closed nobody is listening, which is fine.
-function sendToPopup(message: FillResultMessage): void {
+// Sends the result to the extension, where the background worker saves it for the popup, open or not.
+function reportResult(message: FillResultMessage): void {
   chrome.runtime.sendMessage(message).catch(() => undefined)
+}
+
+// The top page tells the background worker it has loaded, so results saved for the previous page are dropped.
+if (window === window.top) {
+  const loaded: PageLoadedMessage = { type: "page-loaded" }
+  chrome.runtime.sendMessage(loaded).catch(() => undefined)
 }
 
 chrome.runtime.onMessage.addListener((message: unknown) => {
   if (!isFillPageRequest(message)) return
-  void runFill(new ChromeStorageProfileStore(), new BackgroundLLMClient()).then(sendToPopup)
+  void runFill(new ChromeStorageProfileStore(), new BackgroundLLMClient()).then(reportResult)
 })

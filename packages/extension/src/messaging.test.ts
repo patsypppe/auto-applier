@@ -1,7 +1,7 @@
 // Tests that the message guards accept our own messages and reject anything else.
 import { emptySummary } from "@auto-applier/core"
 import { describe, expect, test } from "vitest"
-import { isFillPageRequest, isFillResultMessage, isLlmRequest, isLlmResponse } from "./messaging"
+import { isFillPageRequest, isFillResultMessage, isLlmRequest, isLlmResponse, isPageLoadedMessage } from "./messaging"
 
 const NOT_OBJECTS = [null, undefined, "text", 42]
 
@@ -98,5 +98,16 @@ describe("isLlmResponse", () => {
   test("rejects values that are not responses", () => {
     expect(isLlmResponse({ data: 1 })).toBe(false)
     for (const value of NOT_OBJECTS) expect(isLlmResponse(value)).toBe(false)
+  })
+})
+
+describe("isPageLoadedMessage", () => {
+  test("accepts a page-loaded message", () => {
+    expect(isPageLoadedMessage({ type: "page-loaded" })).toBe(true)
+  })
+
+  test("rejects other types and non-objects", () => {
+    expect(isPageLoadedMessage({ type: "fill-page" })).toBe(false)
+    for (const value of NOT_OBJECTS) expect(isPageLoadedMessage(value)).toBe(false)
   })
 })
