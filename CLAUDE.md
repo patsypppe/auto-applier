@@ -85,6 +85,7 @@ packages/extension/
 - **Resume parsing:** extract text with plain code (pdf.js), then the LLM turns the text into JSON, then `validateProfile`, then it becomes an editable draft the user reviews before saving. Scanned image PDFs have no text and will not work.
 - **Call A (map fields):** only for fields the chain could not match. Sends field metadata (label, type, options, sibling labels, section heading) and the list of key names, NEVER the user's values. Returns a key or `none` per field. One batched call per page. A `none` or low confidence leaves the field empty and flagged.
 - **Call B (free-text answers):** only for long free-text questions. Sends the question, the relevant slice of the profile (experience, skills, summary) and the job description. Returns a drafted answer for the user to review.
+- **Ambiguity goes to the LLM (decided by the user).** Whenever the deterministic steps cannot resolve a field, the LLM gets it: (a) no matcher result at or above the threshold (Call A); (b) the key is known but no single option matches the value in a select or radio group, for example "No" versus "I do not require sponsorship" (**Call C, proposed**: send the field's label, its options and only that one value; the LLM returns which option fits, or `none`). The fillers already report this case as `failed` with the reason `No single option matches "..."`. Step 10 must add a machine-readable code to `FillResult` so ambiguity can be routed without matching on reason text (not built yet).
 - Never send credentials, the vault or the API key to the LLM.
 
 ## Build order and status
@@ -94,7 +95,7 @@ packages/extension/
 3. `resolveValue` ✅ committed
 4. `discoverFields` ✅ committed
 5. `matchField`, `AttributeMatcher`, `BareNameMatcher` ✅ committed
-6. Fillers: **6a** `setNativeValue` + `TextFiller` ✅ committed; **6b** `SelectFiller`, `RadioFiller`, `CheckboxFiller` (in progress); **6c** `ComboboxFiller` (`FileFiller` is proposed to move to step 9, because it needs the resume store; not yet agreed)
+6. Fillers: **6a** `setNativeValue` + `TextFiller` ✅ committed; **6b** `SelectFiller`, `RadioFiller`, `CheckboxFiller` ✅ committed; **6c** `ComboboxFiller` (in progress) (`FileFiller` is proposed to move to step 9, because it needs the resume store; not yet agreed)
 7. `fillPage` orchestrator + `content.ts` + "Fill this page" popup button → first end-to-end result
 8. LLM client, settings (API key), manifest `host_permissions`
 9. Resume parsing: `extractText`, `ResumeParser`, `ResumeUpload`, IndexedDB resume store
@@ -106,6 +107,8 @@ packages/extension/
 
 - LLM provider not chosen. Auto-submit vs stop-before-submit not confirmed (default: stop).
 - Labels are matched with English patterns only.
+- A radio group whose first radio is disabled is not discovered at all (`discoverFields` describes a group from its first radio). Not fixed; fix it if it shows up on a real site.
+- A select with no placeholder: an untouched first option is treated as empty and gets overwritten; an option the page marked `selected` is respected.
 - Controls hidden with CSS are not skipped (jsdom has no layout; needs a real-browser check).
 - Not handled yet: shadow DOM, custom dropdowns that are not `input[role=combobox]`, checkbox groups (each checkbox is its own field), password fields (skipped; they return with the login feature).
 - Keys like `currentCompany` / `currentTitle` are deferred until the experience editor exists.

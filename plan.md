@@ -95,6 +95,7 @@ Patterns in use: Strategy (fillers, adapters), Chain of Responsibility (matchers
 - **Resume parsing:** plain code extracts the text; the LLM turns it into JSON; `validateProfile` checks it; it becomes a draft. **(Proposed)** if validation fails, the error list can be sent back to the LLM once for a fix. Scanned (image-only) PDFs have no text and will not work.
 - **Call A, map fields:** for fields the chain could not match. Sends only field metadata and the list of key names, never the user's values. Returns a key or `none` per field. One batched call per page.
 - **Call B, free-text answers:** for long free-text questions. Sends the question, the relevant slice of the profile and the job description. Returns a draft answer the user reviews.
+- **Call C, pick an option (proposed):** when the key is known but no single option in a select or radio group matches the value (for example "No" versus "I do not require sponsorship"), the field goes to the LLM. Sends the field's label, its options and only that one value; returns the option that fits, or `none`. This is the decided rule: any ambiguity the deterministic steps cannot resolve is handed to the LLM, and `none` or no answer leaves the field flagged.
 - Never sent to the LLM: credentials, the vault, the API key.
 
 ## 8. Handling sites that resist an extension
@@ -142,12 +143,12 @@ Steps are built one at a time: tests first, diff shown, approval, commit. `CLAUD
 | 4 | `discoverFields` | `discoverFields.ts`, `labels.ts` | done |
 | 5 | Matchers | `matchField.ts`, `AttributeMatcher.ts`, `BareNameMatcher.ts` | done |
 | 6a | Text filling | `setNativeValue.ts`, `TextFiller.ts` | done |
-| 6b | Select, radio, checkbox fillers | `SelectFiller`, `RadioFiller`, `CheckboxFiller` | in progress |
-| 6c | Combobox filler | `ComboboxFiller` | planned |
+| 6b | Select, radio, checkbox fillers | `SelectFiller`, `RadioFiller`, `CheckboxFiller` | done |
+| 6c | Combobox filler | `ComboboxFiller` | in progress |
 | 7 | `fillPage`, `content.ts`, "Fill this page" button, highlight flagged fields | `fill/fillPage.ts`, `ui/highlightFlagged.ts` | planned. **First end-to-end result.** |
 | 8 | LLM client and settings | `SettingsStore`, `<Provider>LLMClient`, `messaging.ts`, manifest `host_permissions` | planned. **Needs the provider choice.** |
 | 9 | Resume parsing and file upload | `extractText` (`pdfjs-dist`), a DOCX reader (to be chosen), `ResumeParser`, `ResumeUpload`, `IndexedDbResumeStore`, `FileFiller` | planned |
-| 10 | LLM fallback | prompt files for Calls A and B, background handlers, wired into `fillPage` | planned |
+| 10 | LLM fallback | prompt files for Calls A, B and C (option picking), background handlers, a machine-readable code on failed fills so ambiguity can be routed to the LLM, wired into `fillPage` | planned |
 | 11 | Site adapters | `detectAdapter`, `GenericAdapter`, `GreenhouseAdapter`, then others | planned. The `SiteAdapter` interface will grow when the first adapter needs it. |
 | 12 | Multi-step flow and login | `FlowRunner`, `CredentialVault`, `AuthHandler` | later |
 
