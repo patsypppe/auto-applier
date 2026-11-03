@@ -10,7 +10,12 @@ export type LlmResponse = { ok: true; data: unknown } | { ok: false; error: stri
 
 export type FillResultMessage = {
   type: "fill-result"
-  result: { ok: true; summary: ReportSummary } | { ok: false; error: string }
+  result: { ok: true; summary: ReportSummary; notes: string[] } | { ok: false; error: string }
+}
+
+// Returns true when an unknown value is a list of text.
+function isTextList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
 }
 
 // Returns true when an unknown value is a fill-page request.
@@ -25,8 +30,8 @@ export function isFillResultMessage(message: unknown): message is FillResultMess
   const { type, result } = message as { type?: unknown; result?: unknown }
   if (type !== "fill-result" || typeof result !== "object" || result === null) return false
 
-  const outcome = result as { ok?: unknown; summary?: unknown; error?: unknown }
-  if (outcome.ok === true) return isReportSummary(outcome.summary)
+  const outcome = result as { ok?: unknown; summary?: unknown; notes?: unknown; error?: unknown }
+  if (outcome.ok === true) return isReportSummary(outcome.summary) && isTextList(outcome.notes)
   return outcome.ok === false && typeof outcome.error === "string"
 }
 

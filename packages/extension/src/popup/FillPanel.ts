@@ -1,4 +1,4 @@
-// Renders the "Fill this page" button and shows the running totals reported back by the page's frames.
+// Renders the "Fill this page" button and shows the running totals and notes reported back by the page's frames.
 import { addSummaries, emptySummary, formatSummary } from "@auto-applier/core"
 import { isFillResultMessage } from "../messaging"
 import type { FillPageRequest } from "../messaging"
@@ -12,7 +12,17 @@ async function requestFill(): Promise<void> {
   await chrome.tabs.sendMessage(tab.id, request)
 }
 
-// Adds the button and a status line to the container, and updates the status as each frame reports in.
+// Replaces the contents of a list element with one item per note.
+function showNotes(list: HTMLElement, notes: string[]): void {
+  const items = notes.map((note) => {
+    const item = document.createElement("li")
+    item.textContent = note
+    return item
+  })
+  list.replaceChildren(...items)
+}
+
+// Adds the button, a status line and a notes list to the container, and updates them as each frame reports in.
 export function mountFillPanel(container: HTMLElement): void {
   const button = document.createElement("button")
   button.type = "button"
@@ -21,14 +31,20 @@ export function mountFillPanel(container: HTMLElement): void {
   const status = document.createElement("p")
   status.setAttribute("role", "status")
 
+  const notesList = document.createElement("ul")
+  notesList.className = "notes"
+
   let totals = emptySummary()
+  let notes: string[] = []
 
   chrome.runtime.onMessage.addListener((message: unknown) => {
     if (!isFillResultMessage(message)) return
 
     if (message.result.ok) {
       totals = addSummaries(totals, message.result.summary)
+      notes = [...new Set([...notes, ...message.result.notes])]
       status.textContent = formatSummary(totals)
+      showNotes(notesList, notes)
     } else {
       status.textContent = message.result.error
     }
@@ -36,6 +52,8 @@ export function mountFillPanel(container: HTMLElement): void {
 
   button.addEventListener("click", async () => {
     totals = emptySummary()
+    notes = []
+    showNotes(notesList, notes)
     status.textContent = "Filling…"
     try {
       await requestFill()
@@ -44,5 +62,5 @@ export function mountFillPanel(container: HTMLElement): void {
     }
   })
 
-  container.append(button, status)
+  container.append(button, status, notesList)
 }

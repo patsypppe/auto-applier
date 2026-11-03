@@ -18,7 +18,17 @@ describe("isFillPageRequest", () => {
 
 describe("isFillResultMessage", () => {
   test("accepts a success with a summary", () => {
-    expect(isFillResultMessage({ type: "fill-result", result: { ok: true, summary: emptySummary() } })).toBe(true)
+    const result = { ok: true, summary: emptySummary(), notes: ["AI help skipped: no key"] }
+
+    expect(isFillResultMessage({ type: "fill-result", result })).toBe(true)
+  })
+
+  test("rejects a success whose notes are missing or not text", () => {
+    const summary = emptySummary()
+
+    expect(isFillResultMessage({ type: "fill-result", result: { ok: true, summary } })).toBe(false)
+    expect(isFillResultMessage({ type: "fill-result", result: { ok: true, summary, notes: [1] } })).toBe(false)
+    expect(isFillResultMessage({ type: "fill-result", result: { ok: true, summary, notes: "note" } })).toBe(false)
   })
 
   test("accepts a failure with an error text", () => {
