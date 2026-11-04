@@ -71,3 +71,15 @@
 - A rerun from the cache took 67 s; only the 96 boards that had failed were asked again.
 - Not done yet: companies like prolificacademicltd (paid studies) and eosfitness (gym jobs) are in Simplify's list. Filtering by job title in the matching slice should hide them.
 - Next: slice 4, merging repeat postings across cities and across runs.
+
+## 2026-11-04: Slice 4, copies and reposts
+
+- Measured first, on the full run: 9,855 postings were exact copies (same board, title and text) in another city. Ignoring the job's own city names and all numbers in the text raised that to 10,360. Copies that differ in a real way stay apart: SpaceX's Bastrop copy has no pay range, and Deepgram's Singapore copy adds "This role does not sponsor Employment Pass". Both pairs are in the fixture.
+- `textHash`: sha256 of board, title (lowercase, spaces squashed) and text with the job's own place words and numbers taken out.
+- `mergeCopies`: one job per hash, keyed by the lowest id (numeric order), so the key stays the same from run to run. Locations combined; US if any copy is in the US; earliest posting date, latest update.
+- `linkReposts`: `data/seen.json` remembers each job's hash and first-seen date for 60 days. A known key keeps its first-seen date. A new key with a remembered hash gets `repostOf` (the oldest copy) and that copy's first-seen date. Lookup is by hash, built once per run, because the first version searched every remembered job for each new one.
+- Real data, from the cache: 98,179 postings became 87,820 jobs. A second run kept all 87,820 keys and first-seen dates, with 0 reposts, as expected on the same day. Hand-checked 15 jobs with several locations: all are genuinely one posting.
+- Not tested on real data: reposts, which need runs on different days. Only the fixture tests cover them.
+- Known limit: numbers are ignored, so copies whose pay range differs by city are joined, and the job shows one copy's range.
+- A test mistake caught along the way: changing a copy's location in a test left the old city in its text, so the copies no longer matched. The test was fixed, not the code.
+- Next: slice 5, work-authorization tags.

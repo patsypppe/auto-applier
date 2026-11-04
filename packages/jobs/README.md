@@ -35,12 +35,13 @@ It sends one request at a time to each job site, waits 1 second between requests
 
 ## What it took on 2026-11-04
 
-1,931 boards, 17 minutes from an empty cache, 98,179 jobs. 96 boards returned 404. The saved answers took 1.2 GB and the jobs file 597 MB. A second run from the saved answers took about a minute.
+1,931 boards, 17 minutes from an empty cache, 98,179 postings, which became 87,820 jobs after joining copies. 96 boards returned 404. The saved answers took 1.2 GB and the jobs file 597 MB. A second run from the saved answers took about a minute.
 
 ## Known limits
 
 - Only Greenhouse, Lever and Ashby. Workday is planned; iCIMS, Oracle and company-built career sites are not.
 - Lever and Ashby boards do not give the company name, so a board added with `--board` shows its slug.
 - The country is read from location text. About 7% of jobs say only "Remote" or name a place it does not know, and are left undecided.
-- The same posting listed in several cities is still several jobs. Merging them comes next.
+- Copies of a posting in several cities are joined into one job only when their text is the same apart from the city and any numbers. A joined job shows the text of its lowest-id copy, so a pay range that differs by city shows only that copy's range.
+- A posting reposted under a new id is linked to its earlier copy if that copy was seen in the last 60 days (`data/seen.json`).
 - `npm ci` fails on this branch until the root lockfile lists this package; `npm install` works.
