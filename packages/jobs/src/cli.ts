@@ -1,35 +1,25 @@
-// Command line entry point: "collect --board site:slug [--board ...] [--fresh]" reads boards into data/jobs.json.
-import { mkdir, writeFile } from "node:fs/promises"
+// Command line entry point for the job feed: "companies" builds the company list, "collect" reads the boards.
+import { mkdir } from "node:fs/promises"
 import { join } from "node:path"
-import { readBoardArgs } from "./boardArg"
-import { collectAll } from "./fetching/collectBoards"
-import { formatSummary } from "./fetching/summary"
+import { runCollect } from "./commands/collect"
+import { runCompanies } from "./commands/companies"
 
 const DATA_DIR = join(process.cwd(), "data")
-const CACHE_HOURS = 12
+const USAGE = "Commands: companies [--with-aggregator], collect [--board site:slug ...] [--fresh]"
 
-// Collects the chosen boards, saves the jobs and prints the summary; --fresh ignores saved answers.
-async function collect(args: readonly string[]): Promise<void> {
-  const boards = readBoardArgs(args)
-  const fresh = args.includes("--fresh")
-  const started = Date.now()
-
-  const { jobs, results } = await collectAll(boards, {
-    cache: { dir: join(DATA_DIR, "cache"), maxAgeHours: fresh ? 0 : CACHE_HOURS },
-  })
-
-  await mkdir(DATA_DIR, { recursive: true })
-  const file = join(DATA_DIR, "jobs.json")
-  await writeFile(file, JSON.stringify(jobs))
-
-  process.stdout.write(`${formatSummary(results, (Date.now() - started) / 1000)}\nSaved to ${file}\n`)
+// Writes one line to the terminal.
+function print(line: string): void {
+  process.stdout.write(`${line}\n`)
 }
 
-// Runs the command named in the arguments and prints any error as one line.
+// Runs the command named in the arguments.
 async function main(argv: readonly string[]): Promise<void> {
   const [command, ...args] = argv
-  if (command !== "collect") throw new Error(`Unknown command '${command ?? ""}'. Try: collect --board greenhouse:stripe`)
-  await collect(args)
+  await mkdir(DATA_DIR, { recursive: true })
+
+  if (command === "companies") return runCompanies(args, DATA_DIR, print)
+  if (command === "collect") return runCollect(args, DATA_DIR, print)
+  throw new Error(`Unknown command '${command ?? ""}'. ${USAGE}`)
 }
 
 main(process.argv.slice(2)).catch((error: unknown) => {

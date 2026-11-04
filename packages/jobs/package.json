@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "companies": "node build.mjs && node dist/cli.js companies",
     "collect": "node build.mjs && node dist/cli.js collect",
     "test": "vitest run",
     "typecheck": "tsc -p . --noEmit"
