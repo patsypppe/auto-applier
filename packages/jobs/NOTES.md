@@ -43,3 +43,15 @@
 - Built `fetchJson` (fixed user agent, 30 s timeout, retries after 1, 3 and 9 s on 429 and 5xx or a dropped connection), `htmlToText`, `countryOf`, `fetchGreenhouseBoard`, and `collect --board greenhouse:<slug>`.
 - Real runs: stripe 758 jobs in 0.6 s, airbnb 207 in 0.3 s, databricks 927 in 1.5 s. The first version left 352 of Stripe's jobs without a country, because Stripe writes bare city names. Reading the offices too brought that to 3 (Bucharest, Barcelona). Hand-checked 20 random Databricks jobs: all 20 countries right.
 - Next: slice 2, Lever and Ashby, the three sources at once, the pause between requests, the cache and the run summary.
+
+## 2026-11-04: Slice 2, Lever, Ashby, pauses and cache
+
+- The lockfile question is still open; left as written in `docs/INTEGRATION.md`.
+- Each job site is now a `BoardSource`: `fetchRaw` (the requests) and `readJobs` (the answer to records), so the cache can store raw answers and re-read them after a code change. Greenhouse was split the same way.
+- Lever: the country comes from Lever's two-letter code, because "CA" there means Canada. Ashby: unlisted jobs are skipped, and the country is read from the address fields as well as the location text.
+- `collectBoards` reads one site's boards in order. Every request after the first waits the pause (1 s default), so Workday's several requests per board will be paced the same way. `collectAll` runs the sites side by side. A failed board is recorded and the run goes on.
+- Cache: `data/cache/<site>/<slug>.json` with the fetch time; 12 hours, `--fresh` skips reading it.
+- Real runs: 7 boards (stripe, airbnb, spotify, palantir, plaid, ramp, notion) in 4.4 s: 1,676 jobs, plaid's 404 reported. A second run of three boards came from the cache in 0.2 s. All 711 Lever and Ashby jobs got a country. Hand-checked 16 random jobs across the three sites: all right.
+- Fixed: the slice 1 entity test had a literal em dash in it; it now uses escapes and a degree sign.
+- Company names from Lever and Ashby are the slug ("spotify", "ramp") until the company list in slice 3 gives real names.
+- Next: slice 3, the company list and a full collection.
