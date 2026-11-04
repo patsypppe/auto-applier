@@ -27,6 +27,8 @@ export type JobRecord = {
   firstSeenAt: string
   lastSeenAt: string
   description: string
+  textHash?: string
+  repostOf?: string
 }
 
 export type GetJson = (url: string, body?: unknown) => Promise<unknown>
