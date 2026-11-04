@@ -1,0 +1,15 @@
+{
+  "name": "@auto-applier/jobs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "collect": "node build.mjs && node dist/cli.js collect",
+    "test": "vitest run",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "dependencies": {
+    "@auto-applier/core": "*"
+  }
+}
