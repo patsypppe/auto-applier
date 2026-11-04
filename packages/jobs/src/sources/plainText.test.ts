@@ -20,8 +20,8 @@ describe("htmlToText", () => {
   })
 
   test("decodes named and numeric entities", () => {
-    expect(htmlToText("R&amp;D &quot;team&quot; &#8217;s &#x2014; caf&#233;&nbsp;bar")).toBe(
-      "R&D \"team\" ’s — café bar",
+    expect(htmlToText("R&amp;D &quot;team&quot; &#8217;s &#xB0; caf&#233;&nbsp;bar")).toBe(
+      "R&D \"team\" \u2019s \u00b0 caf\u00e9 bar",
     )
   })
 
