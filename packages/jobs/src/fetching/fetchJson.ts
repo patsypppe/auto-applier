@@ -16,6 +16,17 @@ export type FetchOptions = {
 
 type Attempt = { response: Response } | { dropped: string }
 
+// A failed request that also carries the HTTP status, when there was one, so a 404 can be told apart from a busy server.
+export class RequestError extends Error {
+  readonly status?: number
+
+  constructor(message: string, status?: number) {
+    super(message)
+    this.name = "RequestError"
+    this.status = status
+  }
+}
+
 // Waits for the given number of milliseconds.
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -45,9 +56,9 @@ async function attempt(url: string, options: FetchOptions, fetchFn: typeof fetch
 }
 
 // Builds the error for a status that will not get better by asking again.
-function statusError(label: string, status: number): Error {
+function statusError(label: string, status: number): RequestError {
   const hint = status === 404 ? " It was not found, so the board may have moved or closed." : ""
-  return new Error(`${label} returned ${status}.${hint}`)
+  return new RequestError(`${label} returned ${status}.${hint}`, status)
 }
 
 // Reads the body as JSON, or says the board answered with something else, such as a sign-in page.
@@ -75,8 +86,9 @@ export async function fetchJson(url: string, options: FetchOptions): Promise<unk
 
     const delay = delays[tries - 1]
     if (delay === undefined) {
-      const reason = "response" in result ? `returned ${result.response.status}` : `could not be reached (${result.dropped})`
-      throw new Error(`${options.label} ${reason} after ${tries} tries.`)
+      const status = "response" in result ? result.response.status : undefined
+      const reason = status !== undefined ? `returned ${status}` : `could not be reached (${"dropped" in result ? result.dropped : ""})`
+      throw new RequestError(`${options.label} ${reason} after ${tries} tries.`, status)
     }
     await sleep(delay)
   }

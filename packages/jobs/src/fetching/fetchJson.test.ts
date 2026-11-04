@@ -1,6 +1,6 @@
 // Tests that fetchJson sends one polite request, retries temporary failures with growing waits, and explains failures.
 import { describe, expect, test, vi } from "vitest"
-import { fetchJson, USER_AGENT } from "./fetchJson"
+import { fetchJson, RequestError, USER_AGENT } from "./fetchJson"
 
 const URL = "https://boards-api.greenhouse.io/v1/boards/acme/jobs"
 const LABEL = "Greenhouse board 'acme'"
@@ -95,6 +95,15 @@ describe("fetchJson: permanent failures", () => {
     )
     expect(fetchFn).toHaveBeenCalledTimes(1)
     expect(sleep).not.toHaveBeenCalled()
+  })
+
+  test("puts the status on the error so a caller can tell a missing board from a busy one", async () => {
+    const error: unknown = await fetchJson(URL, { label: LABEL, fetchFn: fetchAnswering(404), sleep: fakeSleep() }).catch(
+      (e: unknown) => e,
+    )
+
+    expect(error).toBeInstanceOf(RequestError)
+    expect((error as RequestError).status).toBe(404)
   })
 
   test("refuses an answer that is not JSON", async () => {
