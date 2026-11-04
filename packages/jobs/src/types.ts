@@ -1,5 +1,5 @@
-// Defines the shape of a collected job, shared by every job board reader.
-export type Ats = "greenhouse"
+// Defines the shape of a collected job and of a job site that boards are read from.
+export type Ats = "greenhouse" | "lever" | "ashby"
 
 export type JobRecord = {
   key: string
@@ -16,4 +16,13 @@ export type JobRecord = {
   firstSeenAt: string
   lastSeenAt: string
   description: string
+}
+
+export type GetJson = (url: string, body?: unknown) => Promise<unknown>
+
+export type BoardSource = {
+  ats: Ats
+  name: string
+  fetchRaw: (slug: string, getJson: GetJson) => Promise<unknown>
+  readJobs: (raw: unknown, slug: string, seenAt: string) => JobRecord[]
 }

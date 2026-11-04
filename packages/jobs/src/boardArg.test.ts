@@ -1,27 +1,30 @@
-// Tests that readBoardArg reads "--board ats:slug" and explains what to type when it is wrong.
+// Tests that readBoardArgs reads every "--board site:slug" option and explains what to type when one is wrong.
 import { describe, expect, test } from "vitest"
-import { readBoardArg } from "./boardArg"
+import { readBoardArgs } from "./boardArg"
 
-const USAGE = "Use --board greenhouse:<slug>, for example --board greenhouse:stripe."
+const USAGE = "Use --board <site>:<slug>, for example --board greenhouse:stripe. Sites: greenhouse, lever, ashby."
 
-describe("readBoardArg", () => {
+describe("readBoardArgs", () => {
   test("reads the job site and the board slug", () => {
-    expect(readBoardArg(["--board", "greenhouse:stripe"])).toEqual({ ats: "greenhouse", slug: "stripe" })
+    expect(readBoardArgs(["--board", "greenhouse:stripe"])).toEqual([{ ats: "greenhouse", slug: "stripe" }])
   })
 
-  test("accepts the form with an equals sign", () => {
-    expect(readBoardArg(["--board=greenhouse:stripe"])).toEqual({ ats: "greenhouse", slug: "stripe" })
+  test("reads several boards, in both forms, in order", () => {
+    expect(readBoardArgs(["--board", "lever:spotify", "--fresh", "--board=ashby:ramp"])).toEqual([
+      { ats: "lever", slug: "spotify" },
+      { ats: "ashby", slug: "ramp" },
+    ])
   })
 
   test("refuses a missing board", () => {
-    expect(() => readBoardArg([])).toThrow(USAGE)
+    expect(() => readBoardArgs(["--fresh"])).toThrow(USAGE)
   })
 
   test("refuses a job site it cannot read yet", () => {
-    expect(() => readBoardArg(["--board", "workday:nvidia"])).toThrow(`'workday' is not supported yet. ${USAGE}`)
+    expect(() => readBoardArgs(["--board", "workday:nvidia"])).toThrow(`'workday' is not supported yet. ${USAGE}`)
   })
 
   test("refuses a board with no slug", () => {
-    expect(() => readBoardArg(["--board", "greenhouse:"])).toThrow(USAGE)
+    expect(() => readBoardArgs(["--board", "greenhouse:"])).toThrow(USAGE)
   })
 })

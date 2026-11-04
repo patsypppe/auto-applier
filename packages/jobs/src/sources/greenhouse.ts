@@ -1,20 +1,13 @@
 // Reads a company's public Greenhouse job board and turns its jobs into job records.
 import * as z from "zod/mini"
 import en from "zod/v4/locales/en.js"
-import { fetchJson } from "../fetching/fetchJson"
-import type { JobRecord } from "../types"
+import type { BoardSource, JobRecord } from "../types"
 import { countryOf } from "./country"
 import { htmlToText } from "./plainText"
 
 z.config(en())
 
 const BOARDS_URL = "https://boards-api.greenhouse.io/v1/boards"
-
-export type BoardOptions = {
-  fetchFn?: typeof fetch
-  sleep?: (ms: number) => Promise<void>
-  now?: Date
-}
 
 const text = z.nullish(z.string())
 
@@ -75,18 +68,17 @@ function toJobRecord(raw: unknown, slug: string, seenAt: string): JobRecord | un
   }
 }
 
-// Fetches every job on the board, with descriptions, and returns the ones that could be read.
-export async function fetchGreenhouseBoard(slug: string, options: BoardOptions = {}): Promise<JobRecord[]> {
-  const label = `Greenhouse board '${slug}'`
-  const answer = await fetchJson(`${BOARDS_URL}/${encodeURIComponent(slug)}/jobs?content=true`, {
-    label,
-    fetchFn: options.fetchFn,
-    sleep: options.sleep,
-  })
+export const greenhouse: BoardSource = {
+  ats: "greenhouse",
+  name: "Greenhouse",
 
-  const board = boardSchema.safeParse(answer)
-  if (!board.success) throw new Error(`${label} sent an answer without a jobs list.`)
+  // Asks for every job on the board, with descriptions, in one request.
+  fetchRaw: (slug, getJson) => getJson(`${BOARDS_URL}/${encodeURIComponent(slug)}/jobs?content=true`),
 
-  const seenAt = (options.now ?? new Date()).toISOString()
-  return board.data.jobs.flatMap((job) => toJobRecord(job, slug, seenAt) ?? [])
+  // Reads the board's answer into job records, skipping jobs that cannot be read.
+  readJobs: (raw, slug, seenAt) => {
+    const board = boardSchema.safeParse(raw)
+    if (!board.success) throw new Error(`Greenhouse board '${slug}' sent an answer without a jobs list.`)
+    return board.data.jobs.flatMap((job) => toJobRecord(job, slug, seenAt) ?? [])
+  },
 }
