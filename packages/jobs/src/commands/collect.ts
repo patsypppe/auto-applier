@@ -3,6 +3,8 @@ import { appendFile } from "node:fs/promises"
 import { join } from "node:path"
 import { readBoardArgs } from "../boardArg"
 import { isDead, updateDeadBoards, type DeadBoards } from "../companies/deadBoards"
+import { linkReposts, type SeenJobs } from "../dedupe/linkReposts"
+import { mergeCopies } from "../dedupe/mergeCopies"
 import { collectAll, type BoardResult, type BoardToRead } from "../fetching/collectBoards"
 import { formatSummary } from "../fetching/summary"
 import { readCompanyFile, readJsonFile, writeJobsFile, writeJsonFile } from "../storage/files"
@@ -26,7 +28,8 @@ function progressPrinter(print: (line: string) => void) {
   }
 }
 
-// Collects the boards, saves the jobs, the requests made and the boards that returned 404, and prints the summary.
+// Collects the boards, joins copies and links reposts, saves the jobs, the requests made and the boards that returned 404,
+// and prints the summary.
 export async function runCollect(args: readonly string[], dataDir: string, print: (line: string) => void): Promise<void> {
   const deadFile = join(dataDir, "dead-boards.json")
   const dead = await readJsonFile<DeadBoards>(deadFile, {})
@@ -41,10 +44,17 @@ export async function runCollect(args: readonly string[], dataDir: string, print
     onRequest: (url, at) => void appendFile(requestLog, `${at.toISOString()} ${new URL(url).host}\n`),
   })
 
+  const seenFile = join(dataDir, "seen.json")
+  const merged = mergeCopies(jobs)
+  const linked = linkReposts(merged, await readJsonFile<SeenJobs>(seenFile, {}), started)
+  const reposts = linked.jobs.filter((job) => job.repostOf !== undefined).length
+
   const file = join(dataDir, "jobs.jsonl")
-  await writeJobsFile(file, jobs)
+  await writeJobsFile(file, linked.jobs)
+  await writeJsonFile(seenFile, linked.seen)
   await writeJsonFile(deadFile, updateDeadBoards(dead, results, started.toISOString().slice(0, 10)))
 
   print(formatSummary(results, (Date.now() - started.getTime()) / 1000))
+  print(`${jobs.length.toLocaleString("en-US")} postings became ${merged.length.toLocaleString("en-US")} jobs after joining copies; ${reposts} reposts linked to an earlier copy.`)
   print(`Saved to ${file}`)
 }
