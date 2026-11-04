@@ -18,6 +18,13 @@ describe("countryOf: United States", () => {
     expect(countryOf([location])).toBe("US")
   })
 
+  test.each([["Atlanta GA"], ["St. Louis MO"], ["San Francisco"], ["Chicago"], ["Office - Chicago"], ["Austin"], ["NYC"]])(
+    "reads %s, written without a comma or a state, as US",
+    (location) => {
+      expect(countryOf([location])).toBe("US")
+    },
+  )
+
   test("counts a job as US when any of its locations is in the US", () => {
     expect(countryOf(["London, United Kingdom", "New York, NY"])).toBe("US")
   })
@@ -26,6 +33,13 @@ describe("countryOf: United States", () => {
 describe("countryOf: other countries", () => {
   test.each([["Tokyo, Japan"], ["Remote - Japan"], ["Bengaluru, India"], ["Singapore"], ["Berlin, Germany"], ["Toronto, Canada"]])(
     "reads %s as another country",
+    (location) => {
+      expect(countryOf([location])).toBe("other")
+    },
+  )
+
+  test.each([["Amsterdam"], ["Bengaluru"], ["Bangalore"], ["Tokyo"], ["Sydney"], ["Toronto, ON"], ["Berlin"], ["Home based - EMEA"]])(
+    "reads the big city or region %s as another country",
     (location) => {
       expect(countryOf([location])).toBe("other")
     },

@@ -11,7 +11,13 @@ const STATE_NAMES =
   "Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|" +
   "West Virginia|Wisconsin|Wyoming|Puerto Rico"
 
-const US_WORDS = new RegExp(`\\b(United States|USA|U\\.S\\.A?\\.?|US|D\\.C\\.|${STATE_NAMES})(?![a-z])`)
+// Big US tech cities that boards often write without a state.
+const US_CITIES =
+  "San Francisco|San Jose|Palo Alto|Mountain View|Menlo Park|Sunnyvale|Bay Area|Seattle|Chicago|Austin|Boston|" +
+  "Denver|Atlanta|Los Angeles|NYC|New York City|Brooklyn|Miami|Dallas|Houston|Pittsburgh|Philadelphia|Phoenix|" +
+  "San Diego|Salt Lake City"
+
+const US_WORDS = new RegExp(`\\b(United States|USA|U\\.S\\.A?\\.?|US|D\\.C\\.|${STATE_NAMES}|${US_CITIES})(?![a-z])`)
 
 const OTHER_COUNTRIES = new RegExp(
   "\\b(" +
@@ -20,7 +26,13 @@ const OTHER_COUNTRIES = new RegExp(
     "Italy|Japan|Kenya|Korea|Latvia|Lithuania|Luxembourg|Malaysia|Mexico|Morocco|Netherlands|New Zealand|Nigeria|" +
     "Norway|Pakistan|Peru|Philippines|Poland|Portugal|Romania|Saudi Arabia|Serbia|Singapore|Slovakia|South Africa|" +
     "Spain|Sweden|Switzerland|Taiwan|Thailand|Turkey|Ukraine|United Arab Emirates|UAE|United Kingdom|UK|England|" +
-    "Scotland|Uruguay|Vietnam" +
+    "Scotland|Uruguay|Vietnam|" +
+    // Big cities and regions outside the US that boards often write alone. London and Dublin stay undecided,
+    // because there is a London, Ontario and a Dublin, California.
+    "Amsterdam|Bengaluru|Bangalore|Hyderabad|Pune|Mumbai|Delhi|Gurugram|Gurgaon|Noida|Chennai|Tokyo|Seoul|Taipei|" +
+    "Sydney|Melbourne|Berlin|Munich|Paris|Madrid|Barcelona|Lisbon|Zurich|Stockholm|Copenhagen|Oslo|Helsinki|" +
+    "Warsaw|Prague|Bucharest|Sofia|Tel Aviv|Toronto|Vancouver|Montreal|Mexico City|S\u00e3o Paulo|Sao Paulo|" +
+    "EMEA|APAC|LATAM|Europe" +
     ")\\b",
 )
 
@@ -28,8 +40,9 @@ const OTHER_COUNTRIES = new RegExp(
 function countryOfLocation(location: string): "US" | "other" | undefined {
   if (US_WORDS.test(location)) return "US"
 
-  const codeAfterComma = location.match(/,\s*([A-Z]{2})\b/)
-  if (codeAfterComma && STATE_CODES.has(codeAfterComma[1]!)) return "US"
+  // A state code after a comma ("Seattle, WA") or at the very end ("Atlanta GA").
+  const stateCode = location.match(/,\s*([A-Z]{2})\b/) ?? location.match(/\s([A-Z]{2})$/)
+  if (stateCode && STATE_CODES.has(stateCode[1]!)) return "US"
 
   return OTHER_COUNTRIES.test(location) ? "other" : undefined
 }
