@@ -8,6 +8,7 @@ import { htmlToText } from "./plainText"
 z.config(en())
 
 const POSTINGS_URL = "https://api.lever.co/v0/postings"
+const EU_POSTINGS_URL = "https://api.eu.lever.co/v0/postings"
 
 const text = z.nullish(z.string())
 
@@ -79,8 +80,9 @@ export const lever: BoardSource = {
   ats: "lever",
   name: "Lever",
 
-  // Asks for every published posting on the board in one request.
-  fetchRaw: (slug, getJson) => getJson(`${POSTINGS_URL}/${encodeURIComponent(slug)}?mode=json`),
+  // Asks for every published posting on the board in one request, from Lever's EU host for boards that live there.
+  fetchRaw: ({ slug, region }, getJson) =>
+    getJson(`${region === "eu" ? EU_POSTINGS_URL : POSTINGS_URL}/${encodeURIComponent(slug)}?mode=json`),
 
   // Reads Lever's list of postings into job records, skipping postings that cannot be read.
   readJobs: (raw, slug, seenAt) => {

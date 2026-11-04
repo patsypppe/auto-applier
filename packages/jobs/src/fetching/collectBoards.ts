@@ -3,17 +3,20 @@ import { readCachedBoard, writeCachedBoard } from "../storage/boardCache"
 import { ashby } from "../sources/ashby"
 import { greenhouse } from "../sources/greenhouse"
 import { lever } from "../sources/lever"
-import type { Ats, BoardSource, GetJson, JobRecord } from "../types"
-import { fetchJson } from "./fetchJson"
+import type { Ats, Board, BoardSource, GetJson, JobRecord } from "../types"
+import { fetchJson, RequestError } from "./fetchJson"
 
 const SOURCES: Record<Ats, BoardSource> = { greenhouse, lever, ashby }
 const DEFAULT_DELAY_MS = 1000
+
+export type BoardToRead = Board & { name?: string }
 
 export type BoardResult = {
   ats: Ats
   slug: string
   outcome: "fetched" | "cached" | "failed"
   jobs: number
+  status?: number
   error?: string
 }
 
@@ -23,6 +26,8 @@ export type CollectOptions = {
   delayMs?: number
   cache?: { dir: string; maxAgeHours: number }
   now?: Date
+  onBoard?: (result: BoardResult, done: number, total: number) => void
+  onRequest?: (url: string, at: Date) => void
 }
 
 export type Collected = { jobs: JobRecord[]; results: BoardResult[] }
@@ -39,59 +44,69 @@ function politeGetJson(source: BoardSource, options: CollectOptions, sleep: (ms:
     async (url, body) => {
       if (!first) await sleep(options.delayMs ?? DEFAULT_DELAY_MS)
       first = false
+      options.onRequest?.(url, new Date())
       return fetchJson(url, { label: `${source.name} board '${slug}'`, body, fetchFn: options.fetchFn, sleep })
     }
+}
+
+// Gives jobs the company's name from the list when the board only told us its slug, as Lever and Ashby do.
+function withCompanyName(jobs: JobRecord[], board: BoardToRead): JobRecord[] {
+  const { name } = board
+  if (!name) return jobs
+  return jobs.map((job) => (job.company === board.slug ? { ...job, company: name } : job))
 }
 
 // Reads one board from the cache or the network and returns its jobs and how it went.
 async function collectBoard(
   source: BoardSource,
-  slug: string,
+  board: BoardToRead,
   getJsonFor: (slug: string) => GetJson,
   options: CollectOptions,
   now: Date,
 ): Promise<{ jobs: JobRecord[]; result: BoardResult }> {
   const { cache } = options
+  const { slug } = board
   try {
     const cached = cache ? await readCachedBoard(cache.dir, source.ats, slug, cache.maxAgeHours, now) : undefined
-    const raw = cached ?? (await source.fetchRaw(slug, getJsonFor(slug)))
+    const raw = cached ?? (await source.fetchRaw(board, getJsonFor(slug)))
     if (cache && cached === undefined) await writeCachedBoard(cache.dir, source.ats, slug, raw, now)
 
-    const jobs = source.readJobs(raw, slug, now.toISOString())
+    const jobs = withCompanyName(source.readJobs(raw, slug, now.toISOString()), board)
     const outcome = cached === undefined ? "fetched" : "cached"
     return { jobs, result: { ats: source.ats, slug, outcome, jobs: jobs.length } }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
-    return { jobs: [], result: { ats: source.ats, slug, outcome: "failed", jobs: 0, error: message } }
+    const status = error instanceof RequestError ? error.status : undefined
+    const failed: BoardResult = { ats: source.ats, slug, outcome: "failed", jobs: 0, error: message }
+    return { jobs: [], result: status === undefined ? failed : { ...failed, status } }
   }
 }
 
 // Reads the given boards of one job site in order; a board that fails is recorded and the rest still run.
-export async function collectBoards(source: BoardSource, slugs: readonly string[], options: CollectOptions = {}): Promise<Collected> {
+export async function collectBoards(
+  source: BoardSource,
+  boards: readonly BoardToRead[],
+  options: CollectOptions = {},
+): Promise<Collected> {
   const now = options.now ?? new Date()
   const getJsonFor = politeGetJson(source, options, options.sleep ?? wait)
 
   const jobs: JobRecord[] = []
   const results: BoardResult[] = []
-  for (const slug of slugs) {
-    const board = await collectBoard(source, slug, getJsonFor, options, now)
-    jobs.push(...board.jobs)
-    results.push(board.result)
+  for (const board of boards) {
+    const collected = await collectBoard(source, board, getJsonFor, options, now)
+    jobs.push(...collected.jobs)
+    results.push(collected.result)
+    options.onBoard?.(collected.result, results.length, boards.length)
   }
   return { jobs, results }
 }
 
 // Reads boards from every job site at once, since they are different hosts, and joins the results.
-export async function collectAll(boards: readonly { ats: Ats; slug: string }[], options: CollectOptions = {}): Promise<Collected> {
+export async function collectAll(boards: readonly BoardToRead[], options: CollectOptions = {}): Promise<Collected> {
   const sites = [...new Set(boards.map((board) => board.ats))]
   const collected = await Promise.all(
-    sites.map((ats) =>
-      collectBoards(
-        SOURCES[ats],
-        boards.filter((board) => board.ats === ats).map((board) => board.slug),
-        options,
-      ),
-    ),
+    sites.map((ats) => collectBoards(SOURCES[ats], boards.filter((board) => board.ats === ats), options)),
   )
   return {
     jobs: collected.flatMap((site) => site.jobs),

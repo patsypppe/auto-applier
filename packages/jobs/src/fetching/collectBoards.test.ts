@@ -13,7 +13,7 @@ const NOW = new Date("2026-11-04T12:00:00Z")
 const fakeSite: BoardSource = {
   ats: "greenhouse",
   name: "Greenhouse",
-  fetchRaw: (slug, getJson) => getJson(`https://boards.example/${slug}`),
+  fetchRaw: (board, getJson) => getJson(`https://boards.example/${board.slug}`),
   readJobs: (raw, slug, seenAt) => {
     const titles = (raw as { titles?: string[] }).titles
     if (!titles) throw new Error(`Greenhouse board '${slug}' sent an answer without a jobs list.`)
@@ -21,7 +21,7 @@ const fakeSite: BoardSource = {
   },
 }
 
-// Builds a job record with only the details these tests look at.
+// Builds a job record with only the details these tests look at; the company is the slug, as Lever and Ashby give it.
 function jobNamed(slug: string, title: string, index: number, seenAt: string): JobRecord {
   return {
     key: `greenhouse:${slug}:${index}`,
@@ -36,6 +36,11 @@ function jobNamed(slug: string, title: string, index: number, seenAt: string): J
     lastSeenAt: seenAt,
     description: "",
   }
+}
+
+// Turns slugs into boards of the made-up site.
+function boards(...slugs: string[]) {
+  return slugs.map((slug) => ({ ats: "greenhouse" as const, slug }))
 }
 
 // Builds a fetch stand-in that answers each board URL from the given table, and 404 for anything else.
@@ -56,7 +61,7 @@ describe("collectBoards: reading boards", () => {
   test("reads each board in order and returns all their jobs", async () => {
     const fetchFn = fetchFrom({ acme: { titles: ["Data Analyst"] }, globex: { titles: ["ML Engineer", "SWE"] } })
 
-    const { jobs, results } = await collectBoards(fakeSite, ["acme", "globex"], { fetchFn, sleep: fakeSleep(), now: NOW })
+    const { jobs, results } = await collectBoards(fakeSite, boards("acme", "globex"), { fetchFn, sleep: fakeSleep(), now: NOW })
 
     expect(jobs.map((job) => job.title)).toEqual(["Data Analyst", "ML Engineer", "SWE"])
     expect(results).toEqual([
@@ -69,15 +74,15 @@ describe("collectBoards: reading boards", () => {
     const fetchFn = fetchFrom({ a: { titles: [] }, b: { titles: [] }, c: { titles: [] } })
     const sleep = fakeSleep()
 
-    await collectBoards(fakeSite, ["a", "b", "c"], { fetchFn, sleep, delayMs: 1000, now: NOW })
+    await collectBoards(fakeSite, boards("a", "b", "c"), { fetchFn, sleep, delayMs: 1000, now: NOW })
 
     expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([1000, 1000])
   })
 
-  test("records a board that fails and goes on with the next one", async () => {
+  test("records a board that fails, with its status, and goes on with the next one", async () => {
     const fetchFn = fetchFrom({ globex: { titles: ["SWE"] } })
 
-    const { jobs, results } = await collectBoards(fakeSite, ["gone", "globex"], { fetchFn, sleep: fakeSleep(), now: NOW })
+    const { jobs, results } = await collectBoards(fakeSite, boards("gone", "globex"), { fetchFn, sleep: fakeSleep(), now: NOW })
 
     expect(jobs.map((job) => job.slug)).toEqual(["globex"])
     expect(results[0]).toEqual({
@@ -85,6 +90,7 @@ describe("collectBoards: reading boards", () => {
       slug: "gone",
       outcome: "failed",
       jobs: 0,
+      status: 404,
       error: "Greenhouse board 'gone' returned 404. It was not found, so the board may have moved or closed.",
     })
   })
@@ -92,9 +98,35 @@ describe("collectBoards: reading boards", () => {
   test("records an answer it cannot read as a failure", async () => {
     const fetchFn = fetchFrom({ odd: { something: "else" } })
 
-    const { results } = await collectBoards(fakeSite, ["odd"], { fetchFn, sleep: fakeSleep(), now: NOW })
+    const { results } = await collectBoards(fakeSite, boards("odd"), { fetchFn, sleep: fakeSleep(), now: NOW })
 
     expect(results[0]).toMatchObject({ outcome: "failed", error: "Greenhouse board 'odd' sent an answer without a jobs list." })
+  })
+
+  test("names the company from the list when the board only gave its slug", async () => {
+    const fetchFn = fetchFrom({ ramp: { titles: ["SWE"] } })
+
+    const { jobs } = await collectBoards(fakeSite, [{ ats: "greenhouse", slug: "ramp", name: "Ramp" }], {
+      fetchFn,
+      sleep: fakeSleep(),
+      now: NOW,
+    })
+
+    expect(jobs[0]!.company).toBe("Ramp")
+  })
+
+  test("reports each board as it finishes and each request as it goes out", async () => {
+    const fetchFn = fetchFrom({ a: { titles: [] }, b: { titles: [] } })
+    const onBoard = vi.fn()
+    const onRequest = vi.fn()
+
+    await collectBoards(fakeSite, boards("a", "b"), { fetchFn, sleep: fakeSleep(), now: NOW, onBoard, onRequest })
+
+    expect(onBoard.mock.calls.map(([result, done, total]) => [result.slug, done, total])).toEqual([
+      ["a", 1, 2],
+      ["b", 2, 2],
+    ])
+    expect(onRequest.mock.calls.map(([url]) => url)).toEqual(["https://boards.example/a", "https://boards.example/b"])
   })
 })
 
@@ -105,7 +137,7 @@ describe("collectBoards: the cache", () => {
     const fetchFn = fetchFrom({ globex: { titles: ["New Job"] } })
     const sleep = fakeSleep()
 
-    const { jobs, results } = await collectBoards(fakeSite, ["acme", "globex"], {
+    const { jobs, results } = await collectBoards(fakeSite, boards("acme", "globex"), {
       fetchFn,
       sleep,
       delayMs: 1000,
@@ -123,7 +155,7 @@ describe("collectBoards: the cache", () => {
     const dir = await mkdtemp(join(tmpdir(), "collect-"))
     const fetchFn = fetchFrom({ acme: { titles: ["Fetched Job"] } })
 
-    await collectBoards(fakeSite, ["acme"], { fetchFn, sleep: fakeSleep(), cache: { dir, maxAgeHours: 12 }, now: NOW })
+    await collectBoards(fakeSite, boards("acme"), { fetchFn, sleep: fakeSleep(), cache: { dir, maxAgeHours: 12 }, now: NOW })
 
     expect(await readCachedBoard(dir, "greenhouse", "acme", 12, NOW)).toEqual({ titles: ["Fetched Job"] })
   })
@@ -143,7 +175,7 @@ describe("collectAll", () => {
       active[host]! -= 1
       return new Response(JSON.stringify(host.includes("lever") ? [] : { jobs: [] }), { status: 200 })
     })
-    const boards = [
+    const list = [
       { ats: "greenhouse" as const, slug: "a" },
       { ats: "greenhouse" as const, slug: "b" },
       { ats: "lever" as const, slug: "c" },
@@ -151,7 +183,7 @@ describe("collectAll", () => {
       { ats: "ashby" as const, slug: "e" },
     ]
 
-    const { results } = await collectAll(boards, { fetchFn, sleep: fakeSleep(), now: NOW })
+    const { results } = await collectAll(list, { fetchFn, sleep: fakeSleep(), now: NOW })
 
     expect(results.map((result) => `${result.ats}:${result.slug}:${result.outcome}`).sort()).toEqual([
       "ashby:e:fetched",

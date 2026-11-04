@@ -74,7 +74,7 @@ export const ashby: BoardSource = {
   name: "Ashby",
 
   // Asks for every job on the board in one request.
-  fetchRaw: (slug, getJson) => getJson(`${BOARD_URL}/${encodeURIComponent(slug)}`),
+  fetchRaw: ({ slug }, getJson) => getJson(`${BOARD_URL}/${encodeURIComponent(slug)}`),
 
   // Reads the board's answer into job records, skipping unlisted jobs and jobs that cannot be read.
   readJobs: (raw, slug, seenAt) => {

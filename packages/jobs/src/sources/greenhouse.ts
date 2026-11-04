@@ -73,7 +73,7 @@ export const greenhouse: BoardSource = {
   name: "Greenhouse",
 
   // Asks for every job on the board, with descriptions, in one request.
-  fetchRaw: (slug, getJson) => getJson(`${BOARDS_URL}/${encodeURIComponent(slug)}/jobs?content=true`),
+  fetchRaw: ({ slug }, getJson) => getJson(`${BOARDS_URL}/${encodeURIComponent(slug)}/jobs?content=true`),
 
   // Reads the board's answer into job records, skipping jobs that cannot be read.
   readJobs: (raw, slug, seenAt) => {

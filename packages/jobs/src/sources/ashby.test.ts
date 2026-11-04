@@ -11,7 +11,7 @@ describe("ashby: the request", () => {
   test("asks for the job board by name", async () => {
     const getJson = vi.fn(async (_url: string) => ({ jobs: [] }))
 
-    await ashby.fetchRaw("ramp", getJson)
+    await ashby.fetchRaw({ slug: "ramp" }, getJson)
 
     expect(getJson).toHaveBeenCalledWith("https://api.ashbyhq.com/posting-api/job-board/ramp")
   })

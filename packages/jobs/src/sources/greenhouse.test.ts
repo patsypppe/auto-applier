@@ -11,7 +11,7 @@ describe("greenhouse: the request", () => {
   test("asks for the board's jobs with their descriptions", async () => {
     const getJson = vi.fn(async (_url: string) => ({ jobs: [] }))
 
-    await greenhouse.fetchRaw("databricks", getJson)
+    await greenhouse.fetchRaw({ slug: "databricks" }, getJson)
 
     expect(getJson).toHaveBeenCalledWith("https://boards-api.greenhouse.io/v1/boards/databricks/jobs?content=true")
   })
@@ -19,7 +19,7 @@ describe("greenhouse: the request", () => {
   test("encodes odd characters in the slug", async () => {
     const getJson = vi.fn(async (_url: string) => ({ jobs: [] }))
 
-    await greenhouse.fetchRaw("a b/c", getJson)
+    await greenhouse.fetchRaw({ slug: "a b/c" }, getJson)
 
     expect(getJson).toHaveBeenCalledWith("https://boards-api.greenhouse.io/v1/boards/a%20b%2Fc/jobs?content=true")
   })

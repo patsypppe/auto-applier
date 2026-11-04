@@ -1,5 +1,16 @@
-// Defines the shape of a collected job and of a job site that boards are read from.
+// Defines the shape of a collected job, a company's board, and a job site that boards are read from.
 export type Ats = "greenhouse" | "lever" | "ashby"
+
+export type Board = {
+  ats: Ats
+  slug: string
+  region?: "eu"
+}
+
+export type Company = Board & {
+  name: string
+  sources: string[]
+}
 
 export type JobRecord = {
   key: string
@@ -23,6 +34,6 @@ export type GetJson = (url: string, body?: unknown) => Promise<unknown>
 export type BoardSource = {
   ats: Ats
   name: string
-  fetchRaw: (slug: string, getJson: GetJson) => Promise<unknown>
+  fetchRaw: (board: Pick<Board, "slug" | "region">, getJson: GetJson) => Promise<unknown>
   readJobs: (raw: unknown, slug: string, seenAt: string) => JobRecord[]
 }

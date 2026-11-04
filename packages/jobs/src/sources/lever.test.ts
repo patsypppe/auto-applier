@@ -11,9 +11,17 @@ describe("lever: the request", () => {
   test("asks for the board's postings as JSON", async () => {
     const getJson = vi.fn(async (_url: string) => [])
 
-    await lever.fetchRaw("spotify", getJson)
+    await lever.fetchRaw({ slug: "spotify" }, getJson)
 
     expect(getJson).toHaveBeenCalledWith("https://api.lever.co/v0/postings/spotify?mode=json")
+  })
+
+  test("asks Lever's EU host for a board that lives there", async () => {
+    const getJson = vi.fn(async (_url: string) => [])
+
+    await lever.fetchRaw({ slug: "cirrus", region: "eu" }, getJson)
+
+    expect(getJson).toHaveBeenCalledWith("https://api.eu.lever.co/v0/postings/cirrus?mode=json")
   })
 })
 
