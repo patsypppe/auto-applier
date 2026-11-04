@@ -55,3 +55,19 @@
 - Fixed: the slice 1 entity test had a literal em dash in it; it now uses escapes and a degree sign.
 - Company names from Lever and Ashby are the slug ("spotify", "ramp") until the company list in slice 3 gives real names.
 - Next: slice 3, the company list and a full collection.
+
+## 2026-11-04: Slice 3, company list and a full collection
+
+- Found while studying real links: Greenhouse's EU boards (`job-boards.eu.greenhouse.io`) answer on the normal API, but Lever's EU boards only answer on `api.eu.lever.co`, so boards carry an optional `region: "eu"`. Embedded Greenhouse links name the board in `?for=`; links with only `?token=` name no board. The Stage 1 slug count had wrongly taken "embed" as a slug.
+- `companies`: Simplify new-grad gave 1,280 boards and internships 1,085, merged to 1,931 (Greenhouse 863, Lever 341, Ashby 727). About 30,600 links point at other job sites.
+- Decision: the aggregator's lists (about 16,000 slugs, mostly not tech) are opt-in with `--with-aggregator`. At about one board a second per site they would add hours to every run.
+- Decision: jobs are saved as `data/jobs.jsonl`, one per line. The full run's descriptions alone are 541 million characters, close to what one JavaScript string can hold.
+- Request errors now carry the HTTP status, so 404s are told apart from busy servers. A board that returns 404 on two different days is skipped by later runs.
+- Full run from an empty cache: 1,022 s (17 minutes), 98,179 jobs, peak memory 1.4 GB, cache 1.2 GB, jobs file 597 MB.
+  - Failures: 96 boards, all 404 (Greenhouse 40, Ashby 30, Lever 26). No 429, timeout or 5xx.
+  - Politeness from `data/requests.log`: never more than 1 request per second per host. Smallest gap 1.02 s, median about 1.1 s.
+  - Largest boards: Lever tsmg 4,475 jobs, Greenhouse prolificacademicltd 4,160, SpaceX 2,893.
+- Country: first run left 9.1% undecided. Most were "Remote" alone (4,943, of which 3,929 are from prolificacademicltd, a paid-study site). Added big city names and state codes without a comma ("Atlanta GA"), test first. Now US 65,314, other 25,818, undecided 7,047 (7.2%). A 30-job sample looked right, except Cloudflare's "Distributed", which was read as other from its office data and could not be confirmed.
+- A rerun from the cache took 67 s; only the 96 boards that had failed were asked again.
+- Not done yet: companies like prolificacademicltd (paid studies) and eosfitness (gym jobs) are in Simplify's list. Filtering by job title in the matching slice should hide them.
+- Next: slice 4, merging repeat postings across cities and across runs.
