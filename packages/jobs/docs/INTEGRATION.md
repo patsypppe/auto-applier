@@ -5,7 +5,7 @@ This branch only adds `packages/jobs`. These changes outside it are needed when 
 ## Root
 
 - `package.json`: the `test` and `typecheck` scripts name core and the extension explicitly. Add `npm run test -w @auto-applier/jobs` and `tsc -p packages/jobs --noEmit`.
-- `package-lock.json`: gains the `@auto-applier/jobs` workspace entry on the next `npm install`. This branch never ran `npm install`, so the lockfile is unchanged.
+- `package-lock.json`: gains the `@auto-applier/jobs` workspace entry on the next `npm install`. This branch never ran `npm install`, so the lockfile is unchanged. Until that entry exists, `npm ci` on this branch stops with "Missing: @auto-applier/jobs@0.1.0 from lock file". `npm install`, which the README uses, works and adds the entry.
 
 ## Extension (only if the feed moves into the extension)
 
