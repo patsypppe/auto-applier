@@ -10,6 +10,7 @@ const RESTRICTIONS: ReadonlySet<AuthTag> = new Set([
   "clearance",
   "no-sponsorship",
   "no-future-sponsorship",
+  "no-visa-holders",
   "unclear",
 ])
 

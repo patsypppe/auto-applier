@@ -19,13 +19,16 @@ export type RankedJob = {
 
 export type HistoryInput = { data: H1bHistory; aliases: Readonly<Record<string, string>> }
 
+// Likely-blocked and blocked jobs go below fine ones of the same score.
+const EFFECT_RANK: Record<Effect, number> = { positive: 0, ok: 0, "likely-blocked": 1, blocked: 2 }
+
 // Returns a job's posting date as a number for sorting, newest largest; a job with no date counts from when it was first seen.
 function postedTime(job: JobRecord): number {
   return Date.parse(job.postedAt ?? job.firstSeenAt) || 0
 }
 
-// Ranks the jobs for this user: best match first, and newer first among equal scores. When H-1B history is given, each job
-// also gets its company's filings, looked up once per company.
+// Ranks the jobs for this user: best match first; among equal scores, fine before likely blocked, then newer first.
+// When H-1B history is given, each job also gets its company's filings, looked up once per company.
 export function getJobs(settings: FeedSettings, profile: Profile, jobs: readonly JobRecord[], history?: HistoryInput): RankedJob[] {
   const me = { skills: profile.skills, roles: settings.filters.roles }
   const byCompany = new Map<string, EmployerHistory>()
@@ -44,5 +47,5 @@ export function getJobs(settings: FeedSettings, profile: Profile, jobs: readonly
       const filings = historyOf(job.company)
       return filings ? { ...ranked, history: filings } : ranked
     })
-    .sort((a, b) => b.score - a.score || postedTime(b.job) - postedTime(a.job))
+    .sort((a, b) => b.score - a.score || EFFECT_RANK[a.effect] - EFFECT_RANK[b.effect] || postedTime(b.job) - postedTime(a.job))
 }

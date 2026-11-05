@@ -206,3 +206,62 @@ describe("tagJob: evidence and jobs abroad", () => {
     expect(tagsOf("To be eligible, candidates must be authorized to work in Canada; visa sponsorship is not available for this role.")).toEqual(["not-stated"])
   })
 })
+
+describe("tagJob: wordings found in the real-data check", () => {
+  test("does not read sponsorship for an export license as a visa refusal, as in Cloudflare's notice", () => {
+    const text = "Please note that any offer of employment may be conditioned on your authorization to receive software or technology controlled under these U.S. export laws without sponsorship for an export license."
+
+    expect(tagsOf(text)).not.toContain("no-sponsorship")
+  })
+
+  test.each([
+    ["Preference for a Top Secret clearance."],
+    ["Ability to obtain a Secret or higher security clearance is preferred; a clearance is not required for this role."],
+    ["An active Secret clearance is a plus."],
+    ["In addition to the base salary, this position is eligible for a government clearance differential."],
+  ])("does not read %s as a clearance requirement", (text) => {
+    expect(tagsOf(text)).not.toContain("clearance")
+  })
+
+  test.each([
+    ["- The ability to obtain a U.S. Government security clearance (active clearance preferred)."],
+    ["Active Top-Secret Clearance, preferred with SCI eligibility"],
+  ])("still reads %s as a clearance, since only part of it is preferred", (text) => {
+    expect(tagsOf(text)).toContain("clearance")
+  })
+
+  test("still reads a required clearance next to a preferred one", () => {
+    expect(tagsOf("Active Secret clearance required, TS/SCI preferred.")).toContain("clearance")
+  })
+
+  test.each([["TS clearance"], ["- Active TS clearance"], ["Must possess an active Secret level clearance; Top Secret preferred"]])("reads the short requirement %s as a clearance", (text) => {
+    expect(tagsOf(text)).toContain("clearance")
+  })
+
+  test.each([["- U.S. Citizenship."], ["US Citizenship"], ["Citizen with the ability to obtain a Security Clearance"]])(
+    "reads the bare requirement line %s as citizens only",
+    (text) => {
+      expect(tagsOf(text)).toContain("citizen-only")
+    },
+  )
+
+  test("reads temporary visas such as F-1 named as not eligible as a rule against visa holders", () => {
+    const text = "Individuals with temporary visas such as E, F-1, H-1, H-2, L, B, J, or TN or who need sponsorship for work authorization now or in the future, are not eligible for hire."
+
+    expect(tagsOf(text)).toContain("no-visa-holders")
+  })
+
+  test("does not read a student welcome as a rule against visa holders", () => {
+    expect(tagsOf("F-1 students on OPT are eligible and encouraged to apply.")).not.toContain("no-visa-holders")
+  })
+
+  test("reads 'unable to offer employment to those who require sponsorship' as no sponsorship", () => {
+    const text = "At this time, we are unable to offer employment for individuals located outside of the United States and/or those who require sponsorship for employment visa status (e.g., H-1B visa status)."
+
+    expect(tagsOf(text)).toContain("no-sponsorship")
+  })
+
+  test("reads 'Visa Sponsorship: H1B Available' as sponsors", () => {
+    expect(tagsOf("Visa Sponsorship: H1B Available")).toEqual(["sponsors"])
+  })
+})

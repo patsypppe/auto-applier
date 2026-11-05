@@ -57,6 +57,16 @@ describe("getJobs", () => {
     expect(ranked.map((entry) => entry.job.id)).toEqual(["newer", "older"])
   })
 
+  test("puts a likely-blocked job below an equal-scoring job that is fine, before looking at dates", () => {
+    const refuses = "Python and SQL. We are unable to sponsor visas for this role."
+    const ranked = getJobs(SETTINGS, PROFILE, [job("refuses", { description: refuses }), job("fine", { postedAt: "2026-10-01T00:00:00Z" })])
+
+    expect(ranked.map((entry) => [entry.job.id, entry.effect])).toEqual([
+      ["fine", "ok"],
+      ["refuses", "likely-blocked"],
+    ])
+  })
+
   test("adds each company's H-1B history when it is given, and leaves it out when not", () => {
     const history = { data: { fiscalYear: 2026, employers: { acme: { name: "ACME INC", approvals: 12, newEmploymentApprovals: 5, denials: 1 } } }, aliases: {} }
 

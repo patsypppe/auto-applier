@@ -36,6 +36,7 @@ const EFFECTS: Record<AuthTag, Rule> = {
   clearance,
   "no-sponsorship": noSponsorship,
   "no-future-sponsorship": noFutureSponsorship,
+  "no-visa-holders": (auth) => (auth.status === "citizen" || auth.status === "permanent-resident" ? "ok" : "blocked"),
   sponsors,
   "opt-cpt-welcome": (auth) => (F1.includes(auth.status) ? "positive" : "ok"),
   "e-verify": eVerify,

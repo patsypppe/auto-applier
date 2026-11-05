@@ -13,7 +13,10 @@ const REFUSES_SPONSORSHIP = [
   /\bwithout\b[^.;]{0,40}?\bsponsorship\b/i,
   /\bno\s+(visa\s+|employer\s+|H-?1B\s+)?sponsorship\b/i,
   /\bsponsorship\s+(is\s+|will\s+)?(not|un)\s*(available|offered|provided|possible)\b/i,
+  /\b(unable to|not able to|cannot|can't)\s+(offer employment|hire|employ|consider)\b[^.;]{0,120}?\brequire[sd]?\s+(visa\s+)?sponsorship\b/i,
 ]
+// "Without sponsorship for an export license" is about export licenses, not visas.
+const EXPORT_LICENSE = /\bsponsor(ship|ing)?\s+for\s+(an?\s+)?export licen[cs]es?\b/gi
 // "Disclose any need for sponsorship" asks a question rather than refusing, and "not limited to" is not a refusal either.
 const ASKS_ONLY = /\b(disclose|let us know|tell us|indicate)\b/i
 const NOT_LIMITED_TO = /\bnot limited to\b/gi
@@ -27,6 +30,7 @@ const OFFERS_SPONSORSHIP = [
   /\b(we|they)\s+(do\s+|does\s+)?sponsor\s+(work\s+|employment\s+)?visas\b/i,
   /\b(we|they)\s+(do|does)\s+sponsor\b/i,
   /\bvisa sponsorship\b[^.;]{0,40}\bfor (qualified|eligible|selected)\b/i,
+  /\bvisa sponsorship\s*:\s*(H-?1B\s+)?(available|offered|yes)\b/i,
 ]
 
 const CITIZENS_ONLY = [
@@ -36,6 +40,8 @@ const CITIZENS_ONLY = [
   new RegExp(String.raw`\brequires?\b[^.;]{0,40}\bto be\s+${US}\s+citizens\b`, "i"),
   new RegExp(String.raw`\bonly\s+(hire\s+)?${US}\s+citizens\b`, "i"),
   /\bcitizenship (is )?required\b/i,
+  new RegExp(String.raw`^[\s*\u2022-]*${US}\s+citizenship[.:]?\s*$`, "i"),
+  /^[\s*\u2022-]*(U\.?S\.?\s+)?citizen with the ability to obtain\b/i,
 ]
 // A rule that also lets in green card holders, refugees or asylees is a U.S. person rule, not a citizens-only one.
 const NAMES_OTHER_PERSONS = /\b(permanent resident|green card|lawful permanent|refugee|asyl(ee|um)|protected individual|U\.?S\.? persons?|or national)\b/i
@@ -52,9 +58,16 @@ const US_PERSONS = [
 const A_REQUIREMENT = /\b(must|only|required|requires|requirement|eligible|conform|policy)\b/i
 
 const CLEARANCE =
-  /\b(security clearances?|(government|federal|national security|DoD|DoW) clearances?|TS\/SCI|top secret|secret clearance|secret security|DOE\s+(level\s+)?Q|clearance level|active clearance|polygraph)\b/i
+  /\b(security clearances?|(government|federal|national security|DoD|DoW) clearances?|TS\/SCI|top secret|secret (level )?clearance|secret security|TS clearance|DOE\s+(level\s+)?Q|clearance level|active clearance|polygraph)\b/i
 const PUBLIC_TRUST = /\bpublic trust\b/i
 const REAL_CLEARANCE = /\b(secret|TS\/SCI|SCI|DOE|polygraph)\b/i
+// A clearance that is only preferred, or a clearance pay differential, is not a rule, unless the sentence also requires one.
+const CLEARANCE_OPTIONAL = /\b(preferred|preference|a plus|nice to have|bonus|desired|not required|differential)\b/i
+const CLEARANCE_REQUIRED = /\b(required|requires|must|mandatory)\b/i
+
+// Temporary visas named as not eligible, as in "individuals with temporary visas such as E, F-1, H-1 ... are not eligible".
+const VISA_HOLDERS_EXCLUDED =
+  /\b(F-1|temporary (work )?visas?|student visas?|nonimmigrant visas?)\b[^.;]{0,160}?\b(not eligible|ineligible|will not be considered|cannot be considered)\b/i
 
 // A line that lists something as a skill ("experience with E-Verify filings") is not the employer's own rule.
 const SKILL = /\b(experience|familiarity|knowledge|understanding|background in)\b/i
@@ -90,9 +103,20 @@ function onlyASkill(sentence: string): boolean {
   return SKILL.test(sentence) && !MAKES_IT_A_RULE.test(sentence)
 }
 
+// Returns true when the sentence requires a clearance rather than only preferring one. Each comma-separated clause that
+// names a clearance is read on its own, and a bracketed wish such as "(active clearance preferred)" is left out, so only
+// a preference about the clearance itself makes it optional.
+function requiresClearance(sentence: string): boolean {
+  const withoutAsides = sentence.replace(/\([^)]*\)/g, (aside) => (CLEARANCE_OPTIONAL.test(aside) ? "" : aside))
+  return withoutAsides
+    .split(",")
+    .filter((clause) => CLEARANCE.test(clause))
+    .some((clause) => !CLEARANCE_OPTIONAL.test(clause) || CLEARANCE_REQUIRED.test(clause.replace(/\bnot required\b/gi, "")))
+}
+
 // Returns true when the sentence refuses visa sponsorship.
 function refusesSponsorship(sentence: string): boolean {
-  const plain = sentence.replace(NOT_LIMITED_TO, "")
+  const plain = sentence.replace(NOT_LIMITED_TO, "").replace(EXPORT_LICENSE, "")
   if (ASKS_ONLY.test(plain) || NOT_EVERY_ROLE.test(plain)) return false
   return any(REFUSES_SPONSORSHIP, plain) && (VISA_CONTEXT.test(plain) || /\bsponsorship\b/i.test(plain))
 }
@@ -108,8 +132,9 @@ export const RULES: readonly Rule[] = [
   },
   {
     tag: "clearance",
-    matches: (s) => CLEARANCE.test(s) && !(PUBLIC_TRUST.test(s) && !REAL_CLEARANCE.test(s)) && !onlyASkill(s) && !HEDGED.test(s),
+    matches: (s) => requiresClearance(s) && !(PUBLIC_TRUST.test(s) && !REAL_CLEARANCE.test(s)) && !onlyASkill(s) && !HEDGED.test(s),
   },
+  { tag: "no-visa-holders", matches: (s) => VISA_HOLDERS_EXCLUDED.test(s) && !NOT_A_RULE.test(s) },
   { tag: "no-future-sponsorship", matches: (s) => refusesSponsorship(s) && LATER_TOO.test(s) },
   { tag: "no-sponsorship", matches: (s) => refusesSponsorship(s) && !LATER_TOO.test(s) },
   {

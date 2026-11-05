@@ -52,6 +52,7 @@ export type AuthTag =
   | "clearance"
   | "no-sponsorship"
   | "no-future-sponsorship"
+  | "no-visa-holders"
   | "sponsors"
   | "opt-cpt-welcome"
   | "e-verify"

@@ -58,7 +58,7 @@ Each item lists checks you can run by hand or that tests cover. "Saved sample" m
 
 ### F4. Work-authorization tags
 Every job gets zero or more tags, each with the sentence that triggered it. When nothing triggered, it gets one tag, `not-stated`.
-- Tag values: `citizen-only`, `us-person`, `clearance`, `no-sponsorship`, `no-future-sponsorship`, `sponsors`, `opt-cpt-welcome`, `e-verify`, `unclear`, `not-stated`.
+- Tag values: `citizen-only`, `us-person`, `clearance`, `no-sponsorship`, `no-future-sponsorship`, `no-visa-holders`, `sponsors`, `opt-cpt-welcome`, `e-verify`, `unclear`, `not-stated`.
 - Each tag shows its evidence sentence. Clicking it shows the paragraph around it.
 - A tag is never based on a sentence about another country (for example the Singapore sentence in the research appendix).
 - Negated statements are read as negated: "unable to provide visa sponsorship" is `no-sponsorship`, never `sponsors`.

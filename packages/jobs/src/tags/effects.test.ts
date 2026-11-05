@@ -34,6 +34,16 @@ describe("effectOf", () => {
     expect(effectOf("no-future-sponsorship", optStudent)).toBe("blocked")
   })
 
+  test("lets only citizens and permanent residents through a rule against temporary visa holders", () => {
+    expect([citizen, resident, optStudent, cptIntern, h1bHolder].map((who) => effectOf("no-visa-holders", who))).toEqual([
+      "ok",
+      "ok",
+      "blocked",
+      "blocked",
+      "blocked",
+    ])
+  })
+
   test("treats a clearance as fine for a citizen who can get one and likely blocked for one who cannot", () => {
     expect(effectOf("clearance", citizen)).toBe("ok")
     expect(effectOf("clearance", { ...citizen, clearance: "none" })).toBe("likely-blocked")

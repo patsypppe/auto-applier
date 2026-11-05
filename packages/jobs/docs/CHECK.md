@@ -90,8 +90,8 @@ software engineer or statistics. For each I printed every "N years" phrase in th
 One more is debatable: Latitude AI asks for "4+ years (or Master's degree and 2+ years)". The reader takes 4; for an MS
 user the answer is 2.
 
-Four of the five misses are hidden anyway by the excluded title words. The fifth shows a real gap: "Sr" is not in the
-default excluded words, and 306 of the 9,847 jobs have "Sr" without senior, staff, principal, manager or director.
+All five misses are hidden anyway: four by the excluded title words, and the "Sr AI Engineer" by its level, since the
+level reader already reads "Sr" as senior and the default levels leave senior out.
 
 Not covered by the reader: years written as words ("two years of"), in 426 of the 9,847 jobs.
 
@@ -132,7 +132,41 @@ The history was emptied again afterwards.
 2. Treat "preferred" or "not required" near "clearance" as not a restriction (477 jobs).
 3. Read "temporary visas such as ... F-1 ... are not eligible" as blocked for F-1, CPT, OPT and STEM OPT (189 jobs).
 4. Read bare requirement lines: "TS clearance", "U.S. Citizenship", "Citizen with the ability to obtain".
-5. Add "sr" to the default excluded title words.
-6. Rank likely-blocked jobs below ok ones for the same score.
-7. Years: allow a longer gap before the role word, accept "N+ years building/running ...", and only treat "ideally" as
+5. Rank likely-blocked jobs below ok ones for the same score.
+6. Years: allow a longer gap before the role word, accept "N+ years building/running ...", and only treat "ideally" as
    optional when it comes before the years.
+
+## Fixes made after the check
+
+Each fix has a test with the wording from the real posting. 520 tests pass and the typecheck is clean. Every job's tags
+were then compared before and after on the 66,549 US jobs, and the changed sentences were read.
+
+| Fix | Change on the real data |
+|---|---|
+| "Sponsorship for an export license" is no longer read as a visa refusal | 441 no-sponsorship tags removed, all of them this sentence (Cloudflare, Mach Industries, Cylake and others) |
+| A clearance that is only preferred, desired, a plus, not required, or a pay differential is not a rule. Each comma-separated clause is read on its own, and a bracketed wish such as "(active clearance preferred)" is left out, so "security clearance (active clearance preferred)" and "Active Top-Secret Clearance, preferred with SCI eligibility" still count | Of the 7,027 jobs with "clearance" and one of those words, 211 lost the tag. The removed sentences that also say "must" or "required" were all read: the requirement was about citizenship or U.S. person status, which keep their own tags. One stays a miss: "strongly preferred ...; at minimum, must be eligible to obtain one" |
+| "TS clearance" and "Secret level clearance" are read as clearances | 164 more clearance tags, mostly Anduril's "Ability to obtain and maintain a U.S. TS clearance" |
+| Bare requirement lines "U.S. Citizenship" and "Citizen with the ability to obtain ..." are citizens only | 80 more citizen-only tags |
+| New tag no-visa-holders: temporary visas such as F-1 named as not eligible. Blocked for F-1 CPT, OPT and STEM OPT, H-1B and anyone needing sponsorship; fine for citizens and permanent residents | 190 jobs (Protolabs, US Conec, WorldStrides, GCM Grosvenor and others) |
+| "Unable to offer employment / consider candidates ... who require sponsorship" is a refusal | 13 no-sponsorship (Inductive Automation) and 4 no-future-sponsorship (Beghou Consulting, which was wrongly tagged sponsors before) |
+| "Visa sponsorship: Available" is an offer | 3 more sponsors |
+| Equal scores: fine jobs before likely-blocked ones, then newer first | Notion moves above the four Integra FEC internships |
+| Years: "3+ years" or "at least 3 years" also counts before "of", "in" or a verb ("8+ years of SW program management", "5+ years building ..."); a wish word counts only before the years or right after them ("5+ years of Python preferred"), so "..., ideally Amazon EKS" no longer drops the requirement; "18+ years of age" and "years ago" are not experience | All 5 misses in the 40-job sample are read now, and no other job in it changed. Over the 9,847 data and engineering jobs, 865 now get a number and 53 get a different one; 25 of them read by hand were all real requirements |
+
+Not changed: the "Sr" fix in the first list (not needed, see part 3), ibotta's "authorized to work ... on a full-time
+basis" (still not stated), and the two unclear tags on the wrong sentence (Axle, Rivian).
+
+After the fixes, with the example profile:
+
+| | Before | After |
+|---|---|---|
+| no-sponsorship | 3,267 | 2,839 |
+| clearance | 6,976 | 6,931 |
+| citizen-only | 1,555 | 1,635 |
+| no-visa-holders | none | 190 |
+| unclear | 5,778 | 5,524 |
+| For F-1 OPT: blocked | 13,882 | 14,017 |
+| For F-1 OPT: likely blocked | 2,831 | 2,457 |
+| Shown | 146 | 135 |
+
+Shown plus hidden is still 89,757.
