@@ -15,6 +15,13 @@ describe("normalizeName", () => {
     expect(normalizeName(name)).toBe(normalized)
   })
 
+  test.each([["OSMO LABS PBC DBA OSMO", "osmo labs"], ["RE CAR INC D/B/A SLATE", "re car"], ["SCM INDUSTRIES LLC D B A SERVICE CENTER METALS", "scm industries"]])(
+    "keeps the legal name before 'doing business as' in %s",
+    (name, normalized) => {
+      expect(normalizeName(name)).toBe(normalized)
+    },
+  )
+
   test("removes only endings, so a name that is all endings keeps its words", () => {
     expect(normalizeName("Company Inc")).toBe("company")
   })

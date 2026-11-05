@@ -33,6 +33,12 @@ describe("matchEmployer", () => {
     expect(matchEmployer("Focal", HISTORY, {})).toEqual({ status: "none", fiscalYear: 2026 })
   })
 
+  test("never matches a short name by a similar filing name, which too often means another company", () => {
+    const history: H1bHistory = { fiscalYear: 2026, employers: { "str group usa": employer("STR GROUP USA INC", 3) } }
+
+    expect(matchEmployer("STR", history, {})).toEqual({ status: "ambiguous", candidates: ["STR GROUP USA INC"], fiscalYear: 2026 })
+  })
+
   test("says it cannot tell when several filing names fit", () => {
     expect(matchEmployer("Axon", HISTORY, {})).toEqual({ status: "ambiguous", candidates: ["AXON NETWORKS INC", "AXON US INC"], fiscalYear: 2026 })
   })

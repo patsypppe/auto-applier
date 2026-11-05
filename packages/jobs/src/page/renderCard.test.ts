@@ -92,12 +92,20 @@ describe("renderCard", () => {
     )
   })
 
+  test("asks the user to check a match made by a similar name", () => {
+    const history = { status: "matched", how: "generic-ending", employer: "NOTION LABS INC", approvals: 23, newEmploymentApprovals: 3, fiscalYear: 2026 } as const
+
+    expect(renderCard({ ...CARD, history }, undefined, vi.fn()).textContent).toContain(
+      "USCIS approved 23 H-1B petitions for NOTION LABS INC in FY2026, 3 of them for new employment. Matched by a similar name, so check it is the same company.",
+    )
+  })
+
   test("says plainly when no H-1B filings were found or the name was unclear", () => {
     const none = renderCard({ ...CARD, history: { status: "none", fiscalYear: 2026 } }, undefined, vi.fn())
     const ambiguous = renderCard({ ...CARD, history: { status: "ambiguous", candidates: ["AXON NETWORKS INC", "AXON US INC"], fiscalYear: 2026 } }, undefined, vi.fn())
 
     expect(none.textContent).toContain("No FY2026 H-1B approvals found under this name. The company may file under another legal name.")
-    expect(ambiguous.textContent).toContain("Several employers in the FY2026 H-1B data share this name (AXON NETWORKS INC, AXON US INC), so none is shown.")
+    expect(ambiguous.textContent).toContain("The FY2026 H-1B data has similar names (AXON NETWORKS INC, AXON US INC) but none that is surely this company.")
   })
 
   test("reports a new status when the user picks one", () => {

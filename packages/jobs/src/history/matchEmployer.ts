@@ -10,6 +10,10 @@ const GENERIC_ENDINGS = new Set([
   "therapeutics", "bio", "biosciences", "networks", "robotics", "platforms", "industries", "enterprises", "hq",
 ])
 
+// Names shorter than this ("STR", "Pico") matched the wrong company too often in the hand check, so a similar filing name
+// only makes them ambiguous.
+const MIN_LENGTH_FOR_GENERIC = 5
+
 export type EmployerHistory =
   | { status: "matched"; how: "alias" | "exact" | "generic-ending"; employer: string; approvals: number; newEmploymentApprovals: number; fiscalYear: number }
   | { status: "ambiguous"; candidates: string[]; fiscalYear: number }
@@ -33,8 +37,8 @@ export function matchEmployer(company: string, history: H1bHistory, aliases: Rea
     if (!name.startsWith(`${key} `)) return false
     return name.slice(key.length + 1).split(" ").every((word) => GENERIC_ENDINGS.has(word))
   })
-  if (candidates.length === 1) return matched(history, candidates[0]!, "generic-ending")
-  if (candidates.length > 1) {
+  if (candidates.length === 1 && key.length >= MIN_LENGTH_FOR_GENERIC) return matched(history, candidates[0]!, "generic-ending")
+  if (candidates.length > 0) {
     return { status: "ambiguous", candidates: candidates.map((name) => history.employers[name]!.name).sort(), fiscalYear: history.fiscalYear }
   }
   return { status: "none", fiscalYear: history.fiscalYear }
