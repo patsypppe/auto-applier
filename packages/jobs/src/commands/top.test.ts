@@ -63,7 +63,7 @@ describe("top command", () => {
     await runTop([], dir, print)
 
     const output = lines.join("\n")
-    expect(output).toContain("1. 65  Data Analyst at Acme (Austin, TX)")
+    expect(output).toContain("1. 53  Data Analyst at Acme (Austin, TX)")
     expect(output).toContain("you have: Python | missing: SQL")
     expect(output).toContain("likely blocked: no-sponsorship: We are unable to sponsor visas.")
     expect(output).toContain("https://boards.example/1")

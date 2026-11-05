@@ -45,8 +45,8 @@ describe("getJobs", () => {
     const ranked = getJobs(SETTINGS, PROFILE, jobs)
 
     expect(ranked.map((entry) => [entry.job.id, entry.score])).toEqual([
-      ["strong", 100],
-      ["half", 65],
+      ["strong", 77],
+      ["half", 53],
       ["weak", 30],
     ])
   })

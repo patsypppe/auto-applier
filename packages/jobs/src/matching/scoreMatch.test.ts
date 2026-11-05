@@ -16,6 +16,11 @@ describe("scoreMatch", () => {
     expect(scoreMatch({ title: "Business Analyst", description: "SQL, Python and Looker." }, ME).score).toBe(47)
   })
 
+  test("counts at least three skills in the share, so a posting that names one skill cannot score full marks", () => {
+    expect(scoreMatch({ title: "Data Analyst", description: "Strong SQL." }, ME).score).toBe(53)
+    expect(scoreMatch({ title: "Data Analyst", description: "SQL and Python." }, ME).score).toBe(77)
+  })
+
   test("gives a job that names no known skills only the title part", () => {
     expect(scoreMatch({ title: "Data Scientist", description: "Join our team." }, ME)).toMatchObject({ score: 30, reasons: { matchedSkills: [], missingSkills: [] } })
   })

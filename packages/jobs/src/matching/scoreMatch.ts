@@ -1,7 +1,10 @@
-// Scores how well a job fits the user: 70 points for the share of the job's named skills the user has, 30 for a wanted title.
+// Scores how well a job fits the user: 70 points for the share of the job's named skills the user has (counting at least
+// three), and 30 for a wanted title.
 import type { Level } from "../types"
 import { levelFromTitle } from "./level"
 import { findSkills } from "./skills"
+
+const MIN_SKILLS_COUNTED = 3
 
 export type MatchReasons = {
   matchedSkills: string[]
@@ -26,7 +29,8 @@ export function scoreMatch(job: { title: string; description: string }, me: { sk
   const missingSkills = named.filter((skill) => !mine.has(skill.toLowerCase()))
   const titleMatches = titleHasRole(job.title, me.roles)
 
-  const skillPart = named.length === 0 ? 0 : (70 * matchedSkills.length) / named.length
+  // At least three skills count in the share, so a posting that names one skill the user has cannot score full marks.
+  const skillPart = (70 * matchedSkills.length) / Math.max(named.length, MIN_SKILLS_COUNTED)
   return {
     score: Math.round(skillPart + (titleMatches ? 30 : 0)),
     reasons: { matchedSkills, missingSkills, titleMatches, level: levelFromTitle(job.title) },
