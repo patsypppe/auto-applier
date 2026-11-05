@@ -36,6 +36,23 @@ describe("renderCard", () => {
     expect(card.textContent).toContain("Asks for 2+ years")
   })
 
+  test.each([
+    [{ min: 95000, max: 115000, currency: "USD", per: "year" }, "Pay: $95,000 to $115,000 a year"],
+    [{ min: 22, max: 25.5, currency: "USD", per: "hour" }, "Pay: $22 to $25.50 an hour"],
+    [{ min: 166600, max: 182000, currency: "CAD", per: "year" }, "Pay: CAD 166,600 to 182,000 a year"],
+  ] as const)("shows the pay %o as %s", (pay, line) => {
+    const card = renderCard({ ...CARD, pay: { ...pay, from: "text" } }, undefined, vi.fn())
+
+    expect(card.textContent).toContain(line)
+  })
+
+  test("shows the job type and workplace when the board gives them, and no pay line when there is none", () => {
+    const card = renderCard({ ...CARD, jobType: "intern", workplace: "hybrid" }, undefined, vi.fn())
+
+    expect(card.textContent).toContain("Intern, hybrid")
+    expect(card.textContent).not.toContain("Pay:")
+  })
+
   test("puts text from the posting in as text, never as HTML", () => {
     const card = renderCard({ ...CARD, title: '<img src=x onerror="alert(1)">', company: "<b>Acme</b>" }, undefined, vi.fn())
 

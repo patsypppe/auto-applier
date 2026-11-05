@@ -14,6 +14,12 @@ export type Company = Board & {
 
 export type JobCopy = { id: string; url: string; locations: string[] }
 
+export type Pay = { min: number; max: number; currency: string; per: "year" | "hour"; from: "board" | "text" }
+
+export type JobType = "full-time" | "part-time" | "contract" | "intern" | "temporary"
+
+export type Workplace = "remote" | "hybrid" | "onsite"
+
 export type JobRecord = {
   key: string
   ats: Ats
@@ -32,6 +38,9 @@ export type JobRecord = {
   textHash?: string
   repostOf?: string
   copies?: JobCopy[]
+  pay?: Pay
+  jobType?: JobType
+  workplace?: Workplace
 }
 
 export type GetJson = (url: string, body?: unknown) => Promise<unknown>

@@ -1,8 +1,10 @@
 // Reads a company's public Ashby job board and turns its listed jobs into job records.
 import * as z from "zod/mini"
 import en from "zod/v4/locales/en.js"
-import type { BoardSource, JobRecord } from "../types"
+import { isSensiblePay } from "../matching/pay"
+import type { BoardSource, JobRecord, JobType, Pay, Workplace } from "../types"
 import { countryOf } from "./country"
+import { definedOnly } from "./definedOnly"
 import { htmlToText } from "./plainText"
 
 z.config(en())
@@ -23,7 +25,34 @@ const jobSchema = z.object({
   publishedAt: text,
   descriptionPlain: text,
   descriptionHtml: text,
+  employmentType: text,
+  workplaceType: text,
+  compensation: z.nullish(
+    z.object({
+      compensationTiers: z.nullish(
+        z.array(
+          z.object({
+            components: z.nullish(
+              z.array(
+                z.object({
+                  compensationType: text,
+                  interval: text,
+                  currencyCode: text,
+                  minValue: z.nullish(z.number()),
+                  maxValue: z.nullish(z.number()),
+                }),
+              ),
+            ),
+          }),
+        ),
+      ),
+    }),
+  ),
 })
+
+const JOB_TYPES: Record<string, JobType> = { FullTime: "full-time", PartTime: "part-time", Contract: "contract", Intern: "intern", Temporary: "temporary" }
+const WORKPLACES: Record<string, Workplace> = { OnSite: "onsite", Hybrid: "hybrid", Remote: "remote" }
+const PAY_PERIODS: Record<string, Pay["per"]> = { "1 YEAR": "year", "1 HOUR": "hour" }
 
 const boardSchema = z.object({ jobs: z.array(z.unknown()) })
 
@@ -40,6 +69,16 @@ function locationsOf(job: AshbyJob): string[] {
 function addressCountries(job: AshbyJob): string[] {
   const addresses = [job.address, ...(job.secondaryLocations ?? []).map((place) => place.address)]
   return addresses.map((address) => address?.postalAddress?.addressCountry ?? "").filter((country) => country !== "")
+}
+
+// Returns the salary range of the job's first tier that is paid by the year or the hour, in the board's currency.
+// Monthly, weekly, daily and one-time amounts are left out, since the feed compares only yearly and hourly pay.
+function payOf(job: AshbyJob): Pay | undefined {
+  const components = (job.compensation?.compensationTiers ?? []).flatMap((tier) => tier.components ?? [])
+  const salary = components.find((part) => part.compensationType === "Salary" && PAY_PERIODS[part.interval ?? ""] && part.minValue && part.maxValue)
+  if (!salary?.minValue || !salary.maxValue) return undefined
+  const pay: Pay = { min: salary.minValue, max: salary.maxValue, currency: salary.currencyCode ?? "USD", per: PAY_PERIODS[salary.interval ?? ""]!, from: "board" }
+  return isSensiblePay(pay) ? pay : undefined
 }
 
 // Turns one job into a record, or returns undefined when it is unlisted or has no id, title or link.
@@ -66,6 +105,7 @@ function toJobRecord(raw: unknown, slug: string, seenAt: string): JobRecord | un
     firstSeenAt: seenAt,
     lastSeenAt: seenAt,
     description: job.descriptionPlain?.trim() || htmlToText(job.descriptionHtml ?? ""),
+    ...definedOnly({ pay: payOf(job), jobType: JOB_TYPES[job.employmentType ?? ""], workplace: WORKPLACES[job.workplaceType ?? ""] }),
   }
 }
 
@@ -73,8 +113,8 @@ export const ashby: BoardSource = {
   ats: "ashby",
   name: "Ashby",
 
-  // Asks for every job on the board in one request.
-  fetchRaw: ({ slug }, getJson) => getJson(`${BOARD_URL}/${encodeURIComponent(slug)}`),
+  // Asks for every job on the board in one request, with the pay the company publishes.
+  fetchRaw: ({ slug }, getJson) => getJson(`${BOARD_URL}/${encodeURIComponent(slug)}?includeCompensation=true`),
 
   // Reads the board's answer into job records, skipping unlisted jobs and jobs that cannot be read.
   readJobs: (raw, slug, seenAt) => {

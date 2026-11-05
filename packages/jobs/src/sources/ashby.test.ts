@@ -13,7 +13,7 @@ describe("ashby: the request", () => {
 
     await ashby.fetchRaw({ slug: "ramp" }, getJson)
 
-    expect(getJson).toHaveBeenCalledWith("https://api.ashbyhq.com/posting-api/job-board/ramp")
+    expect(getJson).toHaveBeenCalledWith("https://api.ashbyhq.com/posting-api/job-board/ramp?includeCompensation=true")
   })
 })
 
@@ -35,6 +35,9 @@ describe("ashby: reading jobs", () => {
       postedAt: "2026-04-07T17:12:35.753+00:00",
       firstSeenAt: SEEN_AT,
       lastSeenAt: SEEN_AT,
+      pay: { min: 211400, max: 290600, currency: "USD", per: "year", from: "board" },
+      jobType: "full-time",
+      workplace: "hybrid",
     })
     expect(description.length).toBeGreaterThan(500)
   })
@@ -47,6 +50,47 @@ describe("ashby: reading jobs", () => {
       [["London, UK"], "other"],
       [["Toronto, ON"], "other"],
     ])
+  })
+
+  test("reads the salary from the board, in its own currency, and leaves pay out when the board gives none", () => {
+    const jobs = ashby.readJobs(BOARD, "ramp", SEEN_AT)
+
+    expect(jobs.map((job) => job.pay)).toEqual([
+      { min: 211400, max: 290600, currency: "USD", per: "year", from: "board" },
+      undefined,
+      { min: 166600, max: 182000, currency: "CAD", per: "year", from: "board" },
+    ])
+  })
+
+  test("reads an hourly salary as pay per hour", () => {
+    const hourly = { compensationTiers: [{ components: [{ compensationType: "Salary", interval: "1 HOUR", currencyCode: "USD", minValue: 40, maxValue: 55 }] }] }
+
+    const [job] = ashby.readJobs({ jobs: [{ ...BOARD.jobs[0], compensation: hourly }] }, "ramp", SEEN_AT)
+
+    expect(job!.pay).toEqual({ min: 40, max: 55, currency: "USD", per: "hour", from: "board" })
+  })
+
+  test.each([
+    ["FullTime", "full-time"],
+    ["PartTime", "part-time"],
+    ["Contract", "contract"],
+    ["Intern", "intern"],
+    ["Temporary", "temporary"],
+  ])("reads the employment type %s as %s", (employmentType, jobType) => {
+    const [job] = ashby.readJobs({ jobs: [{ ...BOARD.jobs[0], employmentType }] }, "ramp", SEEN_AT)
+
+    expect(job!.jobType).toBe(jobType)
+  })
+
+  test.each([
+    ["OnSite", "onsite"],
+    ["Hybrid", "hybrid"],
+    ["Remote", "remote"],
+    [null, undefined],
+  ])("reads the workplace %s as %s", (workplaceType, workplace) => {
+    const [job] = ashby.readJobs({ jobs: [{ ...BOARD.jobs[0], workplaceType }] }, "ramp", SEEN_AT)
+
+    expect(job!.workplace).toBe(workplace)
   })
 
   test("leaves out jobs the company has unlisted", () => {

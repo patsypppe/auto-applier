@@ -77,6 +77,19 @@ describe("getJobs", () => {
     expect(without!.history).toBeUndefined()
   })
 
+  test("reads pay from the posting text, and prefers the pay the board itself gives", () => {
+    const text = "Python and SQL. The base salary range is $95,000 - $115,000."
+    const board = { min: 100000, max: 120000, currency: "USD", per: "year" as const, from: "board" as const }
+
+    const [fromText] = getJobs(SETTINGS, PROFILE, [job("1", { description: text })])
+    const [fromBoard] = getJobs(SETTINGS, PROFILE, [job("1", { description: text, pay: board })])
+    const [none] = getJobs(SETTINGS, PROFILE, [job("1")])
+
+    expect(fromText!.pay).toEqual({ min: 95000, max: 115000, currency: "USD", per: "year", from: "text" })
+    expect(fromBoard!.pay).toEqual(board)
+    expect(none!.pay).toBeUndefined()
+  })
+
   test("adds the work-authorization tags and what they mean for the user", () => {
     const [entry] = getJobs(SETTINGS, PROFILE, [job("1", { description: "Python. U.S. citizenship required." })])
 

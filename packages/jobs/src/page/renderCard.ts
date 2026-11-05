@@ -2,7 +2,7 @@
 import { APPLICATION_STATUSES, type AppliedEntry, type ApplicationStatus } from "../feed/applied"
 import type { Card } from "../feed/card"
 import { historySentence } from "../history/historySentence"
-import type { Effect } from "../types"
+import type { Effect, JobType, Pay } from "../types"
 
 const EFFECT_LABELS: Record<Effect, string> = {
   blocked: "Blocked for you",
@@ -39,6 +39,31 @@ function skillsLine(card: Card): HTMLElement {
   const parts = [`You have: ${matchedSkills.join(", ") || "none named"}`, `Missing: ${missingSkills.join(", ") || "none"}`]
   if (yearsRequired !== undefined) parts.push(`Asks for ${yearsRequired}+ years`)
   return element("p", "skills", parts.join(" · "))
+}
+
+const JOB_TYPE_LABELS: Record<JobType, string> = {
+  "full-time": "Full-time",
+  "part-time": "Part-time",
+  contract: "Contract",
+  intern: "Intern",
+  temporary: "Temporary",
+}
+
+// Writes an amount with thousands commas and cents only when there are some: 95000 as "95,000", 25.5 as "25.50".
+function amount(value: number): string {
+  return value.toLocaleString("en-US", { minimumFractionDigits: Number.isInteger(value) ? 0 : 2, maximumFractionDigits: 2 })
+}
+
+// Writes the pay range, such as "Pay: $95,000 to $115,000 a year" or "Pay: CAD 166,600 to 182,000 a year".
+function payText(pay: Pay): string {
+  const [low, high] = pay.currency === "USD" ? [`$${amount(pay.min)}`, `$${amount(pay.max)}`] : [`${pay.currency} ${amount(pay.min)}`, amount(pay.max)]
+  return `Pay: ${low} to ${high} ${pay.per === "year" ? "a year" : "an hour"}`
+}
+
+// Lists the job type and workplace the board gives, such as "Intern, hybrid", or returns undefined when it gives neither.
+function kindText(card: Card): string | undefined {
+  const parts = [card.jobType ? JOB_TYPE_LABELS[card.jobType] : undefined, card.workplace].filter((part) => part !== undefined)
+  return parts.length > 0 ? parts.join(", ") : undefined
 }
 
 // Shows each work-authorization tag as a chip that opens to its evidence sentence and the sentences around it.
@@ -85,6 +110,9 @@ export function renderCard(card: Card, applied: AppliedEntry | undefined, onStat
   const posted = card.postedAt ? `posted ${card.postedAt.slice(0, 10)}` : `first seen ${card.firstSeenAt.slice(0, 10)}`
   article.append(element("p", "meta", `${card.company} · ${card.locations.join("; ")} · ${posted}`))
   article.append(element("span", "score", String(card.score)))
+  const kind = kindText(card)
+  const facts = [kind, card.pay ? payText(card.pay) : undefined].filter((part) => part !== undefined)
+  if (facts.length > 0) article.append(element("p", "facts", facts.join(" · ")))
   article.append(skillsLine(card), tagsBlock(card))
   if (card.history) article.append(element("p", "history", historySentence(card.history)))
 

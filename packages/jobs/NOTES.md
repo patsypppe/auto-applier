@@ -227,3 +227,22 @@
 - Not done: myworkdaysite.com links; cached Workday answers depend on the roles at the time, so changing roles needs --fresh.
 - Decision (Pranjal said "do what's best"): no parallel Workday requests, since that would load Workday's shared servers beyond one request at a time. Instead the reader skips detail requests for postings listed abroad (unless `includeAbroad`) and for titles with a left-out word (Senior, Staff and so on), and Workday stays opt-in.
 - Same 20 boards again: 217 requests (was 237) in 383 s (was 392), 22 jobs (10 US). All 23 skipped role postings were checked: each was listed abroad or had a left-out word, so the feed would have hidden it. The gain is small because searches are most of the requests. A full Workday run is still several hours, so it suits an overnight run or `--board` for a few companies.
+
+## 2026-11-05: Slice 11a, pay, job type and workplace
+
+- Checked the cached answers first: Ashby sends pay only when asked with `?includeCompensation=true` (the Ramp fixture was saved that way, but the collector never asked), and Lever sends a structured `salaryRange` on 6,802 of 19,271 postings, which was not known when the plan was written. Greenhouse has no such fields.
+- Built test first:
+  - `JobRecord` gains optional `pay`, `jobType` and `workplace`, set only when the board says so.
+  - Ashby: asks with `includeCompensation=true`; reads the Salary component paid "1 YEAR" or "1 HOUR" (10,296 and 498 components in the cache; "1 MONTH", "1 WEEK", "1 DAY" and "1 TIME" are left out), `employmentType` and `workplaceType`.
+  - Lever: `salaryRange` paid per year or per hour (the other intervals are left out), `workplaceType`, and the free-text commitment read by its words ("Contract Full time" is contract, "Full time or Part time" is neither, "CDI" and "Remote" are no job type).
+  - `readPay(text)` for every job without board pay, read when ranking like the years: "$95,000 - $115,000", "$120K-$150K", "$22.00 - $25.00 per hour", "$219,800&mdash;$274,700 USD", "$174,000 USD - $206,000 USD", "$200,000 - 225,000". It spans every level or place listed. Not pay: millions and billions, ranges just after equity, bonus, stipend or relocation, and ranges per month, week or day.
+  - Pay in US dollars from a board or the text must look like pay (yearly 10,000 to 2,000,000, hourly 5 to 500), so a $5,500 to $7,500 internship stipend Stand Together's board marks as yearly is left out.
+  - The card shows "Full-time, hybrid · Pay: $381,000 to $510,000 a year".
+- Real data: Ashby re-read with pay, 726 requests in 774 s, no more than one a second per host (smallest gaps: Ashby 1.020 s, Lever 1.038 s, Greenhouse 1.055 s). 89,784 jobs.
+- Of 59,901 US jobs: pay from the board 13,904, from the text 25,588, none 20,409. Job type known for 23,989, workplace for 22,626 (Ashby and Lever only).
+- Hand checks:
+  - 40 data and engineering jobs with a dollar amount: first pass 23 of 33 with stated pay right. The misses were "&mdash;" between amounts (7), "USD" after each amount (1) and a second amount without "$" (1), all fixed with tests; then 31 of 33. Left: Braze's base and on-target ranges are joined into one, and Welo's single "$34/hour" is not a range. Funding, bonuses, stipends and a "$124 trillion" line were never read as pay.
+  - 40 random text-only readings over all US jobs: all 40 are the stated range; 2 span both base and on-target pay because the posting lists both.
+  - 1,479 jobs have pay from both the board and the text: 1,214 agree within 1%. The board wins. Many of the rest are a different level or place in the text.
+  - 25 unusual readings: one was wrong ("New hire equity: $16,000-$24,000"), fixed with a test. Ranges such as "$12,600&mdash;$167,000" are what the postings say.
+- Test order: the monthly-pay and too-small-stipend tests were run failing before their fix; the equity and relocation tests were written in the same step as their fix, after the real data showed the problem.

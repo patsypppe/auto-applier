@@ -1,7 +1,7 @@
 // The slim form of a ranked job that the feed page shows: everything on the card, without the long description.
 import type { EmployerHistory } from "../history/matchEmployer"
 import type { MatchReasons } from "../matching/scoreMatch"
-import type { Effect, JobCopy, Tag } from "../types"
+import type { Effect, JobCopy, JobType, Pay, Tag, Workplace } from "../types"
 import type { RankedJob } from "./getJobs"
 
 export type Card = {
@@ -19,11 +19,14 @@ export type Card = {
   effect: Effect
   reasons: MatchReasons
   tags: Tag[]
+  pay?: Pay
+  jobType?: JobType
+  workplace?: Workplace
   history?: EmployerHistory
 }
 
 // Turns a ranked job into a card.
-export function toCard({ job, score, effect, reasons, tags, history }: RankedJob): Card {
+export function toCard({ job, score, effect, reasons, tags, pay, history }: RankedJob): Card {
   return {
     key: job.key,
     company: job.company,
@@ -39,6 +42,9 @@ export function toCard({ job, score, effect, reasons, tags, history }: RankedJob
     effect,
     reasons,
     tags,
+    pay,
+    jobType: job.jobType,
+    workplace: job.workplace,
     history,
   }
 }

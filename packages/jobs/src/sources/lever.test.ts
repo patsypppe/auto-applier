@@ -43,8 +43,67 @@ describe("lever: reading postings", () => {
       postedAt: new Date(1792767640768).toISOString(),
       firstSeenAt: SEEN_AT,
       lastSeenAt: SEEN_AT,
+      jobType: "full-time",
+      workplace: "hybrid",
     })
     expect(description.length).toBeGreaterThan(500)
+  })
+
+  test.each([
+    ["per-year-salary", 108700, 125300, "year"],
+    ["per-hour-wage", 24.04, 28.85, "hour"],
+  ])("reads Lever's salary range paid %s as pay per year or hour", (interval, min, max, per) => {
+    const posting = { ...POSTINGS[0], salaryRange: { min, max, currency: "USD", interval } }
+
+    const [job] = lever.readJobs([posting], "spotify", SEEN_AT)
+
+    expect(job!.pay).toEqual({ min, max, currency: "USD", per, from: "board" })
+  })
+
+  test("leaves out a yearly salary too small to be one, such as an internship stipend the board marks as yearly", () => {
+    const posting = { ...POSTINGS[0], salaryRange: { min: 5500, max: 7500, currency: "USD", interval: "per-year-salary" } }
+
+    const [job] = lever.readJobs([posting], "spotify", SEEN_AT)
+
+    expect(job!.pay).toBeUndefined()
+  })
+
+  test("leaves out a salary paid per month or once, which the feed does not compare", () => {
+    const posting = { ...POSTINGS[0], salaryRange: { min: 5000, max: 6000, currency: "EUR", interval: "per-month-salary" } }
+
+    const [job] = lever.readJobs([posting], "spotify", SEEN_AT)
+
+    expect(job!.pay).toBeUndefined()
+  })
+
+  test.each([
+    ["Full-time", "full-time"],
+    ["Full Time Hybrid", "full-time"],
+    ["Regular Full-Time", "full-time"],
+    ["Permanent", "full-time"],
+    ["Contract Full time", "contract"],
+    ["Temporary/Contract", "temporary"],
+    ["Freelance", "contract"],
+    ["Seasonal - Part Time", "temporary"],
+    ["Part Time", "part-time"],
+    ["Internship", "intern"],
+    ["Full time or Part time", undefined],
+    ["Remote", undefined],
+    ["CDI", undefined],
+  ])("reads the commitment %s as %s", (commitment, jobType) => {
+    const posting = { ...POSTINGS[0], categories: { ...POSTINGS[0].categories, commitment } }
+
+    const [job] = lever.readJobs([posting], "spotify", SEEN_AT)
+
+    expect(job!.jobType).toBe(jobType)
+  })
+
+  test("reads Lever's workplace, and leaves out one it marks unspecified", () => {
+    const places = ["onsite", "hybrid", "remote", "unspecified"].map((workplaceType) => ({ ...POSTINGS[0], workplaceType }))
+
+    const jobs = lever.readJobs(places, "spotify", SEEN_AT)
+
+    expect(jobs.map((job) => job.workplace)).toEqual(["onsite", "hybrid", "remote", undefined])
   })
 
   test("takes the country from Lever's country code", () => {

@@ -2,11 +2,12 @@
 import type { Profile } from "@auto-applier/core"
 import { matchEmployer, type EmployerHistory } from "../history/matchEmployer"
 import type { H1bHistory } from "../history/readH1bCsv"
+import { readPay } from "../matching/pay"
 import { scoreMatch, type MatchReasons } from "../matching/scoreMatch"
 import type { FeedSettings } from "../settings"
 import { jobEffect } from "../tags/effects"
 import { tagJob } from "../tags/tagJob"
-import type { Effect, JobRecord, Tag } from "../types"
+import type { Effect, JobRecord, Pay, Tag } from "../types"
 
 export type RankedJob = {
   job: JobRecord
@@ -14,6 +15,7 @@ export type RankedJob = {
   effect: Effect
   score: number
   reasons: MatchReasons
+  pay?: Pay
   history?: EmployerHistory
 }
 
@@ -28,7 +30,8 @@ function postedTime(job: JobRecord): number {
 }
 
 // Ranks the jobs for this user: best match first; among equal scores, fine before likely blocked, then newer first.
-// When H-1B history is given, each job also gets its company's filings, looked up once per company.
+// Each job gets its pay, from the board or else from its text. When H-1B history is given, each job also gets its
+// company's filings, looked up once per company.
 export function getJobs(settings: FeedSettings, profile: Profile, jobs: readonly JobRecord[], history?: HistoryInput): RankedJob[] {
   const me = { skills: profile.skills, roles: settings.filters.roles }
   const byCompany = new Map<string, EmployerHistory>()
@@ -43,7 +46,8 @@ export function getJobs(settings: FeedSettings, profile: Profile, jobs: readonly
     .map((job): RankedJob => {
       const tags = tagJob(job)
       const { score, reasons } = scoreMatch(job, me)
-      const ranked = { job, tags, effect: jobEffect(tags.map(({ tag }) => tag), settings.workAuth), score, reasons }
+      const pay = job.pay ?? readPay(job.description)
+      const ranked = { job, tags, effect: jobEffect(tags.map(({ tag }) => tag), settings.workAuth), score, reasons, ...(pay ? { pay } : {}) }
       const filings = historyOf(job.company)
       return filings ? { ...ranked, history: filings } : ranked
     })
