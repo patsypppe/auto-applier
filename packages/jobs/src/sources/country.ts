@@ -4,6 +4,9 @@ const STATE_CODES = new Set(
     "OR PA RI SC SD TN TX UT VT VA WA WV WI WY PR").split(" "),
 )
 
+// State codes that are also the codes of countries: India, Germany, Israel, Canada, Colombia, Argentina, Panama, Morocco, Indonesia.
+const COUNTRY_LIKE_CODES = new Set(["IN", "DE", "IL", "CA", "CO", "AR", "PA", "MA", "ID"])
+
 const STATE_NAMES =
   "Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|" +
   "Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|" +
@@ -31,7 +34,7 @@ const OTHER_COUNTRIES = new RegExp(
     // because there is a London, Ontario and a Dublin, California.
     "Amsterdam|Bengaluru|Bangalore|Hyderabad|Pune|Mumbai|Delhi|Gurugram|Gurgaon|Noida|Chennai|Tokyo|Seoul|Taipei|" +
     "Sydney|Melbourne|Berlin|Munich|Paris|Madrid|Barcelona|Lisbon|Zurich|Stockholm|Copenhagen|Oslo|Helsinki|" +
-    "Warsaw|Prague|Bucharest|Sofia|Tel Aviv|Toronto|Vancouver|Montreal|Mexico City|S\u00e3o Paulo|Sao Paulo|" +
+    "Warsaw|Prague|Bucharest|Sofia|Tel Aviv|Toronto|Vancouver|Montreal|Mexico City|S\u00e3o Paulo|Sao Paulo|Bogota|" +
     "EMEA|APAC|LATAM|Europe" +
     ")\\b",
 )
@@ -40,11 +43,14 @@ const OTHER_COUNTRIES = new RegExp(
 function countryOfLocation(location: string): "US" | "other" | undefined {
   if (US_WORDS.test(location)) return "US"
 
-  // A state code after a comma ("Seattle, WA") or at the very end ("Atlanta GA").
-  const stateCode = location.match(/,\s*([A-Z]{2})\b/) ?? location.match(/\s([A-Z]{2})$/)
-  if (stateCode && STATE_CODES.has(stateCode[1]!)) return "US"
+  const abroad = OTHER_COUNTRIES.test(location)
 
-  return OTHER_COUNTRIES.test(location) ? "other" : undefined
+  // A state code after a comma ("Seattle, WA") or at the very end ("Atlanta GA"). Some state codes are also country codes,
+  // so next to a city abroad ("Berlin, DE", "Bangalore, IN") the code names the country, not the state.
+  const code = (location.match(/,\s*([A-Z]{2})\b/) ?? location.match(/\s([A-Z]{2})$/))?.[1]
+  if (code && STATE_CODES.has(code) && !(abroad && COUNTRY_LIKE_CODES.has(code))) return "US"
+
+  return abroad ? "other" : undefined
 }
 
 // Returns "US" when any location is in the United States, "other" when one is clearly elsewhere, else undefined.

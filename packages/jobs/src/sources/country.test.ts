@@ -45,6 +45,20 @@ describe("countryOf: other countries", () => {
     },
   )
 
+  test.each([["Bangalore, IN"], ["Pune, IN"], ["Berlin, DE"], ["Tel Aviv - IL"], ["Toronto, CA"], ["Bogota, CO"]])(
+    "reads %s as abroad, where the code is a country that looks like a state",
+    (location) => {
+      expect(countryOf([location])).toBe("other")
+    },
+  )
+
+  test.each([["Indianapolis, IN"], ["Wilmington, DE"], ["Chicago, IL"], ["Paris, TX"], ["Denver, CO"]])(
+    "still reads %s as US when the city is not a known city abroad",
+    (location) => {
+      expect(countryOf([location])).toBe("US")
+    },
+  )
+
   test("does not read a two-letter word inside another country's name as a state", () => {
     expect(countryOf(["Paris, France"])).toBe("other")
   })
