@@ -2,7 +2,7 @@
 import type { AppliedEntry, ApplicationStatus } from "../feed/applied"
 import type { Card } from "../feed/card"
 import { filterCards, type PageFilters } from "./filterCards"
-import { renderCard } from "./renderCard"
+import { localDate, renderCard } from "./renderCard"
 
 type Feed = { total: number; shown: Card[]; hidden: { reason: string; count: number }[]; extra: Card[]; applied: AppliedEntry[] }
 
@@ -80,7 +80,7 @@ function drawHistory(): void {
   const listed = new Set([...feed.shown, ...feed.extra].map((card) => card.key))
   const rows = feed.applied.map((entry) => {
     const row = document.createElement("li")
-    const when = entry.changes.map((change) => `${change.status} ${change.date.slice(0, 10)}`).join(", ")
+    const when = entry.changes.map((change) => `${change.status} ${localDate(change.date)}`).join(", ")
     row.textContent = `${entry.title} at ${entry.company}: ${entry.status}${when ? ` (${when})` : ""}${listed.has(entry.key) ? "" : " · no longer listed"}`
     return row
   })

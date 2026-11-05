@@ -10,6 +10,11 @@ const EFFECT_LABELS: Record<Effect, string> = {
   positive: "A plus for you",
 }
 
+// Returns a saved time as a YYYY-MM-DD date in the user's own time zone, so an evening change shows that day.
+export function localDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-CA")
+}
+
 // Makes an element with an optional class and text.
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
   const made = document.createElement(tag)
@@ -64,7 +69,7 @@ function statusBlock(applied: AppliedEntry | undefined, onStatus: (status: Appli
   block.append(select)
 
   const since = applied?.changes.at(-1)?.date
-  if (since) block.append(element("span", "since", `since ${since.slice(0, 10)}`))
+  if (since) block.append(element("span", "since", `since ${localDate(since)}`))
   return block
 }
 

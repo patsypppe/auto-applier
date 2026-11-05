@@ -75,6 +75,15 @@ describe("renderCard", () => {
     expect(card.textContent).toContain("since 2026-11-02")
   })
 
+  test("shows the status date in the user's own time zone, not UTC", () => {
+    const lateEvening = "2026-11-05T02:00:00.000Z"
+    const applied: AppliedEntry = { key: CARD.key, company: "Acme", title: "Data Analyst", url: CARD.url, status: "applied", changes: [{ status: "applied", date: lateEvening }] }
+
+    const card = renderCard(CARD, applied, vi.fn())
+
+    expect(card.textContent).toContain(`since ${new Date(lateEvening).toLocaleDateString("en-CA")}`)
+  })
+
   test("reports a new status when the user picks one", () => {
     const onStatus = vi.fn()
     const card = renderCard(CARD, undefined, onStatus)
