@@ -283,6 +283,80 @@ Each slice: tests first, then code, then the package tests, the typecheck and th
 
 Stage 5 (real data check) follows slice 8 at the latest, so the targets in `SPEC.md` can be measured with history included.
 
+## Slice 11: setup screen, filters on the page, pay, degree, STEM OPT
+
+Status: draft for review, 2026-11-05. Comes from the comparison with Jobright and Tsenta. Slice 10 (resume) is still not
+built and is not part of this.
+
+What was checked before writing this:
+
+- Ashby's board response already has a `compensation` field per job, with `compensationTiers[].components[]`
+  holding `compensationType` ("Salary"), `interval` ("1 YEAR"), `currencyCode`, `minValue` and `maxValue` (seen in
+  `test/fixtures/ashby-ramp.json`, all 3 jobs). It also has `employmentType` ("FullTime") and `workplaceType`
+  ("OnSite", "Hybrid"). We drop all of these today.
+- Lever's response has `workplaceType` ("hybrid") and `categories.commitment` ("Permanent"). The Spotify fixture has
+  no pay field, so Lever pay comes from the text only.
+- Greenhouse has no pay or job-type field (`test/fixtures/greenhouse-databricks.json` keys); its pay is in the
+  posting HTML.
+- Over the 59,910 jobs with country US in data/jobs.jsonl, 12,752 (21%) have a "$X to $Y" range in the text, by a
+  rough pattern that misses hourly ranges. A rough count, not the reader's real accuracy.
+- The server already applies the filters on every `GET /api/feed`, so changing a filter needs no new ranking.
+  Changing the work-authorization status does, since effects depend on it.
+
+Each part is tests first, then code, then the tests, the typecheck and a check on the real data, then a stop.
+
+**11a. Keep pay, job type and workplace when collecting.**
+- `JobRecord` gains optional `pay` (`{ min, max, currency, per: "year" | "hour", from: "board" | "text" }`),
+  `jobType` (`full-time`, `part-time`, `contract`, `intern`, `temporary`) and `workplace` (`remote`, `hybrid`,
+  `onsite`). Only set when the board or the text says so.
+- Ashby: pay from the Salary component, job type from `employmentType`, workplace from `workplaceType`.
+- Lever: workplace from `workplaceType`, job type from `categories.commitment` only for values it clearly names.
+- `readPay(text)` for every source without board pay: "$120,000 - $150,000", "$120K to $150K", "$45 - $55 per
+  hour". Ranges only; a single number such as "$5,000 sign-on bonus" is not pay.
+- Check: 40 jobs by hand, pay read against the text. Needs one collect from the cache (no requests if run within
+  12 hours of a collect, otherwise a normal polite run).
+
+**11b. Degree.**
+- `degreeRequired(text, title)` returns the lowest degree the posting requires: `bachelor`, `master` or `phd`. "PhD"
+  in the title counts; "Master's preferred" does not, the same rule as the years reader. "Bachelor's or Master's"
+  is bachelor.
+- Settings gain `filters.myDegree` (default none set, so nothing is hidden). A job that requires more is hidden with
+  the reason `degree`.
+- Check: 40 jobs by hand.
+
+**11c. Filters on the page.**
+- A row of chips over the cards, like the two sites: posted within (7, 30, 90 days), workplace (remote, hybrid,
+  onsite), job type, level, max years, min pay, degree, and "new since my last visit".
+- The page sends them as query parameters; the server applies them on top of settings.json for that request only.
+  Hidden counts still add up to the total. The page remembers the chips in `localStorage`.
+- Min pay: a job with no pay stays shown (most have none), the same choice as for years.
+- "New since my last visit": the page saves the time of each visit in `localStorage` and marks cards first seen
+  after it.
+
+**11d. STEM OPT badge.**
+- When the status is `f1-stem-opt`, or F-1 with `stemDegree: true`, a job with the `e-verify` tag shows "E-Verify
+  employer: STEM OPT can work here". A chip "E-Verify only" hides the rest.
+- The effect already treats E-Verify as a plus for these users, so only the page changes.
+
+**11e. Setup screen.**
+- A "Settings" panel on the page with the fields from settings.json: status, sponsorship later, STEM degree,
+  clearance, roles (a fixed list of common roles grouped as on Jobright, plus free text), levels, locations, remote
+  only, posted within, max years, degree. Opens by itself when settings.json does not exist yet.
+- Saved through a new `POST /api/settings`: checked with `parseSettings`, written to settings.json with the safe
+  write, then the server re-ranks.
+- Re-ranking today re-tags every job (about 90,000; the feed takes about a minute to start). `getJobs` is split so
+  the tags, which do not depend on settings, are kept and only the effects and scores are worked out again. The
+  time is measured before and after.
+
+Not in this slice: resume upload (the core's parser needs an AI key; slice 10), Labor Department wage data (its
+file is a 252 MB Excel file, see "Changes to the spec"), applicant counts, alumni, funding (no free source),
+"apply to all" (autofill is the friend's part).
+
+Questions:
+1. Should the setup screen also edit the skills list, which lives in profile.json in the core's `Profile` shape?
+   Default: no, settings only; skills stay in profile.json.
+2. Min-pay chip: keep jobs that state no pay (default), or hide them?
+
 ## Changes to the spec
 
 - **H-1B history from USCIS first, DOL later.** The USCIS Data Hub gives actual petition decisions per employer as CSV. The DOL file is a 252 MB Excel file, and reading it without a new dependency means writing a zip and XML reader. The DOL data adds wage levels and job titles, which are useful but not needed for the first version. F6 changes accordingly: the card says "USCIS approved N H-1B petitions for this employer in FY2026".
