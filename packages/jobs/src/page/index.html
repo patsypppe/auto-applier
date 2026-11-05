@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Job feed</title>
+    <style>
+      :root { --bg: #ffffff; --text: #1d1d1f; --muted: #5f6368; --line: #dadce0; --blocked: #b3261e; --likely: #9a6700; --plus: #1e7e34; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #1b1b1d; --text: #ececf1; --muted: #a0a4ab; --line: #3a3b3f; --blocked: #f28b82; --likely: #fdd663; --plus: #81c995; } }
+      body { margin: 0 auto; max-width: 960px; padding: 16px; font: 15px/1.45 system-ui, sans-serif; background: var(--bg); color: var(--text); }
+      header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+      input, select, button { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
+      #search { flex: 1 1 220px; }
+      #summary { color: var(--muted); }
+      #summary button { margin: 2px 0; cursor: pointer; }
+      .card { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 10px 0; position: relative; }
+      .card h2 { font-size: 16px; margin: 0 48px 4px 0; }
+      .card a { color: inherit; }
+      .meta, .skills, .copies, .since { color: var(--muted); margin: 4px 0; }
+      .score { position: absolute; top: 12px; right: 14px; font-weight: 600; }
+      .tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; margin: 6px 0; }
+      .tags.blocked .effect { color: var(--blocked); }
+      .tags.likely-blocked .effect { color: var(--likely); }
+      .tags.positive .effect { color: var(--plus); }
+      .tag summary { cursor: pointer; border: 1px solid var(--line); border-radius: 12px; padding: 0 8px; }
+      .evidence { margin: 4px 0 0; color: var(--muted); }
+      .status { display: flex; gap: 8px; align-items: center; }
+      #extra .card { opacity: 0.6; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <input id="search" type="search" placeholder="Search title, company or skill" />
+      <select id="effect">
+        <option value="any">Any work authorization</option>
+        <option value="positive">A plus for you</option>
+        <option value="ok">Fine for you</option>
+        <option value="likely-blocked">Likely blocked</option>
+      </select>
+      <select id="status">
+        <option value="any">Any status</option>
+        <option value="not-tracked">Not tracked</option>
+        <option value="saved">Saved</option>
+        <option value="applied">Applied</option>
+        <option value="interviewing">Interviewing</option>
+        <option value="offer">Offer</option>
+        <option value="rejected">Rejected</option>
+      </select>
+      <select id="sort">
+        <option value="score">Best match</option>
+        <option value="date">Newest</option>
+      </select>
+    </header>
+    <p id="summary">Loading the feed...</p>
+    <main id="cards"></main>
+    <h2 id="extra-title"></h2>
+    <section id="extra"></section>
+    <h2>Your applications</h2>
+    <ul id="history"></ul>
+    <script src="page.js"></script>
+  </body>
+</html>

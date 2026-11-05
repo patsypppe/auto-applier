@@ -1,0 +1,23 @@
+{
+  "name": "@auto-applier/jobs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "node build.mjs",
+    "companies": "node build.mjs && node dist/cli.js companies",
+    "collect": "node build.mjs && node dist/cli.js collect",
+    "h1b": "node build.mjs && node dist/cli.js h1b",
+    "tags": "node build.mjs && node dist/cli.js tags",
+    "top": "node build.mjs && node dist/cli.js top",
+    "feed": "node build.mjs && node dist/cli.js feed",
+    "export-applied": "node build.mjs && node dist/cli.js export-applied",
+    "test": "vitest run",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "dependencies": {
+    "@auto-applier/core": "*"
+  }
+}

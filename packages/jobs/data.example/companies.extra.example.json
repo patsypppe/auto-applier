@@ -1,0 +1,4 @@
+[
+  { "ats": "greenhouse", "slug": "databricks", "name": "Databricks" },
+  { "ats": "lever", "slug": "cirrus", "region": "eu", "name": "Cirrus Logic" }
+]

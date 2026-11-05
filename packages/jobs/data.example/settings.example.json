@@ -1,0 +1,18 @@
+{
+  "workAuth": {
+    "status": "f1-opt",
+    "needsSponsorshipLater": true,
+    "stemDegree": true
+  },
+  "filters": {
+    "roles": ["data scientist", "data analyst", "machine learning engineer", "data engineer"],
+    "levels": ["intern", "new-grad", "entry"],
+    "hideBlocked": true,
+    "hideLikelyBlocked": false,
+    "locations": [],
+    "remoteOnly": false,
+    "postedWithinDays": 90,
+    "maxYearsRequired": 2,
+    "minScore": 0
+  }
+}
