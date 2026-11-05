@@ -57,6 +57,16 @@ describe("getJobs", () => {
     expect(ranked.map((entry) => entry.job.id)).toEqual(["newer", "older"])
   })
 
+  test("adds each company's H-1B history when it is given, and leaves it out when not", () => {
+    const history = { data: { fiscalYear: 2026, employers: { acme: { name: "ACME INC", approvals: 12, newEmploymentApprovals: 5, denials: 1 } } }, aliases: {} }
+
+    const [withHistory] = getJobs(SETTINGS, PROFILE, [job("1")], history)
+    const [without] = getJobs(SETTINGS, PROFILE, [job("1")])
+
+    expect(withHistory!.history).toEqual({ status: "matched", how: "exact", employer: "ACME INC", approvals: 12, newEmploymentApprovals: 5, fiscalYear: 2026 })
+    expect(without!.history).toBeUndefined()
+  })
+
   test("adds the work-authorization tags and what they mean for the user", () => {
     const [entry] = getJobs(SETTINGS, PROFILE, [job("1", { description: "Python. U.S. citizenship required." })])
 

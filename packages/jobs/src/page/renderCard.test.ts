@@ -84,6 +84,22 @@ describe("renderCard", () => {
     expect(card.textContent).toContain(`since ${new Date(lateEvening).toLocaleDateString("en-CA")}`)
   })
 
+  test("shows the employer's H-1B approvals next to the tags", () => {
+    const history = { status: "matched", how: "exact", employer: "ACME INC", approvals: 340, newEmploymentApprovals: 152, fiscalYear: 2026 } as const
+
+    expect(renderCard({ ...CARD, history }, undefined, vi.fn()).textContent).toContain(
+      "USCIS approved 340 H-1B petitions for ACME INC in FY2026, 152 of them for new employment.",
+    )
+  })
+
+  test("says plainly when no H-1B filings were found or the name was unclear", () => {
+    const none = renderCard({ ...CARD, history: { status: "none", fiscalYear: 2026 } }, undefined, vi.fn())
+    const ambiguous = renderCard({ ...CARD, history: { status: "ambiguous", candidates: ["AXON NETWORKS INC", "AXON US INC"], fiscalYear: 2026 } }, undefined, vi.fn())
+
+    expect(none.textContent).toContain("No FY2026 H-1B approvals found under this name. The company may file under another legal name.")
+    expect(ambiguous.textContent).toContain("Several employers in the FY2026 H-1B data share this name (AXON NETWORKS INC, AXON US INC), so none is shown.")
+  })
+
   test("reports a new status when the user picks one", () => {
     const onStatus = vi.fn()
     const card = renderCard(CARD, undefined, onStatus)

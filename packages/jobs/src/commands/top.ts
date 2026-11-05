@@ -2,6 +2,8 @@
 import { join } from "node:path"
 import { applyFilters, type HideReason } from "../feed/applyFilters"
 import { getJobs, type RankedJob } from "../feed/getJobs"
+import { historySentence } from "../history/historySentence"
+import { loadHistory } from "../history/loadHistory"
 import { loadProfile } from "../profile"
 import { loadSettings } from "../settings"
 import { readJobsFile } from "../storage/files"
@@ -35,6 +37,7 @@ function describeJob(entry: RankedJob, rank: number): string[] {
     `${rank}. ${entry.score}  ${job.title} at ${job.company} (${places})`,
     `     you have: ${reasons.matchedSkills.join(", ") || "none named"} | missing: ${missing}${reasons.yearsRequired === undefined ? "" : ` | asks for ${reasons.yearsRequired}+ years`}`,
     `     ${EFFECT_WORDS[effect]}: ${evidence}`,
+    ...(entry.history ? [`     ${historySentence(entry.history)}`] : []),
     `     ${job.url}`,
   ]
 }
@@ -46,7 +49,7 @@ export async function runTop(args: readonly string[], dataDir: string, print: (l
   const profile = await loadProfile(join(dataDir, "profile.json"))
   const jobs = await readJobsFile(join(dataDir, "jobs.jsonl"))
 
-  const { shown, hidden } = applyFilters(getJobs(settings, profile, jobs), settings)
+  const { shown, hidden } = applyFilters(getJobs(settings, profile, jobs, await loadHistory(dataDir)), settings)
   const hiddenText = hidden.length > 0 ? ` Hidden: ${hiddenSummary(hidden)}.` : ""
   print(`Showing ${shown.length.toLocaleString("en-US")} of ${jobs.length.toLocaleString("en-US")} jobs.${hiddenText}`)
   shown.slice(0, limit).forEach((entry, index) => describeJob(entry, index + 1).forEach((line) => print(line)))

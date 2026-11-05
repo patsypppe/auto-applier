@@ -2,6 +2,7 @@
 import { fileURLToPath } from "node:url"
 import { join } from "node:path"
 import { getJobs } from "../feed/getJobs"
+import { loadHistory } from "../history/loadHistory"
 import { loadProfile } from "../profile"
 import { serveFeed } from "../server/serveFeed"
 import { loadSettings } from "../settings"
@@ -24,7 +25,7 @@ export async function runFeed(args: readonly string[], dataDir: string, print: (
   const jobs = await readJobsFile(join(dataDir, "jobs.jsonl"))
 
   print(`Ranking ${jobs.length.toLocaleString("en-US")} jobs. This takes about a minute for the full list.`)
-  const ranked = getJobs(settings, profile, jobs)
+  const ranked = getJobs(settings, profile, jobs, await loadHistory(dataDir))
   const pageDir = fileURLToPath(new URL(".", import.meta.url))
   const { url } = await serveFeed({ ranked, settings, dataDir, pageDir, port: portFrom(args) })
   print(`The feed is at ${url} (only on this computer). Press Ctrl+C to stop.`)

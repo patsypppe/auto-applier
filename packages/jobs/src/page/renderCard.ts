@@ -1,6 +1,7 @@
 // Builds one job card for the feed page. Every piece of text from a posting is set with textContent, never as HTML.
 import { APPLICATION_STATUSES, type AppliedEntry, type ApplicationStatus } from "../feed/applied"
 import type { Card } from "../feed/card"
+import { historySentence } from "../history/historySentence"
 import type { Effect } from "../types"
 
 const EFFECT_LABELS: Record<Effect, string> = {
@@ -85,6 +86,7 @@ export function renderCard(card: Card, applied: AppliedEntry | undefined, onStat
   article.append(element("p", "meta", `${card.company} · ${card.locations.join("; ")} · ${posted}`))
   article.append(element("span", "score", String(card.score)))
   article.append(skillsLine(card), tagsBlock(card))
+  if (card.history) article.append(element("p", "history", historySentence(card.history)))
 
   const others = (card.copies ?? []).filter((copy) => copy.url !== card.url)
   if (others.length > 0) {
