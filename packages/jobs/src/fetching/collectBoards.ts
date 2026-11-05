@@ -3,10 +3,11 @@ import { readCachedBoard, writeCachedBoard } from "../storage/boardCache"
 import { ashby } from "../sources/ashby"
 import { greenhouse } from "../sources/greenhouse"
 import { lever } from "../sources/lever"
+import { workday } from "../sources/workday"
 import type { Ats, Board, BoardSource, GetJson, JobRecord } from "../types"
 import { fetchJson, RequestError } from "./fetchJson"
 
-const SOURCES: Record<Ats, BoardSource> = { greenhouse, lever, ashby }
+const SOURCES: Record<Ats, BoardSource> = { greenhouse, lever, ashby, workday }
 const DEFAULT_DELAY_MS = 1000
 const GIVE_UP_AFTER = 5
 
@@ -29,6 +30,7 @@ export type CollectOptions = {
   now?: Date
   onBoard?: (result: BoardResult, done: number, total: number) => void
   onRequest?: (url: string, at: Date) => void
+  roles?: readonly string[]
 }
 
 export type Collected = { jobs: JobRecord[]; results: BoardResult[] }
@@ -69,7 +71,7 @@ async function collectBoard(
   const { slug } = board
   try {
     const cached = cache ? await readCachedBoard(cache.dir, source.ats, slug, cache.maxAgeHours, now) : undefined
-    const raw = cached ?? (await source.fetchRaw(board, getJsonFor(slug)))
+    const raw = cached ?? (await source.fetchRaw(board, getJsonFor(slug), { roles: options.roles ?? [] }))
     if (cache && cached === undefined) await writeCachedBoard(cache.dir, source.ats, slug, raw, now)
 
     const jobs = withCompanyName(source.readJobs(raw, slug, now.toISOString()), board)

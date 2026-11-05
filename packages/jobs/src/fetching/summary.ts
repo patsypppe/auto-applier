@@ -6,6 +6,7 @@ const SITE_ORDER: readonly [Ats, string][] = [
   ["greenhouse", "Greenhouse"],
   ["lever", "Lever"],
   ["ashby", "Ashby"],
+  ["workday", "Workday"],
 ]
 
 // Returns "1 board" or "3 boards" style text with the number written with commas.

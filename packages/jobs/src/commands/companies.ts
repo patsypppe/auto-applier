@@ -18,7 +18,7 @@ const SIMPLIFY_LISTS = [
 ]
 
 const AGGREGATOR_URL = "https://raw.githubusercontent.com/Riley-Dorrington/job-board-aggregator/main/data"
-const AGGREGATOR_SITES: readonly Ats[] = ["greenhouse", "lever", "ashby"]
+const AGGREGATOR_SITES: readonly Ats[] = ["greenhouse", "lever", "ashby", "workday"]
 
 // Downloads both Simplify listing files and reads the boards out of them.
 async function simplifyCompanies(print: (line: string) => void): Promise<Company[][]> {

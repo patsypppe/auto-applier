@@ -1,4 +1,4 @@
-// Finds the Greenhouse, Lever and Ashby boards behind the job links in a public listings file such as Simplify's.
+// Finds the Greenhouse, Lever, Ashby and Workday boards behind the job links in a public listings file such as Simplify's.
 import * as z from "zod/mini"
 import en from "zod/v4/locales/en.js"
 import type { Board, Company } from "../types"
@@ -31,6 +31,13 @@ export function boardFromUrl(link: string): Board | undefined {
     const slug = firstPathPart(url)
     if (!slug) return undefined
     return host === "jobs.eu.lever.co" ? { ats: "lever", slug: slug.toLowerCase(), region: "eu" } : { ats: "lever", slug: slug.toLowerCase() }
+  }
+  const workday = host.match(/^([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com$/)
+  if (workday) {
+    // The site follows an optional language part, as in /en-US/<site>/job/...
+    const parts = url.pathname.split("/").filter((part) => part !== "")
+    const site = /^[a-z]{2}-[A-Z]{2}$/.test(parts[0] ?? "") ? parts[1] : parts[0]
+    return site ? { ats: "workday", slug: `${workday[1]}|${workday[2]}|${site}` } : undefined
   }
   if (host === "jobs.ashbyhq.com") {
     const slug = firstPathPart(url)

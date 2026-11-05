@@ -9,7 +9,7 @@ z.config(en())
 
 const companySchema = z.object({
   name: z.optional(z.string()),
-  ats: z.enum(["greenhouse", "lever", "ashby"]),
+  ats: z.enum(["greenhouse", "lever", "ashby", "workday"]),
   slug: z.string().check(z.minLength(1)),
   region: z.optional(z.literal("eu")),
   sources: z.optional(z.array(z.string())),
@@ -79,7 +79,7 @@ export async function readJobsFile(file: string): Promise<JobRecord[]> {
 // Turns a schema problem into "ats must be one of ..." style text.
 function describeIssue(issue: z.core.$ZodIssue): string {
   const field = issue.path.join(".")
-  if (issue.code === "invalid_value" && field === "ats") return "ats must be one of greenhouse, lever, ashby."
+  if (issue.code === "invalid_value" && field === "ats") return "ats must be one of greenhouse, lever, ashby, workday."
   return `${field}: ${issue.message}.`
 }
 

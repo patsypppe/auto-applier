@@ -19,6 +19,8 @@ describe("boardFromUrl", () => {
       { ats: "ashby", slug: "fundamentalresearchlabs" },
     ],
     ["https://jobs.ashbyhq.com/Nascent/8454aeb0", { ats: "ashby", slug: "nascent" }],
+    ["https://avav.wd1.myworkdayjobs.com/en-US/avav/job/Albuquerque-NM/RF-PCB-Layout-Engineer_9319", { ats: "workday", slug: "avav|wd1|avav" }],
+    ["https://fourseasons.wd3.myworkdayjobs.com/search/job/Toronto/Analyst_REQ10374076", { ats: "workday", slug: "fourseasons|wd3|search" }],
   ])("reads %s", (url, board) => {
     expect(boardFromUrl(url)).toEqual(board)
   })
@@ -26,7 +28,7 @@ describe("boardFromUrl", () => {
   test.each([
     ["https://boards.greenhouse.io/embed/job_app?token=7669159003"],
     ["https://www.interstates.com/careers/jobs?gh_jid=4178960009"],
-    ["https://fourseasons.wd3.myworkdayjobs.com/search/job/Toronto/Analyst_REQ10374076"],
+    ["https://wd5.myworkdaysite.com/recruiting/acme/careers/job/Austin/Analyst_R1"],
     ["https://careers-lmi.icims.com/jobs/13752/job"],
     ["not a url"],
   ])("finds no board it can read in %s", (url) => {
@@ -47,13 +49,14 @@ describe("readListings", () => {
       { name: "Cirrus Logic", ats: "lever", slug: "cirrus", region: "eu", sources: ["simplify-new-grad"] },
       { name: "Nascent", ats: "ashby", slug: "nascent", sources: ["simplify-new-grad"] },
       { name: "Gemini", ats: "greenhouse", slug: "gemini", sources: ["simplify-new-grad"] },
+      { name: "Four Seasons", ats: "workday", slug: "fourseasons|wd3|search", sources: ["simplify-new-grad"] },
     ])
   })
 
   test("counts the links that point to sites it cannot read", () => {
     const { unreadable } = readListings(LISTINGS, "simplify-new-grad")
 
-    expect(unreadable).toBe(4)
+    expect(unreadable).toBe(3)
   })
 
   test("refuses a file that is not a list of listings", () => {

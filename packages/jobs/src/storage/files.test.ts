@@ -106,9 +106,9 @@ describe("company file", () => {
 
   test("says which entry is wrong and why", async () => {
     const file = join(dir, "companies.extra.json")
-    await writeFile(file, JSON.stringify([{ ats: "lever", slug: "ok" }, { ats: "workday", slug: "nvidia" }]))
+    await writeFile(file, JSON.stringify([{ ats: "lever", slug: "ok" }, { ats: "taleo", slug: "nvidia" }]))
 
-    await expect(readCompanyFile(file)).rejects.toThrow(`${file} entry 2: ats must be one of greenhouse, lever, ashby.`)
+    await expect(readCompanyFile(file)).rejects.toThrow(`${file} entry 2: ats must be one of greenhouse, lever, ashby, workday.`)
   })
 
   test("says what to run when the list is missing", async () => {

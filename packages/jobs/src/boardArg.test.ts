@@ -2,7 +2,7 @@
 import { describe, expect, test } from "vitest"
 import { readBoardArgs } from "./boardArg"
 
-const USAGE = "Use --board <site>:<slug>, for example --board greenhouse:stripe. Sites: greenhouse, lever, ashby."
+const USAGE = "Use --board <site>:<slug>, for example --board greenhouse:stripe. Sites: greenhouse, lever, ashby, workday."
 
 describe("readBoardArgs", () => {
   test("reads the job site and the board slug", () => {
@@ -21,7 +21,7 @@ describe("readBoardArgs", () => {
   })
 
   test("refuses a job site it cannot read yet", () => {
-    expect(() => readBoardArgs(["--board", "workday:nvidia"])).toThrow(`'workday' is not supported yet. ${USAGE}`)
+    expect(() => readBoardArgs(["--board", "taleo:nvidia"])).toThrow(`'taleo' is not supported yet. ${USAGE}`)
   })
 
   test("refuses a board with no slug", () => {

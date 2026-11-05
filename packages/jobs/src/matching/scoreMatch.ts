@@ -18,7 +18,7 @@ export type MatchReasons = {
 export type Match = { score: number; reasons: MatchReasons }
 
 // Returns true when the title holds one of the wanted roles as whole words, ignoring case.
-function titleHasRole(title: string, roles: readonly string[]): boolean {
+export function titleHasRole(title: string, roles: readonly string[]): boolean {
   const lower = title.toLowerCase()
   return roles.some((role) => new RegExp(`(?<![a-z])${role.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z])`).test(lower))
 }

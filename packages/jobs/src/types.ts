@@ -1,5 +1,5 @@
 // Defines the shape of a collected job, a company's board, and a job site that boards are read from.
-export type Ats = "greenhouse" | "lever" | "ashby"
+export type Ats = "greenhouse" | "lever" | "ashby" | "workday"
 
 export type Board = {
   ats: Ats
@@ -39,7 +39,7 @@ export type GetJson = (url: string, body?: unknown) => Promise<unknown>
 export type BoardSource = {
   ats: Ats
   name: string
-  fetchRaw: (board: Pick<Board, "slug" | "region">, getJson: GetJson) => Promise<unknown>
+  fetchRaw: (board: Pick<Board, "slug" | "region">, getJson: GetJson, search?: { roles: readonly string[] }) => Promise<unknown>
   readJobs: (raw: unknown, slug: string, seenAt: string) => JobRecord[]
 }
 

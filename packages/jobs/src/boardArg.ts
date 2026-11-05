@@ -1,7 +1,7 @@
 // Reads the "--board site:slug" options that pick which job boards to collect.
 import type { Ats } from "./types"
 
-const SUPPORTED: readonly Ats[] = ["greenhouse", "lever", "ashby"]
+const SUPPORTED: readonly Ats[] = ["greenhouse", "lever", "ashby", "workday"]
 const USAGE = `Use --board <site>:<slug>, for example --board greenhouse:stripe. Sites: ${SUPPORTED.join(", ")}.`
 
 export type BoardChoice = { ats: Ats; slug: string }

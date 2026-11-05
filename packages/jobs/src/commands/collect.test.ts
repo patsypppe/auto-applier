@@ -42,7 +42,7 @@ beforeEach(async () => {
 
 // Builds a fetch stand-in that answers every board with one job.
 function workingNetwork() {
-  return vi.fn(async () => new Response(JSON.stringify(BOARD_ANSWER), { status: 200 }))
+  return vi.fn(async (_url: string | URL | Request) => new Response(JSON.stringify(BOARD_ANSWER), { status: 200 }))
 }
 
 // Builds a fetch stand-in for a laptop with no connection.
@@ -76,6 +76,47 @@ describe("collect: a run that must not replace the feed", () => {
     await runCollect(["--fresh"], dir, print, { ...quick, fetchFn: noNetwork() }).catch(() => undefined)
 
     expect((await readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([])
+  })
+})
+
+describe("collect: Workday boards", () => {
+  // Adds a Workday board to the company list.
+  async function addWorkdayBoard() {
+    const companies = JSON.parse(await readFile(join(dir, "companies.json"), "utf8"))
+    await writeFile(join(dir, "companies.json"), JSON.stringify([...companies, { name: "Adobe", ats: "workday", slug: "adobe|wd5|external", sources: ["test"] }]))
+  }
+
+  test("skips Workday boards unless asked, and says how to include them", async () => {
+    await addWorkdayBoard()
+    const fetchFn = workingNetwork()
+
+    await runCollect(["--fresh"], dir, print, { ...quick, fetchFn })
+
+    const asked = fetchFn.mock.calls.map(([url]) => String(url))
+    expect(asked.some((url) => url.includes("myworkdayjobs"))).toBe(false)
+    expect(print).toHaveBeenCalledWith("Skipping 1 Workday board. Add --with-workday to read them; it takes about 8 seconds a board.")
+  })
+
+  test("refuses --with-workday when the settings name no roles to search for", async () => {
+    await addWorkdayBoard()
+
+    await expect(runCollect(["--fresh", "--with-workday"], dir, print, { ...quick, fetchFn: workingNetwork() })).rejects.toThrow(
+      "--with-workday needs data/settings.json with roles, so only matching Workday jobs are read.",
+    )
+  })
+
+  test("searches Workday boards for the roles in the settings when asked", async () => {
+    await addWorkdayBoard()
+    await writeFile(join(dir, "settings.json"), JSON.stringify({ workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"] } }))
+    const fetchFn = vi.fn(async (url: string | URL | Request, _init?: RequestInit) => {
+      if (String(url).includes("myworkdayjobs")) return new Response(JSON.stringify({ total: 0, jobPostings: [] }), { status: 200 })
+      return new Response(JSON.stringify(BOARD_ANSWER), { status: 200 })
+    })
+
+    await runCollect(["--fresh", "--with-workday"], dir, print, { ...quick, fetchFn })
+
+    const search = fetchFn.mock.calls.find(([url]) => String(url).includes("myworkdayjobs"))
+    expect(JSON.parse(String(search![1]!.body))).toMatchObject({ searchText: "data analyst" })
   })
 })
 
