@@ -53,16 +53,21 @@ export async function writeJobsFile(file: string, jobs: readonly JobRecord[]): P
   await rename(temporary, file)
 }
 
-// Reads the jobs written by writeJobsFile; a file that does not exist yet means no jobs.
-export async function readJobsFile(file: string): Promise<JobRecord[]> {
-  const jobs: JobRecord[] = []
+// Reads the jobs written by writeJobsFile one at a time, so a large feed never has to be in memory at once.
+// A file that does not exist yet means no jobs.
+export async function eachJob(file: string, visit: (job: JobRecord) => void): Promise<void> {
   try {
     const lines = createInterface({ input: createReadStream(file, "utf8"), crlfDelay: Infinity })
-    for await (const line of lines) if (line.trim() !== "") jobs.push(JSON.parse(line) as JobRecord)
+    for await (const line of lines) if (line.trim() !== "") visit(JSON.parse(line) as JobRecord)
   } catch (error: unknown) {
-    if (isMissing(error)) return []
-    throw error
+    if (!isMissing(error)) throw error
   }
+}
+
+// Reads every job written by writeJobsFile into a list.
+export async function readJobsFile(file: string): Promise<JobRecord[]> {
+  const jobs: JobRecord[] = []
+  await eachJob(file, (job) => jobs.push(job))
   return jobs
 }
 
