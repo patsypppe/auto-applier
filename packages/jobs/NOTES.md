@@ -246,3 +246,21 @@
   - 1,479 jobs have pay from both the board and the text: 1,214 agree within 1%. The board wins. Many of the rest are a different level or place in the text.
   - 25 unusual readings: one was wrong ("New hire equity: $16,000-$24,000"), fixed with a test. Ranges such as "$12,600&mdash;$167,000" are what the postings say.
 - Test order: the monthly-pay and too-small-stipend tests were run failing before their fix; the equity and relocation tests were written in the same step as their fix, after the real data showed the problem.
+
+## 2026-11-05: Slice 11b, degree
+
+- Studied 30 real degree lines first (6,049 of the 9,847 US data and engineering jobs name a degree). Postings often list "Bachelor's" under the requirements and "MS or PhD" under a "Preferred qualifications" heading, with no "preferred" in the line itself.
+- Built test first: `degreeRequired(text, title)` returns `associate`, `bachelor`, `master` or `phd`:
+  - The lowest degree the posting asks for, since a higher one is usually a plus. A degree in the title ("Data Scientist Intern - PhD") decides.
+  - Left out: degrees marked preferred in their own phrase ("Master's preferred", "PhD (preferred) or Master's", "Highly recommended:"), lines under a preferred heading (until the next requirements heading or a "Minimum education:" line), and sentences that name a degree without asking ("You don't need: a PhD", "typical but not required", founder and company lines).
+  - When experience can stand in for the same or a lower degree ("Bachelor's degree or an equivalent combination", "PhD (or BS/MS degree with equivalent level of experience)"), nothing is required.
+  - "MS", "BS", "BA" and "PhD" count only in a degree context, so "MS Office", "PHD filters", "a Stanford PhD spinout", "PhD-level researchers" and "MS" in a list of state codes do not.
+- `filters.myDegree` (unset by default, so nothing is hidden). A job needing more gets the hide reason `degree`. The card says "Needs a PhD". The example settings (MS Statistics) and the local `data/settings.json` now say `"myDegree": "master"`.
+- Hand checks, each a fresh random sample of 40:
+  - Mixed jobs: right apart from 3 misses (one fixed: "The ideal candidate will have:" was taken for a preferred heading; two were right by the rule, "Desired Qualifications" and "or equivalent expertise").
+  - Read as PhD (these are what a master's student would lose): 27 of 40 right on the first sample; 29 of 40 on a second sample, with new wordings; 37 of 40 on a third; 38 of 40 on a fourth. Every miss was fixed with a test from the real line.
+  - Read as master's: 33 of 40 right; the 7 wrong ("undergraduate or Masters", "master/reference data", "a master of Python", two "Highly recommended" lines and two lists of state codes with "MS" for Mississippi) were fixed with tests.
+  - Read as bachelor's: 37 of the 38 printed right; the one miss is "a BS ... or the equivalent", which is not yet seen as experience standing in. It only matters for an associate's-degree user, so it is left as a known limit.
+  - Read as associate's: the readings match the postings (defense contractors' "Associate's degree plus 10 years, or Bachelor's plus 8 ..." tiers).
+- Over the 9,847 jobs: PhD 142, master's 341, bachelor's 2,597, associate's 98, none 6,669.
+- Feed with the example profile and a master's: 129 shown of 89,784; 5 hidden for degree.

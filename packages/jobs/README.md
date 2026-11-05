@@ -56,7 +56,7 @@ npm run top -w @auto-applier/jobs -- --limit 20
 
 `profile.json` has the same shape as the profile the extension saves, so the same skills and education drive both. `settings.json` sets your work-authorization status and what to show: roles (title keywords), levels, places, how recent, companies to include or leave out, and a minimum score. `top` prints how many jobs are shown and why the rest were hidden, then each job with its score, the skills you have and lack, the work-authorization evidence and the link.
 
-The score is 70 points for the share of the skills a posting names that are in your profile (counting at least three, so a posting that names one skill cannot score full marks), plus 30 if the title holds one of your roles. Jobs that ask for more years of experience than `maxYearsRequired` (default 2) are hidden; the years are read from phrases like "3+ years of experience", ignoring ones marked preferred.
+The score is 70 points for the share of the skills a posting names that are in your profile (counting at least three, so a posting that names one skill cannot score full marks), plus 30 if the title holds one of your roles. Jobs that ask for more years of experience than `maxYearsRequired` (default 2) are hidden; the years are read from phrases like "3+ years of experience", ignoring ones marked preferred. With `myDegree` set (for example `"master"`), jobs whose lowest required degree is higher are hidden; degrees marked preferred, listed under a preferred heading, or replaceable by experience do not count.
 
 ### The feed page
 

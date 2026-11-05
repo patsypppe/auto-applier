@@ -13,6 +13,7 @@
     "remoteOnly": false,
     "postedWithinDays": 90,
     "maxYearsRequired": 2,
+    "myDegree": "master",
     "minScore": 0
   }
 }

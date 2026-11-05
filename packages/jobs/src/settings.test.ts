@@ -77,6 +77,14 @@ describe("parseSettings: mistakes", () => {
     )
   })
 
+  test("reads the user's degree, which is unset unless the file gives it", () => {
+    const base = { workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"] } }
+
+    expect(parseSettings({ ...base, filters: { ...base.filters, myDegree: "master" } }).filters.myDegree).toBe("master")
+    expect(parseSettings(base).filters.myDegree).toBeUndefined()
+    expect(() => parseSettings({ ...base, filters: { ...base.filters, myDegree: "masters" } })).toThrow("filters.myDegree must be one of associate, bachelor, master, phd.")
+  })
+
   test("refuses a file that is not an object", () => {
     expect(() => parseSettings([])).toThrow("The settings file must be an object with workAuth and filters.")
   })

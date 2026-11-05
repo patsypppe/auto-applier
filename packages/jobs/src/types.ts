@@ -20,6 +20,8 @@ export type JobType = "full-time" | "part-time" | "contract" | "intern" | "tempo
 
 export type Workplace = "remote" | "hybrid" | "onsite"
 
+export type Degree = "associate" | "bachelor" | "master" | "phd"
+
 export type JobRecord = {
   key: string
   ats: Ats

@@ -131,6 +131,14 @@ describe("applyFilters", () => {
     })
   })
 
+  test("hides a job that requires a higher degree than the user's, and keeps it when the user has not said", () => {
+    const jobs = [job("phd", { description: "Python and SQL. PhD in Statistics or a related field." }), job("master", { description: "Python. Master's degree in Statistics." })]
+    const withDegree = parseSettings({ workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"], myDegree: "master" } })
+
+    expect(hiddenReasons(jobs, withDegree)).toEqual([["phd", "degree"]])
+    expect(hiddenReasons(jobs)).toEqual([])
+  })
+
   test("shows likely-blocked jobs unless the settings hide them", () => {
     const jobs = [job("1", { description: "Python. We are unable to sponsor visas." })]
 

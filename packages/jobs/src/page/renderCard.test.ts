@@ -46,6 +46,12 @@ describe("renderCard", () => {
     expect(card.textContent).toContain(line)
   })
 
+  test("says which degree the posting requires", () => {
+    const card = renderCard({ ...CARD, reasons: { ...CARD.reasons, degreeRequired: "phd" } }, undefined, vi.fn())
+
+    expect(card.textContent).toContain("Needs a PhD")
+  })
+
   test("shows the job type and workplace when the board gives them, and no pay line when there is none", () => {
     const card = renderCard({ ...CARD, jobType: "intern", workplace: "hybrid" }, undefined, vi.fn())
 

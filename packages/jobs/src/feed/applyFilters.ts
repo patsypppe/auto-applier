@@ -1,5 +1,7 @@
 // Splits ranked jobs into the ones to show and the ones hidden, each hidden job with the first reason that hid it.
+import { DEGREES } from "../matching/degree"
 import type { FeedSettings } from "../settings"
+import type { Degree } from "../types"
 import type { RankedJob } from "./getJobs"
 
 export type HideReason =
@@ -10,6 +12,7 @@ export type HideReason =
   | "title-word"
   | "level"
   | "experience"
+  | "degree"
   | "location"
   | "remote"
   | "old"
@@ -22,6 +25,11 @@ export type Filtered = { shown: RankedJob[]; hidden: { job: RankedJob; reason: H
 function hasWords(text: string, words: string): boolean {
   const escaped = words.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   return new RegExp(`(?<![a-z0-9])${escaped}(?![a-z0-9])`).test(text.toLowerCase())
+}
+
+// Returns true when the job requires a higher degree than the user's; a user who has not given a degree sees every job.
+function needsMoreDegree(required: Degree | undefined, mine: Degree | undefined): boolean {
+  return required !== undefined && mine !== undefined && DEGREES.indexOf(required) > DEGREES.indexOf(mine)
 }
 
 // Returns the first reason to hide the job, or undefined when it should be shown. A level or country that cannot be told
@@ -38,6 +46,7 @@ function reasonToHide(entry: RankedJob, settings: FeedSettings, now: Date): Hide
   if (filters.excludeTitleWords.some((word) => hasWords(job.title, word))) return "title-word"
   if (reasons.level && !filters.levels.includes(reasons.level)) return "level"
   if (reasons.yearsRequired !== undefined && reasons.yearsRequired > filters.maxYearsRequired) return "experience"
+  if (needsMoreDegree(reasons.degreeRequired, filters.myDegree)) return "degree"
   if (filters.locations.length > 0 && !job.locations.some((place) => filters.locations.some((wanted) => hasWords(place, wanted)))) return "location"
   if (filters.remoteOnly && !job.locations.some((place) => hasWords(place, "remote"))) return "remote"
   if (ageDays > filters.postedWithinDays) return "old"

@@ -1,6 +1,7 @@
 // Reads data/settings.json: the user's work authorization and what jobs to show, with defaults and a message for each mistake.
 import { readFile } from "node:fs/promises"
-import type { Level, WorkAuth, WorkAuthStatus } from "./types"
+import { DEGREES } from "./matching/degree"
+import type { Degree, Level, WorkAuth, WorkAuthStatus } from "./types"
 
 export const STATUSES: readonly WorkAuthStatus[] = ["citizen", "permanent-resident", "f1-cpt", "f1-opt", "f1-stem-opt", "h1b", "other-needs-sponsorship"]
 export const LEVELS: readonly Level[] = ["intern", "new-grad", "entry", "mid", "senior", "staff"]
@@ -16,6 +17,7 @@ export type Filters = {
   excludeTitleWords: string[]
   postedWithinDays: number
   maxYearsRequired: number
+  myDegree?: Degree
   companies: { include: string[]; exclude: string[] }
   minScore: number
 }
@@ -93,6 +95,8 @@ function readFilters(raw: Raw, problems: string[]): Filters {
   // Two years suits the students this tool is for; someone with more experience raises it.
   const maxYears = raw.maxYearsRequired ?? 2
   if (typeof maxYears !== "number" || maxYears < 0) problems.push("filters.maxYearsRequired must be a number of years, 0 or more.")
+  const myDegree = raw.myDegree === undefined ? undefined : DEGREES.find((degree) => degree === raw.myDegree)
+  if (raw.myDegree !== undefined && !myDegree) problems.push(`filters.myDegree must be one of ${DEGREES.join(", ")}.`)
   const minScore = raw.minScore ?? 0
   if (typeof minScore !== "number" || minScore < 0 || minScore > 100) problems.push("filters.minScore must be a number from 0 to 100.")
 
@@ -107,6 +111,7 @@ function readFilters(raw: Raw, problems: string[]): Filters {
     excludeTitleWords: lists.excludeTitleWords ?? [],
     postedWithinDays: typeof days === "number" ? days : 90,
     maxYearsRequired: typeof maxYears === "number" ? maxYears : 2,
+    ...(myDegree ? { myDegree } : {}),
     companies: { include: include ?? [], exclude: exclude ?? [] },
     minScore: typeof minScore === "number" ? minScore : 0,
   }

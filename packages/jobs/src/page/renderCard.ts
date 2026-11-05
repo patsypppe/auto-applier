@@ -2,7 +2,7 @@
 import { APPLICATION_STATUSES, type AppliedEntry, type ApplicationStatus } from "../feed/applied"
 import type { Card } from "../feed/card"
 import { historySentence } from "../history/historySentence"
-import type { Effect, JobType, Pay } from "../types"
+import type { Degree, Effect, JobType, Pay } from "../types"
 
 const EFFECT_LABELS: Record<Effect, string> = {
   blocked: "Blocked for you",
@@ -33,13 +33,16 @@ function link(url: string, text: string): HTMLAnchorElement {
   return made
 }
 
-// Lists the skills the user has and lacks, and the years the posting asks for.
+// Lists the skills the user has and lacks, and the years and degree the posting asks for.
 function skillsLine(card: Card): HTMLElement {
-  const { matchedSkills, missingSkills, yearsRequired } = card.reasons
+  const { matchedSkills, missingSkills, yearsRequired, degreeRequired } = card.reasons
   const parts = [`You have: ${matchedSkills.join(", ") || "none named"}`, `Missing: ${missingSkills.join(", ") || "none"}`]
   if (yearsRequired !== undefined) parts.push(`Asks for ${yearsRequired}+ years`)
+  if (degreeRequired) parts.push(`Needs ${DEGREE_LABELS[degreeRequired]}`)
   return element("p", "skills", parts.join(" · "))
 }
+
+const DEGREE_LABELS: Record<Degree, string> = { associate: "an associate's", bachelor: "a bachelor's", master: "a master's", phd: "a PhD" }
 
 const JOB_TYPE_LABELS: Record<JobType, string> = {
   "full-time": "Full-time",
