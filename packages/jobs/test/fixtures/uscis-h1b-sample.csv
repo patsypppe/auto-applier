@@ -1,0 +1,265 @@
+﻿Employer (Petitioner) Name,Fiscal Year   ,Industry (NAICS) Code,Measure Names,Petitioner City,Petitioner State,Petitioner Zip Code,Tax ID,Line by line,Measure Values
+,2026,,New Employment Approval,,,,,1,0
+,2026,,New Employment Denial,,,,,1,0
+,2026,,Continuation Approval,,,,,1,0
+,2026,,Continuation Denial,,,,,1,0
+,2026,,Change with Same Employer Approval,,,,,1,1
+,2026,,Change with Same Employer Denial,,,,,1,0
+,2026,,New Concurrent Approval,,,,,1,0
+,2026,,New Concurrent Denial,,,,,1,0
+,2026,,Change of Employer Approval,,,,,1,0
+,2026,,Change of Employer Denial,,,,,1,0
+,2026,,Amended Approval,,,,,1,0
+,2026,,Amended Denial,,,,,1,0
+AXON ENTERPRISE INC,2026,,New Employment Approval,SCOTTSDALE,AZ,85255,1227,"6,596",1
+AXON ENTERPRISE INC,2026,,New Employment Denial,SCOTTSDALE,AZ,85255,1227,"6,596",0
+AXON ENTERPRISE INC,2026,,Continuation Approval,SCOTTSDALE,AZ,85255,1227,"6,596",0
+AXON ENTERPRISE INC,2026,,Continuation Denial,SCOTTSDALE,AZ,85255,1227,"6,596",0
+AXON ENTERPRISE INC,2026,,Change with Same Employer Approval,SCOTTSDALE,AZ,85255,1227,"6,596",0
+AXON ENTERPRISE INC,2026,,Change with Same Employer Denial,SCOTTSDALE,AZ,85255,1227,"6,596",0
+AXON ENTERPRISE INC,2026,,New Concurrent Approval,SCOTTSDALE,AZ,85255,1227,"6,596",0
+AXON ENTERPRISE INC,2026,,New Concurrent Denial,SCOTTSDALE,AZ,85255,1227,"6,596",0
+AXON ENTERPRISE INC,2026,,Change of Employer Approval,SCOTTSDALE,AZ,85255,1227,"6,596",0
+AXON ENTERPRISE INC,2026,,Change of Employer Denial,SCOTTSDALE,AZ,85255,1227,"6,596",0
+AXON ENTERPRISE INC,2026,,Amended Approval,SCOTTSDALE,AZ,85255,1227,"6,596",0
+AXON ENTERPRISE INC,2026,,Amended Denial,SCOTTSDALE,AZ,85255,1227,"6,596",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,New Employment Approval,BROWNSVILLE,TX,78521,7671,"52,881",1
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,New Employment Denial,BROWNSVILLE,TX,78521,7671,"52,881",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Continuation Approval,BROWNSVILLE,TX,78521,7671,"52,881",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Continuation Denial,BROWNSVILLE,TX,78521,7671,"52,881",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Change with Same Employer Approval,BROWNSVILLE,TX,78521,7671,"52,881",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Change with Same Employer Denial,BROWNSVILLE,TX,78521,7671,"52,881",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,New Concurrent Approval,BROWNSVILLE,TX,78521,7671,"52,881",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,New Concurrent Denial,BROWNSVILLE,TX,78521,7671,"52,881",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Change of Employer Approval,BROWNSVILLE,TX,78521,7671,"52,881",1
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Change of Employer Denial,BROWNSVILLE,TX,78521,7671,"52,881",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Amended Approval,BROWNSVILLE,TX,78521,7671,"52,881",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Amended Denial,BROWNSVILLE,TX,78521,7671,"52,881",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,New Employment Approval,STARBASE,TX,78521,7671,"52,882",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,New Employment Denial,STARBASE,TX,78521,7671,"52,882",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Continuation Approval,STARBASE,TX,78521,7671,"52,882",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Continuation Denial,STARBASE,TX,78521,7671,"52,882",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Change with Same Employer Approval,STARBASE,TX,78521,7671,"52,882",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Change with Same Employer Denial,STARBASE,TX,78521,7671,"52,882",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,New Concurrent Approval,STARBASE,TX,78521,7671,"52,882",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,New Concurrent Denial,STARBASE,TX,78521,7671,"52,882",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Change of Employer Approval,STARBASE,TX,78521,7671,"52,882",1
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Change of Employer Denial,STARBASE,TX,78521,7671,"52,882",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Amended Approval,STARBASE,TX,78521,7671,"52,882",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,,Amended Denial,STARBASE,TX,78521,7671,"52,882",0
+STRIPE INC,2026,,New Employment Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",1
+STRIPE INC,2026,,New Employment Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",0
+STRIPE INC,2026,,Continuation Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",0
+STRIPE INC,2026,,Continuation Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",0
+STRIPE INC,2026,,Change with Same Employer Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",0
+STRIPE INC,2026,,Change with Same Employer Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",0
+STRIPE INC,2026,,New Concurrent Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",0
+STRIPE INC,2026,,New Concurrent Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",0
+STRIPE INC,2026,,Change of Employer Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",0
+STRIPE INC,2026,,Change of Employer Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",0
+STRIPE INC,2026,,Amended Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",0
+STRIPE INC,2026,,Amended Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,261",0
+STRIPE LLC,2026,,New Employment Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",2
+STRIPE LLC,2026,,New Employment Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",0
+STRIPE LLC,2026,,Continuation Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",0
+STRIPE LLC,2026,,Continuation Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",0
+STRIPE LLC,2026,,Change with Same Employer Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",1
+STRIPE LLC,2026,,Change with Same Employer Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",0
+STRIPE LLC,2026,,New Concurrent Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",0
+STRIPE LLC,2026,,New Concurrent Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",0
+STRIPE LLC,2026,,Change of Employer Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",1
+STRIPE LLC,2026,,Change of Employer Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",0
+STRIPE LLC,2026,,Amended Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",0
+STRIPE LLC,2026,,Amended Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,265",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Employment Approval,BOSTON,MA,02116,1227,"6,597",12
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Employment Denial,BOSTON,MA,02116,1227,"6,597",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Continuation Approval,BOSTON,MA,02116,1227,"6,597",12
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Continuation Denial,BOSTON,MA,02116,1227,"6,597",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change with Same Employer Approval,BOSTON,MA,02116,1227,"6,597",4
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change with Same Employer Denial,BOSTON,MA,02116,1227,"6,597",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Concurrent Approval,BOSTON,MA,02116,1227,"6,597",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Concurrent Denial,BOSTON,MA,02116,1227,"6,597",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change of Employer Approval,BOSTON,MA,02116,1227,"6,597",47
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change of Employer Denial,BOSTON,MA,02116,1227,"6,597",3
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Amended Approval,BOSTON,MA,02116,1227,"6,597",23
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Amended Denial,BOSTON,MA,02116,1227,"6,597",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Employment Approval,SCOTTSDALE,AZ,85255,1227,"6,598",29
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Employment Denial,SCOTTSDALE,AZ,85255,1227,"6,598",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Continuation Approval,SCOTTSDALE,AZ,85255,1227,"6,598",6
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Continuation Denial,SCOTTSDALE,AZ,85255,1227,"6,598",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change with Same Employer Approval,SCOTTSDALE,AZ,85255,1227,"6,598",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change with Same Employer Denial,SCOTTSDALE,AZ,85255,1227,"6,598",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Concurrent Approval,SCOTTSDALE,AZ,85255,1227,"6,598",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Concurrent Denial,SCOTTSDALE,AZ,85255,1227,"6,598",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change of Employer Approval,SCOTTSDALE,AZ,85255,1227,"6,598",3
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change of Employer Denial,SCOTTSDALE,AZ,85255,1227,"6,598",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Amended Approval,SCOTTSDALE,AZ,85255,1227,"6,598",2
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Amended Denial,SCOTTSDALE,AZ,85255,1227,"6,598",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Employment Approval,SEATTLE,AZ,85255,1227,"6,599",1
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Employment Denial,SEATTLE,AZ,85255,1227,"6,599",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Continuation Approval,SEATTLE,AZ,85255,1227,"6,599",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Continuation Denial,SEATTLE,AZ,85255,1227,"6,599",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change with Same Employer Approval,SEATTLE,AZ,85255,1227,"6,599",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change with Same Employer Denial,SEATTLE,AZ,85255,1227,"6,599",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Concurrent Approval,SEATTLE,AZ,85255,1227,"6,599",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Concurrent Denial,SEATTLE,AZ,85255,1227,"6,599",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change of Employer Approval,SEATTLE,AZ,85255,1227,"6,599",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change of Employer Denial,SEATTLE,AZ,85255,1227,"6,599",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Amended Approval,SEATTLE,AZ,85255,1227,"6,599",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Amended Denial,SEATTLE,AZ,85255,1227,"6,599",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Employment Approval,WASHINGTON,DC,20003,1227,"6,600",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Employment Denial,WASHINGTON,DC,20003,1227,"6,600",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Continuation Approval,WASHINGTON,DC,20003,1227,"6,600",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Continuation Denial,WASHINGTON,DC,20003,1227,"6,600",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change with Same Employer Approval,WASHINGTON,DC,20003,1227,"6,600",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change with Same Employer Denial,WASHINGTON,DC,20003,1227,"6,600",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Concurrent Approval,WASHINGTON,DC,20003,1227,"6,600",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,New Concurrent Denial,WASHINGTON,DC,20003,1227,"6,600",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change of Employer Approval,WASHINGTON,DC,20003,1227,"6,600",1
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Change of Employer Denial,WASHINGTON,DC,20003,1227,"6,600",1
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Amended Approval,WASHINGTON,DC,20003,1227,"6,600",0
+AXON ENTERPRISE INC,2026,31-33 - Manufacturing,Amended Denial,WASHINGTON,DC,20003,1227,"6,600",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,New Employment Approval,BROWNSVILLE,TX,78521,7671,"52,883",14
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,New Employment Denial,BROWNSVILLE,TX,78521,7671,"52,883",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Continuation Approval,BROWNSVILLE,TX,78521,7671,"52,883",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Continuation Denial,BROWNSVILLE,TX,78521,7671,"52,883",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Change with Same Employer Approval,BROWNSVILLE,TX,78521,7671,"52,883",1
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Change with Same Employer Denial,BROWNSVILLE,TX,78521,7671,"52,883",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,New Concurrent Approval,BROWNSVILLE,TX,78521,7671,"52,883",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,New Concurrent Denial,BROWNSVILLE,TX,78521,7671,"52,883",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Change of Employer Approval,BROWNSVILLE,TX,78521,7671,"52,883",6
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Change of Employer Denial,BROWNSVILLE,TX,78521,7671,"52,883",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Amended Approval,BROWNSVILLE,TX,78521,7671,"52,883",4
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Amended Denial,BROWNSVILLE,TX,78521,7671,"52,883",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,New Employment Approval,STARBASE,TX,78521,7671,"52,884",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,New Employment Denial,STARBASE,TX,78521,7671,"52,884",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Continuation Approval,STARBASE,TX,78521,7671,"52,884",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Continuation Denial,STARBASE,TX,78521,7671,"52,884",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Change with Same Employer Approval,STARBASE,TX,78521,7671,"52,884",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Change with Same Employer Denial,STARBASE,TX,78521,7671,"52,884",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,New Concurrent Approval,STARBASE,TX,78521,7671,"52,884",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,New Concurrent Denial,STARBASE,TX,78521,7671,"52,884",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Change of Employer Approval,STARBASE,TX,78521,7671,"52,884",3
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Change of Employer Denial,STARBASE,TX,78521,7671,"52,884",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Amended Approval,STARBASE,TX,78521,7671,"52,884",0
+SPACE EXPLORATION TECHNOLOGIES CORP,2026,31-33 - Manufacturing,Amended Denial,STARBASE,TX,78521,7671,"52,884",0
+OPENAI OPCO LLC,2026,51 - Information,New Employment Approval,SAN FRANCISCO,CA,94158,0637,"41,825",5
+OPENAI OPCO LLC,2026,51 - Information,New Employment Denial,SAN FRANCISCO,CA,94158,0637,"41,825",0
+OPENAI OPCO LLC,2026,51 - Information,Continuation Approval,SAN FRANCISCO,CA,94158,0637,"41,825",1
+OPENAI OPCO LLC,2026,51 - Information,Continuation Denial,SAN FRANCISCO,CA,94158,0637,"41,825",0
+OPENAI OPCO LLC,2026,51 - Information,Change with Same Employer Approval,SAN FRANCISCO,CA,94158,0637,"41,825",0
+OPENAI OPCO LLC,2026,51 - Information,Change with Same Employer Denial,SAN FRANCISCO,CA,94158,0637,"41,825",0
+OPENAI OPCO LLC,2026,51 - Information,New Concurrent Approval,SAN FRANCISCO,CA,94158,0637,"41,825",0
+OPENAI OPCO LLC,2026,51 - Information,New Concurrent Denial,SAN FRANCISCO,CA,94158,0637,"41,825",0
+OPENAI OPCO LLC,2026,51 - Information,Change of Employer Approval,SAN FRANCISCO,CA,94158,0637,"41,825",101
+OPENAI OPCO LLC,2026,51 - Information,Change of Employer Denial,SAN FRANCISCO,CA,94158,0637,"41,825",2
+OPENAI OPCO LLC,2026,51 - Information,Amended Approval,SAN FRANCISCO,CA,94158,0637,"41,825",6
+OPENAI OPCO LLC,2026,51 - Information,Amended Denial,SAN FRANCISCO,CA,94158,0637,"41,825",0
+STRIPE INC,2026,52 - Finance and Insurance,New Employment Approval,S SAN FRAN,CA,94080,5600,"54,262",1
+STRIPE INC,2026,52 - Finance and Insurance,New Employment Denial,S SAN FRAN,CA,94080,5600,"54,262",0
+STRIPE INC,2026,52 - Finance and Insurance,Continuation Approval,S SAN FRAN,CA,94080,5600,"54,262",0
+STRIPE INC,2026,52 - Finance and Insurance,Continuation Denial,S SAN FRAN,CA,94080,5600,"54,262",0
+STRIPE INC,2026,52 - Finance and Insurance,Change with Same Employer Approval,S SAN FRAN,CA,94080,5600,"54,262",0
+STRIPE INC,2026,52 - Finance and Insurance,Change with Same Employer Denial,S SAN FRAN,CA,94080,5600,"54,262",0
+STRIPE INC,2026,52 - Finance and Insurance,New Concurrent Approval,S SAN FRAN,CA,94080,5600,"54,262",0
+STRIPE INC,2026,52 - Finance and Insurance,New Concurrent Denial,S SAN FRAN,CA,94080,5600,"54,262",0
+STRIPE INC,2026,52 - Finance and Insurance,Change of Employer Approval,S SAN FRAN,CA,94080,5600,"54,262",0
+STRIPE INC,2026,52 - Finance and Insurance,Change of Employer Denial,S SAN FRAN,CA,94080,5600,"54,262",0
+STRIPE INC,2026,52 - Finance and Insurance,Amended Approval,S SAN FRAN,CA,94080,5600,"54,262",0
+STRIPE INC,2026,52 - Finance and Insurance,Amended Denial,S SAN FRAN,CA,94080,5600,"54,262",0
+STRIPE INC,2026,52 - Finance and Insurance,New Employment Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",43
+STRIPE INC,2026,52 - Finance and Insurance,New Employment Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",1
+STRIPE INC,2026,52 - Finance and Insurance,Continuation Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",4
+STRIPE INC,2026,52 - Finance and Insurance,Continuation Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",0
+STRIPE INC,2026,52 - Finance and Insurance,Change with Same Employer Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",2
+STRIPE INC,2026,52 - Finance and Insurance,Change with Same Employer Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",1
+STRIPE INC,2026,52 - Finance and Insurance,New Concurrent Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",0
+STRIPE INC,2026,52 - Finance and Insurance,New Concurrent Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",0
+STRIPE INC,2026,52 - Finance and Insurance,Change of Employer Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",3
+STRIPE INC,2026,52 - Finance and Insurance,Change of Employer Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",0
+STRIPE INC,2026,52 - Finance and Insurance,Amended Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",10
+STRIPE INC,2026,52 - Finance and Insurance,Amended Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,263",0
+STRIPE INC,2026,52 - Finance and Insurance,New Employment Approval,WASHINGTON,DC,20005,5600,"54,264",0
+STRIPE INC,2026,52 - Finance and Insurance,New Employment Denial,WASHINGTON,DC,20005,5600,"54,264",1
+STRIPE INC,2026,52 - Finance and Insurance,Continuation Approval,WASHINGTON,DC,20005,5600,"54,264",0
+STRIPE INC,2026,52 - Finance and Insurance,Continuation Denial,WASHINGTON,DC,20005,5600,"54,264",0
+STRIPE INC,2026,52 - Finance and Insurance,Change with Same Employer Approval,WASHINGTON,DC,20005,5600,"54,264",0
+STRIPE INC,2026,52 - Finance and Insurance,Change with Same Employer Denial,WASHINGTON,DC,20005,5600,"54,264",0
+STRIPE INC,2026,52 - Finance and Insurance,New Concurrent Approval,WASHINGTON,DC,20005,5600,"54,264",0
+STRIPE INC,2026,52 - Finance and Insurance,New Concurrent Denial,WASHINGTON,DC,20005,5600,"54,264",0
+STRIPE INC,2026,52 - Finance and Insurance,Change of Employer Approval,WASHINGTON,DC,20005,5600,"54,264",0
+STRIPE INC,2026,52 - Finance and Insurance,Change of Employer Denial,WASHINGTON,DC,20005,5600,"54,264",0
+STRIPE INC,2026,52 - Finance and Insurance,Amended Approval,WASHINGTON,DC,20005,5600,"54,264",0
+STRIPE INC,2026,52 - Finance and Insurance,Amended Denial,WASHINGTON,DC,20005,5600,"54,264",0
+STRIPE LLC,2026,52 - Finance and Insurance,New Employment Approval,S SAN FRAN,CA,94080,5600,"54,266",0
+STRIPE LLC,2026,52 - Finance and Insurance,New Employment Denial,S SAN FRAN,CA,94080,5600,"54,266",0
+STRIPE LLC,2026,52 - Finance and Insurance,Continuation Approval,S SAN FRAN,CA,94080,5600,"54,266",0
+STRIPE LLC,2026,52 - Finance and Insurance,Continuation Denial,S SAN FRAN,CA,94080,5600,"54,266",0
+STRIPE LLC,2026,52 - Finance and Insurance,Change with Same Employer Approval,S SAN FRAN,CA,94080,5600,"54,266",0
+STRIPE LLC,2026,52 - Finance and Insurance,Change with Same Employer Denial,S SAN FRAN,CA,94080,5600,"54,266",0
+STRIPE LLC,2026,52 - Finance and Insurance,New Concurrent Approval,S SAN FRAN,CA,94080,5600,"54,266",0
+STRIPE LLC,2026,52 - Finance and Insurance,New Concurrent Denial,S SAN FRAN,CA,94080,5600,"54,266",0
+STRIPE LLC,2026,52 - Finance and Insurance,Change of Employer Approval,S SAN FRAN,CA,94080,5600,"54,266",2
+STRIPE LLC,2026,52 - Finance and Insurance,Change of Employer Denial,S SAN FRAN,CA,94080,5600,"54,266",0
+STRIPE LLC,2026,52 - Finance and Insurance,Amended Approval,S SAN FRAN,CA,94080,5600,"54,266",1
+STRIPE LLC,2026,52 - Finance and Insurance,Amended Denial,S SAN FRAN,CA,94080,5600,"54,266",0
+STRIPE LLC,2026,52 - Finance and Insurance,New Employment Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",105
+STRIPE LLC,2026,52 - Finance and Insurance,New Employment Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",0
+STRIPE LLC,2026,52 - Finance and Insurance,Continuation Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",2
+STRIPE LLC,2026,52 - Finance and Insurance,Continuation Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",0
+STRIPE LLC,2026,52 - Finance and Insurance,Change with Same Employer Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",42
+STRIPE LLC,2026,52 - Finance and Insurance,Change with Same Employer Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",2
+STRIPE LLC,2026,52 - Finance and Insurance,New Concurrent Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",0
+STRIPE LLC,2026,52 - Finance and Insurance,New Concurrent Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",0
+STRIPE LLC,2026,52 - Finance and Insurance,Change of Employer Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",71
+STRIPE LLC,2026,52 - Finance and Insurance,Change of Employer Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",1
+STRIPE LLC,2026,52 - Finance and Insurance,Amended Approval,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",49
+STRIPE LLC,2026,52 - Finance and Insurance,Amended Denial,SOUTH SAN FRANCISCO,CA,94080,5600,"54,267",0
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",New Employment Approval,IRVINE,CA,92618,2580,"6,601",1
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",New Employment Denial,IRVINE,CA,92618,2580,"6,601",0
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",Continuation Approval,IRVINE,CA,92618,2580,"6,601",1
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",Continuation Denial,IRVINE,CA,92618,2580,"6,601",0
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",Change with Same Employer Approval,IRVINE,CA,92618,2580,"6,601",0
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",Change with Same Employer Denial,IRVINE,CA,92618,2580,"6,601",0
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",New Concurrent Approval,IRVINE,CA,92618,2580,"6,601",0
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",New Concurrent Denial,IRVINE,CA,92618,2580,"6,601",0
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",Change of Employer Approval,IRVINE,CA,92618,2580,"6,601",0
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",Change of Employer Denial,IRVINE,CA,92618,2580,"6,601",0
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",Amended Approval,IRVINE,CA,92618,2580,"6,601",1
+AXON NETWORKS INC,2026,"54 - Professional, Scientific, and Technical Services",Amended Denial,IRVINE,CA,92618,2580,"6,601",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",New Employment Approval,SAN FRANCISCO,CA,94105,0473,"40,582",2
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",New Employment Denial,SAN FRANCISCO,CA,94105,0473,"40,582",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Continuation Approval,SAN FRANCISCO,CA,94105,0473,"40,582",5
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Continuation Denial,SAN FRANCISCO,CA,94105,0473,"40,582",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Change with Same Employer Approval,SAN FRANCISCO,CA,94105,0473,"40,582",1
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Change with Same Employer Denial,SAN FRANCISCO,CA,94105,0473,"40,582",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",New Concurrent Approval,SAN FRANCISCO,CA,94105,0473,"40,582",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",New Concurrent Denial,SAN FRANCISCO,CA,94105,0473,"40,582",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Change of Employer Approval,SAN FRANCISCO,CA,94105,0473,"40,582",14
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Change of Employer Denial,SAN FRANCISCO,CA,94105,0473,"40,582",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Amended Approval,SAN FRANCISCO,CA,94105,0473,"40,582",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Amended Denial,SAN FRANCISCO,CA,94105,0473,"40,582",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",New Employment Approval,WEXFORD,PA,15090,0473,"40,583",1
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",New Employment Denial,WEXFORD,PA,15090,0473,"40,583",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Continuation Approval,WEXFORD,PA,15090,0473,"40,583",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Continuation Denial,WEXFORD,PA,15090,0473,"40,583",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Change with Same Employer Approval,WEXFORD,PA,15090,0473,"40,583",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Change with Same Employer Denial,WEXFORD,PA,15090,0473,"40,583",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",New Concurrent Approval,WEXFORD,PA,15090,0473,"40,583",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",New Concurrent Denial,WEXFORD,PA,15090,0473,"40,583",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Change of Employer Approval,WEXFORD,PA,15090,0473,"40,583",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Change of Employer Denial,WEXFORD,PA,15090,0473,"40,583",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Amended Approval,WEXFORD,PA,15090,0473,"40,583",0
+NOTION LABS INC,2026,"54 - Professional, Scientific, and Technical Services",Amended Denial,WEXFORD,PA,15090,0473,"40,583",0
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",New Employment Approval,SAN FRANCISCO,CA,94158,0637,"41,826",116
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",New Employment Denial,SAN FRANCISCO,CA,94158,0637,"41,826",4
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",Continuation Approval,SAN FRANCISCO,CA,94158,0637,"41,826",8
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",Continuation Denial,SAN FRANCISCO,CA,94158,0637,"41,826",1
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",Change with Same Employer Approval,SAN FRANCISCO,CA,94158,0637,"41,826",3
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",Change with Same Employer Denial,SAN FRANCISCO,CA,94158,0637,"41,826",0
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",New Concurrent Approval,SAN FRANCISCO,CA,94158,0637,"41,826",1
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",New Concurrent Denial,SAN FRANCISCO,CA,94158,0637,"41,826",0
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",Change of Employer Approval,SAN FRANCISCO,CA,94158,0637,"41,826",177
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",Change of Employer Denial,SAN FRANCISCO,CA,94158,0637,"41,826",2
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",Amended Approval,SAN FRANCISCO,CA,94158,0637,"41,826",6
+OPENAI OPCO LLC,2026,"54 - Professional, Scientific, and Technical Services",Amended Denial,SAN FRANCISCO,CA,94158,0637,"41,826",0
