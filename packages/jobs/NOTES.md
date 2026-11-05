@@ -129,3 +129,25 @@
   - Unclear sentences such as headings ("EXPORT CONTROL REQUIREMENTS") add an unclear tag next to the real one. That is harmless, since the worst effect wins.
   - Permanent residents and clearances are still unverified (Executive Order 12968 not read).
 - Next: slice 6, settings, profile and matching, `getJobs` and `applyFilters`.
+
+## 2026-11-04: Slice 6, settings, profile and matching
+
+- Built test first:
+  - `settings.ts`: reads `data/settings.json`. Defaults depend on the status (students and visa holders need sponsorship later; citizens can obtain a clearance), and every mistake is listed with the field name and what is allowed.
+  - `profile.ts`: reads `data/profile.json` and checks it with the core's `validateProfile`, one problem per line.
+  - `matching/`: `findSkills` (about 120 hand-listed skills with aliases; "R", "C", "Go" and "Julia" count only with another language in the same sentence; Spark, Excel, Git and others need their capital letter), `levelFromTitle`, and `scoreMatch` (70 times the share of the job's named skills the user has, plus 30 for a wanted title).
+  - `getJobs` ranks every job (score, then newest).
+  - `applyFilters` hides by the first reason (abroad, blocked, likely-blocked, role, title-word, level, location, remote, old, company, score), and shown plus hidden always equals the total.
+  - `top` command; `src/index.ts`; `data.example/` with settings, a made-up profile and an extra-companies file.
+- Changes to the plan:
+  - `getJobs(settings, profile, jobs)` takes the job list directly; applied history and H-1B data join it in their own slices.
+  - The skill list is written by hand rather than taken from O*NET, which would be a new download; O*NET can replace or extend it later.
+  - `includeAbroad` replaces the spec's `countries` list, since the feed only knows US, other and undecided.
+- Real run with the made-up example profile (MS Statistics, F-1 OPT with a STEM degree, roles data scientist, data analyst, machine learning engineer, data engineer): 99 of 90,254 shown. Hidden: role 52,287, abroad 23,303, blocked 13,898, title-word 323, old 264, level 80. 74 s, 1.2 GB peak memory.
+- Of the 561 US data-role jobs without senior words in the title, 462 were hidden: 264 as older than 30 days (Greenhouse dates a job from its first publication, and many stay open for months), 158 blocked (mostly federal contractors: Accenture Federal 32, Agile Defense 18, GRVTY 15, CGS Federal 10, SpaceX 8), and 40 by level.
+- Match quality, judged by me against the made-up profile, not by Pranjal: all of the top 20 are data roles. Several (OpenAI's) probably expect years of experience that the title does not state.
+- Known problems:
+  - A job that names only one known skill scores 100 if the user has it (Vestwell, Fanatics), so few-skill jobs outrank detailed ones.
+  - Years of experience ("5+ years") are not read yet.
+  - Tagging and skill-finding all 90k jobs takes about a minute.
+- Next: slice 7, the feed page and applied history.

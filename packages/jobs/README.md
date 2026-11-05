@@ -1,6 +1,6 @@
 # Job feed
 
-Collects job postings from companies' own public job boards (Greenhouse, Lever and Ashby) onto your computer, and tags what each one says about work authorization, with the sentence as evidence. Matching them to your resume, a page to browse them and an applied tracker come in later steps; see `docs/PLAN.md`.
+Collects job postings from companies' own public job boards (Greenhouse, Lever and Ashby) onto your computer, and tags what each one says about work authorization, with the sentence as evidence. It ranks them against your own profile and settings, showing the skills you have and lack. A page to browse them and an applied tracker come in later steps; see `docs/PLAN.md`.
 
 Nothing is sent anywhere except the requests to the job boards and to GitHub for the company lists. Everything it saves goes in `packages/jobs/data/`, which git ignores.
 
@@ -43,6 +43,20 @@ npm run tags -w @auto-applier/jobs -- --status f1-opt
 
 It tags every collected job in the US (or with no country), prints how often each tag appears and how many jobs are blocked, likely blocked, fine or a plus for that status, and writes `data/tag-check.json`, a fixed sample of 50 tagged and 50 random jobs with each tag's evidence sentence, for checking by hand. Statuses: citizen, permanent-resident, f1-cpt, f1-opt, f1-stem-opt, h1b, other-needs-sponsorship.
 
+### Your best matches
+
+Copy the examples and edit them (both stay in the git-ignored `data/` folder):
+
+```bash
+cp packages/jobs/data.example/settings.example.json packages/jobs/data/settings.json
+cp packages/jobs/data.example/profile.example.json packages/jobs/data/profile.json
+npm run top -w @auto-applier/jobs -- --limit 20
+```
+
+`profile.json` has the same shape as the profile the extension saves, so the same skills and education drive both. `settings.json` sets your work-authorization status and what to show: roles (title keywords), levels, places, how recent, companies to include or leave out, and a minimum score. `top` prints how many jobs are shown and why the rest were hidden, then each job with its score, the skills you have and lack, the work-authorization evidence and the link.
+
+The score is 70 points for the share of the skills a posting names that are in your profile, plus 30 if the title holds one of your roles.
+
 ## What it took on 2026-11-04
 
 1,931 boards, 17 minutes from an empty cache, 98,179 postings, which became 90,254 jobs after joining copies (60,311 in the US). 96 boards returned 404. The saved answers took 1.2 GB and the jobs file 564 MB. A run from the saved answers took 20 to 75 seconds.
@@ -57,3 +71,5 @@ It tags every collected job in the US (or with no country), prints how often eac
 - The commands keep everything in memory during a run (about 1.4 GB at most for the full list), so the much longer aggregator lists may not fit.
 - `npm ci` fails on this branch until the root lockfile lists this package; `npm install` works.
 - Tags are rules over sentences, not a model. A hand check of 100 jobs (before the last fixes) found 2 wrong restriction tags out of 47 and no missed restriction. Each tag shows its sentence so you can judge it. Tags describe what a posting says; they are not advice about anyone's status.
+- A posting that names only one known skill scores full marks if you have it, so short postings can outrank detailed ones. Years of experience are not read yet, and most titles state no level, so some top jobs expect more experience than a new graduate has.
+- The default `postedWithinDays` of 30 hides many jobs that are still open, because Greenhouse dates a job from when it was first published.
