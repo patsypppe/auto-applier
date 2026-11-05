@@ -153,6 +153,19 @@ describe("tagJob: sentences found in the hand check of the full feed", () => {
     expect(tagsOf(text)).not.toContain("no-sponsorship")
   })
 
+  test.each([
+    ["- Visa sponsorship: we sponsor visas (H1B, TN, etc.) for candidates who are a good fit."],
+    ["Visa sponsorship and green card support for qualified candidates."],
+  ])("reads %s as sponsors", (text) => {
+    expect(tagsOf(text)).toEqual(["sponsors"])
+  })
+
+  test("does not call a skill line about export controls unclear", () => {
+    expect(tagsOf("- Experience with sovereign AI deployments, regulatory compliance (CTA, export controls), and government partnerships")).toEqual([
+      "not-stated",
+    ])
+  })
+
   test("reads 'We do sponsor visas!' as sponsors", () => {
     expect(tagsOf("Visa sponsorship: We do sponsor visas!")).toEqual(["sponsors"])
   })

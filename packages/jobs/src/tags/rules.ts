@@ -24,7 +24,9 @@ const LATER_TOO = /\b(now or in the future|current or future|now or at any time 
 const OFFERS_SPONSORSHIP = [
   /\b(will|can|could|is able to|are able to|happy to|open to|may)\s+(\w+\s+){0,2}sponsor(s|ship)?\b/i,
   /\b(visa|H-?1B)\s+sponsorship\s+(is\s+)?(available|offered|provided)\b/i,
+  /\b(we|they)\s+(do\s+|does\s+)?sponsor\s+(work\s+|employment\s+)?visas\b/i,
   /\b(we|they)\s+(do|does)\s+sponsor\b/i,
+  /\bvisa sponsorship\b[^.;]{0,40}\bfor (qualified|eligible|selected)\b/i,
 ]
 
 const CITIZENS_ONLY = [
@@ -124,5 +126,5 @@ export const RULES: readonly Rule[] = [
 // Returns true when the sentence is about work authorization but none of the rules could say what it means.
 export function isUnclear(sentence: string): boolean {
   const aboutIt = any(ABOUT_WORK_AUTHORIZATION, sentence) || (OPT_CPT.test(sentence) && OPT_CPT_WITH_CONTEXT.test(sentence))
-  return aboutIt && !NOT_A_RULE.test(sentence)
+  return aboutIt && !NOT_A_RULE.test(sentence) && !onlyASkill(sentence)
 }
