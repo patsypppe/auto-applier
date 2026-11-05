@@ -153,3 +153,13 @@
 - Next: slice 7, the feed page and applied history.
 - Decision (Pranjal, after the first real run): `postedWithinDays` defaults to 90 instead of 30. With the example profile, shown jobs went from 99 to 220, and "old" from 264 to 143.
 - New in the top 25 after that change: Integra FEC lists the same internships on two boards ("Integra FEC" and "Integra FEC - Internships"), so they appear twice, because copies are only joined within one board. Also, "Data Scientist (3-5 years experience)" ranks 25th, more reason to read years of experience.
+
+## 2026-11-04: Slice 6b, scoring fixes
+
+- Pranjal chose to fix scoring before the feed page.
+- Score: at least three skills count in the share (70 x matched / max(named, 3)), so a posting that names one skill the user has scores 53, not 100. Test first.
+- Years of experience: `yearsRequired` reads "3+ years", "3-5 years", "at least 2 years", "a minimum of 4 years'" and "2+ years in a role", and needs a word like experience, role or industry nearby, so "for over 20 years" and "18 years of age" do not count. It takes the largest requirement, leaving out sentences marked preferred, nice to have or a plus. New setting `filters.maxYearsRequired` (default 2) and hide reason "experience". The yearsRequired tests and code were written in one step, not run red first.
+- Copies on two boards: `joinAcrossBoards` folds a posting with the same title and text (at least 300 characters) from a second board of the company into the first board's job, by name, when they are listed at the same places, keeping every link in `copies`. The first try left Integra FEC's copies apart, because one board's text had an extra colon. The comparison now ignores punctuation too; pay ranges still differ as numbers.
+- Real data from the cache: 98,179 postings became 89,927 jobs (was 90,254). With the example profile, 146 shown. Hidden: experience 124, role 52,065, abroad 23,211, blocked 13,893, old 88, level 80, title-word 320. Integra FEC now shows its 4 different internships once each.
+- Not checked: how often `yearsRequired` is wrong on real postings. A hand check of 30 or more is the next measurement.
+- Next: slice 7, the feed page and applied history.

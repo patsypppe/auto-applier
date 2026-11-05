@@ -135,6 +135,7 @@ It returns every collected job with its tags, effects, score, reasons and histor
 | `filters.excludeTitleWords` | list | `["senior", "staff", "principal", "manager"]` |
 | `filters.postedWithinDays` | number | 90 (was 30; changed after the first real run, see NOTES) |
 | `filters.companies.include` / `.exclude` | lists | empty |
+| `filters.maxYearsRequired` | years | 2 (added in slice 6b) |
 | `filters.minScore` | 0 to 100 | 0 |
 | `collect.delayMs` | number | 1000 |
 | `collect.cacheHours` | number | 12 |

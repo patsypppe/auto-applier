@@ -55,7 +55,7 @@ npm run top -w @auto-applier/jobs -- --limit 20
 
 `profile.json` has the same shape as the profile the extension saves, so the same skills and education drive both. `settings.json` sets your work-authorization status and what to show: roles (title keywords), levels, places, how recent, companies to include or leave out, and a minimum score. `top` prints how many jobs are shown and why the rest were hidden, then each job with its score, the skills you have and lack, the work-authorization evidence and the link.
 
-The score is 70 points for the share of the skills a posting names that are in your profile, plus 30 if the title holds one of your roles.
+The score is 70 points for the share of the skills a posting names that are in your profile (counting at least three, so a posting that names one skill cannot score full marks), plus 30 if the title holds one of your roles. Jobs that ask for more years of experience than `maxYearsRequired` (default 2) are hidden; the years are read from phrases like "3+ years of experience", ignoring ones marked preferred.
 
 ## What it took on 2026-11-04
 
@@ -71,5 +71,6 @@ The score is 70 points for the share of the skills a posting names that are in y
 - The commands keep everything in memory during a run (about 1.4 GB at most for the full list), so the much longer aggregator lists may not fit.
 - `npm ci` fails on this branch until the root lockfile lists this package; `npm install` works.
 - Tags are rules over sentences, not a model. A hand check of 100 jobs (before the last fixes) found 2 wrong restriction tags out of 47 and no missed restriction. Each tag shows its sentence so you can judge it. Tags describe what a posting says; they are not advice about anyone's status.
-- A posting that names only one known skill scores full marks if you have it, so short postings can outrank detailed ones. Years of experience are not read yet, and most titles state no level, so some top jobs expect more experience than a new graduate has.
+- Years of experience are read only from phrases with a number, so "several years" or a requirement written another way is missed. Most titles state no level.
+- The same posting on two of a company's boards is joined only when the title and text match apart from punctuation, dates and places.
 - `postedWithinDays` defaults to 90, because Greenhouse dates a job from when it was first published and many postings stay open for months. A posting older than that may still be open.
