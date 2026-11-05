@@ -1,4 +1,5 @@
-// Fingerprints a posting by its board, title and text, ignoring what changes between copies: its own city and dates.
+// Fingerprints a posting by its board, title and text, ignoring what changes between copies: its own city, dates and
+// punctuation.
 import { createHash } from "node:crypto"
 import type { JobRecord } from "../types"
 
@@ -14,11 +15,12 @@ function placeWords(job: JobRecord): string[] {
 // Dates like 2026-11-04, 11/04/2026 or a bare year. Other numbers stay, because pay and years of experience tell openings apart.
 const DATES = /\b\d{4}-\d{1,2}-\d{1,2}\b|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b|\b(19|20)\d{2}\b/g
 
-// Lowercases the text, removes the job's own place names and any dates, and squashes spaces.
+// Lowercases the text, removes the job's own place names, any dates and all punctuation, and squashes spaces. Punctuation
+// goes after the dates, which need their dashes and slashes to be found.
 function comparableText(job: JobRecord): string {
   let text = job.description.toLowerCase()
   for (const word of placeWords(job)) text = text.split(word).join(" ")
-  return text.replace(DATES, " ").replace(/\s+/g, " ").trim()
+  return text.replace(DATES, " ").replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim()
 }
 
 // Returns the title and text in a form that is the same for copies of one posting.

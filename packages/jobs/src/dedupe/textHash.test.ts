@@ -36,6 +36,20 @@ describe("textHash", () => {
     expect(textHash(junior)).not.toBe(textHash(senior))
   })
 
+  test("ignores punctuation, so copies that differ by a colon match", () => {
+    const first = { ...tsmgRouen!, description: "Job Qualifications\nFamiliarity with R, Python." }
+    const second = { ...tsmgRouen!, description: "Job Qualifications:\nFamiliarity with R, Python" }
+
+    expect(textHash(first)).toBe(textHash(second))
+  })
+
+  test("still tells pay ranges apart after taking out punctuation", () => {
+    const low = { ...tsmgRouen!, description: "Pay $101,000 to $135,000." }
+    const high = { ...tsmgRouen!, description: "Pay $132,000 to $175,000." }
+
+    expect(textHash(low)).not.toBe(textHash(high))
+  })
+
   test("ignores case and spacing in the title", () => {
     expect(textHash({ ...tsmgRouen!, title: "Surveyor/Field  Data analyst " })).toBe(textHash(tsmgRouen!))
   })

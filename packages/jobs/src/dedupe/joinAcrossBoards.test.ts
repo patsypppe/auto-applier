@@ -36,6 +36,12 @@ describe("joinAcrossBoards", () => {
     ])
   })
 
+  test("folds copies whose text differs only by punctuation, as Integra FEC's two boards do", () => {
+    const second = job("integrafecinternships", "9", { description: LONG_TEXT.replace("summer.", "summer:") })
+
+    expect(joinAcrossBoards([job("integrafec", "1"), second])).toHaveLength(1)
+  })
+
   test("picks the same job to keep whatever order the boards came in", () => {
     expect(joinAcrossBoards([job("integrafecinternships", "9"), job("integrafec", "1")])[0]!.key).toBe("greenhouse:integrafec:1")
   })
