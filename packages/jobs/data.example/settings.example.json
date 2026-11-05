@@ -12,6 +12,7 @@
     "locations": [],
     "remoteOnly": false,
     "postedWithinDays": 90,
+    "maxYearsRequired": 2,
     "minScore": 0
   }
 }

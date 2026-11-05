@@ -33,7 +33,7 @@ function describeJob(entry: RankedJob, rank: number): string[] {
   const evidence = tags.map((found) => (found.evidence ? `${found.tag}: ${found.evidence.slice(0, 160)}` : found.tag)).join(" | ")
   return [
     `${rank}. ${entry.score}  ${job.title} at ${job.company} (${places})`,
-    `     you have: ${reasons.matchedSkills.join(", ") || "none named"} | missing: ${missing}`,
+    `     you have: ${reasons.matchedSkills.join(", ") || "none named"} | missing: ${missing}${reasons.yearsRequired === undefined ? "" : ` | asks for ${reasons.yearsRequired}+ years`}`,
     `     ${EFFECT_WORDS[effect]}: ${evidence}`,
     `     ${job.url}`,
   ]

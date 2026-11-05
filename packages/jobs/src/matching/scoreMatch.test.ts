@@ -8,7 +8,7 @@ describe("scoreMatch", () => {
   test("lists the skills the job names that the user has and the ones they lack", () => {
     const { reasons } = scoreMatch({ title: "Data Analyst", description: "Use SQL, Python and Looker daily." }, ME)
 
-    expect(reasons).toEqual({ matchedSkills: ["SQL", "Python"], missingSkills: ["Looker"], titleMatches: true, level: undefined })
+    expect(reasons).toEqual({ matchedSkills: ["SQL", "Python"], missingSkills: ["Looker"], titleMatches: true, level: undefined, yearsRequired: undefined })
   })
 
   test("scores 70 for skills in proportion and 30 for a wanted title", () => {
@@ -34,6 +34,10 @@ describe("scoreMatch", () => {
     const { reasons } = scoreMatch({ title: "Data Analyst", description: "We model in dbt." }, { ...ME, skills: [...ME.skills, "dbt"] })
 
     expect(reasons.matchedSkills).toEqual(["dbt"])
+  })
+
+  test("reads the years of experience the posting asks for", () => {
+    expect(scoreMatch({ title: "Data Analyst", description: "3+ years of experience with SQL." }, ME).reasons.yearsRequired).toBe(3)
   })
 
   test("reads the level from the title", () => {

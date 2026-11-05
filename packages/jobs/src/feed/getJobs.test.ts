@@ -83,7 +83,8 @@ describe("applyFilters", () => {
       job("role", { title: "Account Executive" }),
       job("word", { title: "Senior Data Analyst" }),
       job("level", { title: "Data Analyst II" }),
-      job("old", { postedAt: "2026-08-01T00:00:00Z" }),
+      job("old", { postedAt: "2026-05-01T00:00:00Z" }),
+      job("experience", { description: "Python and SQL. 5+ years of experience." }),
     ]
 
     expect(Object.fromEntries(hiddenReasons(jobs))).toEqual({
@@ -93,6 +94,7 @@ describe("applyFilters", () => {
       word: "title-word",
       level: "level",
       old: "old",
+      experience: "experience",
     })
   })
 

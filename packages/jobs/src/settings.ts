@@ -15,6 +15,7 @@ export type Filters = {
   levels: Level[]
   excludeTitleWords: string[]
   postedWithinDays: number
+  maxYearsRequired: number
   companies: { include: string[]; exclude: string[] }
   minScore: number
 }
@@ -89,6 +90,9 @@ function readFilters(raw: Raw, problems: string[]): Filters {
   // Ninety days, because Greenhouse dates a job from its first publication and many postings stay open for months.
   const days = raw.postedWithinDays ?? 90
   if (typeof days !== "number" || days <= 0) problems.push("filters.postedWithinDays must be a number of days above 0.")
+  // Two years suits the students this tool is for; someone with more experience raises it.
+  const maxYears = raw.maxYearsRequired ?? 2
+  if (typeof maxYears !== "number" || maxYears < 0) problems.push("filters.maxYearsRequired must be a number of years, 0 or more.")
   const minScore = raw.minScore ?? 0
   if (typeof minScore !== "number" || minScore < 0 || minScore > 100) problems.push("filters.minScore must be a number from 0 to 100.")
 
@@ -102,6 +106,7 @@ function readFilters(raw: Raw, problems: string[]): Filters {
     levels: knownLevels ?? [],
     excludeTitleWords: lists.excludeTitleWords ?? [],
     postedWithinDays: typeof days === "number" ? days : 90,
+    maxYearsRequired: typeof maxYears === "number" ? maxYears : 2,
     companies: { include: include ?? [], exclude: exclude ?? [] },
     minScore: typeof minScore === "number" ? minScore : 0,
   }

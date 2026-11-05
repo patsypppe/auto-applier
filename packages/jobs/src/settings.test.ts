@@ -18,6 +18,7 @@ describe("parseSettings: defaults", () => {
         levels: ["intern", "new-grad", "entry"],
         excludeTitleWords: ["senior", "staff", "principal", "manager", "director"],
         postedWithinDays: 90,
+        maxYearsRequired: 2,
         companies: { include: [], exclude: [] },
         minScore: 0,
       },
@@ -67,6 +68,12 @@ describe("parseSettings: mistakes", () => {
         'filters.roles must list at least one job title keyword, such as "data analyst".',
         "filters.minScore must be a number from 0 to 100.",
       ].join("\n"),
+    )
+  })
+
+  test("asks for a number of years that is not negative", () => {
+    expect(() => parseSettings({ ...MINIMAL, filters: { roles: ["analyst"], maxYearsRequired: -1 } })).toThrow(
+      "filters.maxYearsRequired must be a number of years, 0 or more.",
     )
   })
 
