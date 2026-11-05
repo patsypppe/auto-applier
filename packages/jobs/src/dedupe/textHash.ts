@@ -21,8 +21,17 @@ function comparableText(job: JobRecord): string {
   return text.replace(DATES, " ").replace(/\s+/g, " ").trim()
 }
 
+// Returns the title and text in a form that is the same for copies of one posting.
+function comparableTitleAndText(job: JobRecord): string {
+  return `${job.title.toLowerCase().replace(/\s+/g, " ").trim()}|${comparableText(job)}`
+}
+
 // Returns a hash that is the same for copies of one posting listed in several cities or reposted with new dates.
 export function textHash(job: JobRecord): string {
-  const title = job.title.toLowerCase().replace(/\s+/g, " ").trim()
-  return createHash("sha256").update(`${job.ats}:${job.slug}|${title}|${comparableText(job)}`).digest("hex")
+  return createHash("sha256").update(`${job.ats}:${job.slug}|${comparableTitleAndText(job)}`).digest("hex")
+}
+
+// Returns a hash of the title and text alone, the same for one posting listed on two of a company's boards.
+export function crossBoardHash(job: JobRecord): string {
+  return createHash("sha256").update(comparableTitleAndText(job)).digest("hex")
 }

@@ -4,6 +4,7 @@ import { appendFile } from "node:fs/promises"
 import { join } from "node:path"
 import { readBoardArgs } from "../boardArg"
 import { isDead, updateDeadBoards, type DeadBoards } from "../companies/deadBoards"
+import { joinAcrossBoards } from "../dedupe/joinAcrossBoards"
 import { linkReposts, type SeenJobs } from "../dedupe/linkReposts"
 import { mergeCopies } from "../dedupe/mergeCopies"
 import { collectAll, type BoardResult, type BoardToRead, type CollectOptions } from "../fetching/collectBoards"
@@ -66,7 +67,7 @@ export async function runCollect(
   if (broken) throw new Error(broken)
 
   const seenFile = join(dataDir, "seen.json")
-  const merged = mergeCopies(jobs)
+  const merged = joinAcrossBoards(mergeCopies(jobs))
   const linked = linkReposts(merged, await readJsonFile<SeenJobs>(seenFile, {}), started)
   const reposts = linked.jobs.filter((job) => job.repostOf !== undefined).length
 
