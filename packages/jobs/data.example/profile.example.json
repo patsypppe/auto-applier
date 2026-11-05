@@ -1,0 +1,26 @@
+{
+  "personal": {
+    "firstName": "Sam",
+    "lastName": "Rivera",
+    "email": "sam.rivera@example.com",
+    "phone": "5550100",
+    "city": "Hayward",
+    "state": "CA",
+    "country": "United States",
+    "links": { "github": "github.com/example" }
+  },
+  "experience": [
+    {
+      "company": "Example Analytics",
+      "title": "Data Science Intern",
+      "startDate": "2025-06",
+      "endDate": "2025-08",
+      "description": "Built churn models in Python and reported results in Tableau."
+    }
+  ],
+  "education": [
+    { "school": "Example State University", "degree": "MS", "field": "Statistics", "startDate": "2025-08" }
+  ],
+  "skills": ["Python", "R", "SQL", "pandas", "scikit-learn", "Statistics", "Regression", "A/B testing", "Tableau", "Excel", "Machine learning", "Time series"],
+  "answers": { "workAuthorization": "F-1 student (OPT)", "needsSponsorship": true, "isAuthorizedToWork": true }
+}
