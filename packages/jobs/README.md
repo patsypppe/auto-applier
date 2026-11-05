@@ -1,6 +1,6 @@
 # Job feed
 
-Collects job postings from companies' own public job boards (Greenhouse, Lever and Ashby) onto your computer, and tags what each one says about work authorization, with the sentence as evidence. It ranks them against your own profile and settings, showing the skills you have and lack, on a local page where you can also track your applications. It also shows each employer's H-1B approvals from USCIS. Workday comes in a later step; see `docs/PLAN.md`.
+Collects job postings from companies' own public job boards (Greenhouse, Lever, Ashby and Workday) onto your computer, and tags what each one says about work authorization, with the sentence as evidence. It ranks them against your own profile and settings, showing the skills you have and lack, on a local page where you can also track your applications. It also shows each employer's H-1B approvals from USCIS. See `docs/PLAN.md` for how it is built.
 
 Nothing is sent anywhere except the requests to the job boards and to GitHub for the company lists. Everything it saves goes in `packages/jobs/data/`, which git ignores.
 
@@ -30,6 +30,7 @@ The slug is the part of the board's address after the site name, such as `stripe
 
 - `-- --board greenhouse:stripe --board lever:spotify` reads only those boards into `data/jobs.boards.jsonl`, leaving the full feed alone.
 - `-- --fresh` asks every board again instead of using answers saved in the last 12 hours.
+- `-- --with-workday` also reads the Workday boards. Workday has no plain job list, so it searches each board for every role in `data/settings.json` and reads only jobs whose title holds a role. It takes about 20 seconds a board, so all of them take hours. After changing roles, add `--fresh`.
 
 It sends one request at a time to each job site, waits 1 second between requests, and retries after 1, 3 and 9 seconds when a site is busy, or longer if the site asks (up to a minute). A site that cannot be reached for 5 boards in a row is skipped for the rest of the run. If no board could be read, or more than half failed for reasons other than 404, the run stops with an error and keeps the earlier `jobs.jsonl`. Files are written to a temporary file first and swapped in when complete.
 
@@ -87,7 +88,7 @@ It adds the file up per employer into `data/h1b.json`, matches the collected com
 
 ## Known limits
 
-- Only Greenhouse, Lever and Ashby. Workday is planned; iCIMS, Oracle and company-built career sites are not.
+- Greenhouse, Lever and Ashby, plus Workday with `--with-workday`. iCIMS, Oracle, Workday's myworkdaysite.com pages and company-built career sites are not read.
 - Lever and Ashby boards do not give the company name, so a board added with `--board` shows its slug.
 - The country is read from location text. About 7% of jobs say only "Remote" or name a place it does not know, and are left undecided.
 - Copies of a posting are joined into one job only when they are listed at different places and their text is the same apart from the place and any dates. Copies with different pay or experience stay separate. A joined job lists every copy's own link in `copies`.

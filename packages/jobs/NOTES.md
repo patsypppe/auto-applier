@@ -210,3 +210,18 @@
   - "No filings found" is not proof a company never sponsors: many are small startups, some file under another legal name.
 - Feed page with history (example profile): of 146 shown, 48 exact, 20 similar name, 6 ambiguous, 72 none. Checked in the browser.
 - Next: slice 9, Workday. Still to measure: yearsRequired accuracy.
+
+## 2026-11-04: Slice 9, Workday
+
+- Studied real answers first (Adobe): a search POST returns 20 postings a page with title, externalPath, locationsText and postedOn. The total comes only on the first page; page 2 says 0. A detail GET returns jobPostingInfo with id, jobDescription (HTML), location, additionalLocations, startDate, externalUrl and country.
+- Search matches descriptions too ("data scientist" also found "Enterprise Architect"), so details are fetched only for titles that hold a wanted role.
+- Built test first:
+  - Workday links in Simplify's listings become `tenant|wdN|site` boards (the optional /en-US/ part is skipped; myworkdaysite.com links are not read yet).
+  - `workday` source: one search per role, up to 10 pages each, deduped by path, details for matching titles only.
+  - `collect` skips Workday unless `--with-workday`, and then needs roles in `data/settings.json`.
+  - `titleHasRole` is now exported from `scoreMatch` so both use the same rule.
+- Company list with Workday: 3,575 boards (Greenhouse 863, Lever 340, Ashby 726, Workday 1,646).
+- Trial on 20 random Workday boards with the example roles (data scientist, data analyst, machine learning engineer, data engineer): 237 requests in 392 s, about 20 s a board, 42 jobs (17 US, 25 abroad), each with a description. Kyndryl, Abbott and Salesforce gave most of them.
+- At that pace all 1,646 Workday boards would take about 9 hours, one request a second. Combining roles in one search does not help: on Adobe, "data scientist" finds 23, "data analyst" 77, "data scientist data analyst" 7 and the OR form 13.
+- Open: speed. Workday tenants sit on clusters (wd1, wd5 and so on), so one queue per cluster would cut the time several-fold while keeping one request at a time per host. Needs Pranjal's decision.
+- Not done: myworkdaysite.com links; cached Workday answers depend on the roles at the time, so changing roles needs --fresh.
