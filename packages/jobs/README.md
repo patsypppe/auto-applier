@@ -1,6 +1,6 @@
 # Job feed
 
-Collects job postings from companies' own public job boards (Greenhouse, Lever and Ashby) onto your computer. Matching them to your resume, work-authorization tags, a page to browse them and an applied tracker come in later steps; see `docs/PLAN.md`.
+Collects job postings from companies' own public job boards (Greenhouse, Lever and Ashby) onto your computer, and tags what each one says about work authorization, with the sentence as evidence. Matching them to your resume, a page to browse them and an applied tracker come in later steps; see `docs/PLAN.md`.
 
 Nothing is sent anywhere except the requests to the job boards and to GitHub for the company lists. Everything it saves goes in `packages/jobs/data/`, which git ignores.
 
@@ -35,6 +35,14 @@ It sends one request at a time to each job site, waits 1 second between requests
 
 A board that returns 404 twice, at least 20 hours apart, is skipped from then on; delete its entry in `data/dead-boards.json` to try it again.
 
+### Checking the work-authorization tags
+
+```bash
+npm run tags -w @auto-applier/jobs -- --status f1-opt
+```
+
+It tags every collected job in the US (or with no country), prints how often each tag appears and how many jobs are blocked, likely blocked, fine or a plus for that status, and writes `data/tag-check.json`, a fixed sample of 50 tagged and 50 random jobs with each tag's evidence sentence, for checking by hand. Statuses: citizen, permanent-resident, f1-cpt, f1-opt, f1-stem-opt, h1b, other-needs-sponsorship.
+
 ## What it took on 2026-11-04
 
 1,931 boards, 17 minutes from an empty cache, 98,179 postings, which became 90,254 jobs after joining copies (60,311 in the US). 96 boards returned 404. The saved answers took 1.2 GB and the jobs file 564 MB. A run from the saved answers took 20 to 75 seconds.
@@ -48,3 +56,4 @@ A board that returns 404 twice, at least 20 hours apart, is skipped from then on
 - A posting reposted under a new id is linked to its earlier copy if that copy was seen in the last 60 days (`data/seen.json`) and is no longer listed.
 - The commands keep everything in memory during a run (about 1.4 GB at most for the full list), so the much longer aggregator lists may not fit.
 - `npm ci` fails on this branch until the root lockfile lists this package; `npm install` works.
+- Tags are rules over sentences, not a model. A hand check of 100 jobs (before the last fixes) found 2 wrong restriction tags out of 47 and no missed restriction. Each tag shows its sentence so you can judge it. Tags describe what a posting says; they are not advice about anyone's status.

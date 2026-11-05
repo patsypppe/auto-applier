@@ -107,3 +107,25 @@
 - Docs: SPEC and PLAN brought in line with what was built (jobs.jsonl, USCIS first, retries and timeout, aggregator opt-in, hashing rule, dead-board file, request log, user agent). RESEARCH: Lever's CORS header vs its README, appendix #22 (a U.S. person rule) and #43 (Public Trust is not a clearance) corrected, so the count is 53 right and 7 wrong. README numbers and limits updated.
 - Not done in 4b: Lever US and EU boards with the same slug still share a cache file (F10, low); invalid numeric entities can throw (F11, low); Lever slugs are not URL-decoded (F13, low). Reposts are still tested only with fixtures.
 - Next: slice 5, work-authorization tags.
+
+## 2026-11-04: Slice 5, work-authorization tags
+
+- Built test first:
+  - `splitSentences`: does not break at U.S., U.S.C., Inc., e.g. and similar; every line is its own sentence.
+  - `rules.ts`: the phrase rules as data.
+  - `tagJob`: one tag of each kind, with the evidence sentence and its neighbours. Rules check each semicolon part, so a hedge in one part does not cancel a firm rule in another. Jobs abroad get no restriction tags, and sentences naming only another country are skipped.
+  - `effects.ts`: the status-by-tag table, plus `jobEffect` (worst wins; a plus only when nothing is worse).
+  - `tags` command: counts, effects for one status, and `data/tag-check.json`, a fixed sample of 50 tagged and 50 random jobs.
+- Fixture: the 60 research-appendix postings with their full text from today's data, and the corrected expectations (#22 U.S. person, #43 Public Trust is unclear). My first fixture script matched all Databricks rows to one Tokyo job, because their links differ only in `gh_jid`; #29, #31 and #32 had passed only by luck. Rebuilt matching on job ids.
+- Found while running on real data: Node's `readline` splits lines at U+2028, which `JSON.stringify` leaves unescaped and which appears 116 times in real descriptions. `eachJob` now splits only at "\n". This would have broken the feed page too.
+- Hand check (spec targets: restriction precision at least 95%, recall at least 90%, not-stated at least 95%):
+  - 50 tagged jobs: 47 restriction tags, 2 wrong (95.7%). Wrong: "citizenship may be required for some positions", and "must disclose any current or future need for sponsorship". Both fixed. Missed: "Must be US Citizenship", "US Government clearance (requires US citizenship)", plural "security clearances", and Anthropic's "We do sponsor visas!". All fixed, each with a test made from the real sentence.
+  - 50 random jobs: about 16 had a restriction and none was missed. 25 of 26 "not stated" really say nothing; Relativity's "background check ... to obtain clearance for on-site work" should be unclear (not fixed). Two missed sponsorship offers and one false unclear (a skill line) were fixed.
+  - A re-check after the fixes was not done on a fresh sample, so the figures above are from before the fixes.
+- Real feed, 66,951 jobs in the US or with no country: not-stated 44,635; us-person 7,127; clearance 6,990; unclear 5,784; no-sponsorship 3,274; e-verify 3,163; citizen-only 1,555; no-future-sponsorship 1,220; sponsors 1,050; opt-cpt-welcome 72. The research sample found no sponsorship offers in 12,802 postings, but the full feed has 1,050 (Anthropic's note on its postings is most of them; the 20 checked were all real).
+- Effects by status: F-1 OPT: blocked 13,898, likely blocked 2,839, ok 46,783, plus 3,431. Citizen who can obtain a clearance: nothing blocked. Permanent resident: blocked 1,555, likely blocked 5,926. H-1B: blocked 16,737.
+- Known limits:
+  - "does not provide sponsorship of any kind, including CPT, OPT" is tagged no-sponsorship, which a CPT intern with no later need reads as ok.
+  - Unclear sentences such as headings ("EXPORT CONTROL REQUIREMENTS") add an unclear tag next to the real one. That is harmless, since the worst effect wins.
+  - Permanent residents and clearances are still unverified (Executive Order 12968 not read).
+- Next: slice 6, settings, profile and matching, `getJobs` and `applyFilters`.
