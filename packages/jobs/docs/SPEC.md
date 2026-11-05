@@ -133,7 +133,7 @@ It returns every collected job with its tags, effects, score, reasons and histor
 | `filters.levels` | `intern`, `new-grad`, `entry`, `mid`, `senior`, `staff` | `new-grad`, `entry` |
 | `filters.roles` | list of title keywords | required |
 | `filters.excludeTitleWords` | list | `["senior", "staff", "principal", "manager"]` |
-| `filters.postedWithinDays` | number | 30 |
+| `filters.postedWithinDays` | number | 90 (was 30; changed after the first real run, see NOTES) |
 | `filters.companies.include` / `.exclude` | lists | empty |
 | `filters.minScore` | 0 to 100 | 0 |
 | `collect.delayMs` | number | 1000 |

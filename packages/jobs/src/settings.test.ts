@@ -17,7 +17,7 @@ describe("parseSettings: defaults", () => {
         remoteOnly: false,
         levels: ["intern", "new-grad", "entry"],
         excludeTitleWords: ["senior", "staff", "principal", "manager", "director"],
-        postedWithinDays: 30,
+        postedWithinDays: 90,
         companies: { include: [], exclude: [] },
         minScore: 0,
       },

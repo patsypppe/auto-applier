@@ -72,4 +72,4 @@ The score is 70 points for the share of the skills a posting names that are in y
 - `npm ci` fails on this branch until the root lockfile lists this package; `npm install` works.
 - Tags are rules over sentences, not a model. A hand check of 100 jobs (before the last fixes) found 2 wrong restriction tags out of 47 and no missed restriction. Each tag shows its sentence so you can judge it. Tags describe what a posting says; they are not advice about anyone's status.
 - A posting that names only one known skill scores full marks if you have it, so short postings can outrank detailed ones. Years of experience are not read yet, and most titles state no level, so some top jobs expect more experience than a new graduate has.
-- The default `postedWithinDays` of 30 hides many jobs that are still open, because Greenhouse dates a job from when it was first published.
+- `postedWithinDays` defaults to 90, because Greenhouse dates a job from when it was first published and many postings stay open for months. A posting older than that may still be open.

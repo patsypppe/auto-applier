@@ -151,3 +151,5 @@
   - Years of experience ("5+ years") are not read yet.
   - Tagging and skill-finding all 90k jobs takes about a minute.
 - Next: slice 7, the feed page and applied history.
+- Decision (Pranjal, after the first real run): `postedWithinDays` defaults to 90 instead of 30. With the example profile, shown jobs went from 99 to 220, and "old" from 264 to 143.
+- New in the top 25 after that change: Integra FEC lists the same internships on two boards ("Integra FEC" and "Integra FEC - Internships"), so they appear twice, because copies are only joined within one board. Also, "Data Scientist (3-5 years experience)" ranks 25th, more reason to read years of experience.

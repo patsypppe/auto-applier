@@ -86,7 +86,8 @@ function readFilters(raw: Raw, problems: string[]): Filters {
   const exclude = stringsAt(companies.exclude, [])
   if (!include || !exclude) problems.push("filters.companies.include and .exclude must be lists of company names.")
 
-  const days = raw.postedWithinDays ?? 30
+  // Ninety days, because Greenhouse dates a job from its first publication and many postings stay open for months.
+  const days = raw.postedWithinDays ?? 90
   if (typeof days !== "number" || days <= 0) problems.push("filters.postedWithinDays must be a number of days above 0.")
   const minScore = raw.minScore ?? 0
   if (typeof minScore !== "number" || minScore < 0 || minScore > 100) problems.push("filters.minScore must be a number from 0 to 100.")
@@ -100,7 +101,7 @@ function readFilters(raw: Raw, problems: string[]): Filters {
     remoteOnly: flags.remoteOnly ?? false,
     levels: knownLevels ?? [],
     excludeTitleWords: lists.excludeTitleWords ?? [],
-    postedWithinDays: typeof days === "number" ? days : 30,
+    postedWithinDays: typeof days === "number" ? days : 90,
     companies: { include: include ?? [], exclude: exclude ?? [] },
     minScore: typeof minScore === "number" ? minScore : 0,
   }

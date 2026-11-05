@@ -11,7 +11,7 @@
     "hideLikelyBlocked": false,
     "locations": [],
     "remoteOnly": false,
-    "postedWithinDays": 30,
+    "postedWithinDays": 90,
     "minScore": 0
   }
 }
