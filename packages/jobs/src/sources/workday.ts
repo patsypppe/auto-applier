@@ -3,7 +3,7 @@
 import * as z from "zod/mini"
 import en from "zod/v4/locales/en.js"
 import { titleHasRole } from "../matching/scoreMatch"
-import type { BoardSource, JobRecord } from "../types"
+import type { BoardSearch, BoardSource, JobRecord } from "../types"
 import { countryOf } from "./country"
 import { htmlToText } from "./plainText"
 
@@ -13,7 +13,7 @@ const PAGE_SIZE = 20
 // Searches match descriptions too, so a broad role can return hundreds of jobs; ten pages per role is plenty.
 const MAX_PAGES_PER_ROLE = 10
 
-const postingSchema = z.object({ title: z.nullish(z.string()), externalPath: z.nullish(z.string()) })
+const postingSchema = z.object({ title: z.nullish(z.string()), externalPath: z.nullish(z.string()), locationsText: z.nullish(z.string()) })
 const pageSchema = z.object({ total: z.nullish(z.number()), jobPostings: z.nullish(z.array(postingSchema)) })
 
 const detailSchema = z.object({
@@ -29,7 +29,8 @@ const detailSchema = z.object({
   }),
 })
 
-type Raw = { postings: { title: string; externalPath: string }[]; details: Record<string, unknown> }
+type Posting = { title: string; externalPath: string; locationsText: string }
+type Raw = { postings: Posting[]; details: Record<string, unknown> }
 
 // Splits "tenant|wdN|site" into the parts of the board's address.
 function partsOf(slug: string): { tenant: string; host: string; site: string } {
@@ -50,9 +51,19 @@ async function searchRole(base: string, role: string, getJson: (url: string, bod
     const postings = answer.success ? (answer.data.jobPostings ?? []) : []
     if (page === 0) total = answer.success ? (answer.data.total ?? 0) : 0
     if (postings.length === 0) break
-    for (const posting of postings) if (posting.title && posting.externalPath) found.push({ title: posting.title, externalPath: posting.externalPath })
+    for (const posting of postings) {
+      if (posting.title && posting.externalPath) found.push({ title: posting.title, externalPath: posting.externalPath, locationsText: posting.locationsText ?? "" })
+    }
   }
   return found
+}
+
+// Returns true when a posting is worth a detail request: its title holds a wanted role and no left-out word, and its listed
+// place is not clearly abroad (unless the user wants jobs abroad). "3 Locations" says nothing, so those are still fetched.
+function worthDetails(posting: Posting, search: BoardSearch): boolean {
+  if (!titleHasRole(posting.title, search.roles)) return false
+  if (titleHasRole(posting.title, search.excludeTitleWords ?? [])) return false
+  return search.includeAbroad === true || countryOf([posting.locationsText]) !== "other"
 }
 
 // Turns one job's details into a record, or returns undefined when the details cannot be read.
@@ -86,19 +97,19 @@ export const workday: BoardSource = {
   ats: "workday",
   name: "Workday",
 
-  // Searches for each role, then fetches the details of every distinct job whose title holds one of the roles.
+  // Searches for each role, then fetches the details of every distinct job the feed could show.
   fetchRaw: async ({ slug }, getJson, search) => {
     const roles = search?.roles ?? []
-    if (roles.length === 0) throw new Error(`Workday board '${slug}' needs roles in data/settings.json, so only matching jobs are read.`)
+    if (!search || roles.length === 0) throw new Error(`Workday board '${slug}' needs roles in data/settings.json, so only matching jobs are read.`)
 
     const { host, tenant, site } = partsOf(slug)
     const base = `https://${host}/wday/cxs/${tenant}/${site}`
-    const postings = new Map<string, Raw["postings"][number]>()
+    const postings = new Map<string, Posting>()
     for (const role of roles) for (const posting of await searchRole(base, role, getJson)) postings.set(posting.externalPath, posting)
 
     const details: Raw["details"] = {}
     for (const posting of postings.values()) {
-      if (titleHasRole(posting.title, roles)) details[posting.externalPath] = await getJson(`${base}${posting.externalPath}`)
+      if (worthDetails(posting, search)) details[posting.externalPath] = await getJson(`${base}${posting.externalPath}`)
     }
     return { postings: [...postings.values()], details } satisfies Raw
   },

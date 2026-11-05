@@ -4,7 +4,7 @@ import { ashby } from "../sources/ashby"
 import { greenhouse } from "../sources/greenhouse"
 import { lever } from "../sources/lever"
 import { workday } from "../sources/workday"
-import type { Ats, Board, BoardSource, GetJson, JobRecord } from "../types"
+import type { Ats, Board, BoardSearch, BoardSource, GetJson, JobRecord } from "../types"
 import { fetchJson, RequestError } from "./fetchJson"
 
 const SOURCES: Record<Ats, BoardSource> = { greenhouse, lever, ashby, workday }
@@ -30,7 +30,7 @@ export type CollectOptions = {
   now?: Date
   onBoard?: (result: BoardResult, done: number, total: number) => void
   onRequest?: (url: string, at: Date) => void
-  roles?: readonly string[]
+  search?: BoardSearch
 }
 
 export type Collected = { jobs: JobRecord[]; results: BoardResult[] }
@@ -71,7 +71,7 @@ async function collectBoard(
   const { slug } = board
   try {
     const cached = cache ? await readCachedBoard(cache.dir, source.ats, slug, cache.maxAgeHours, now) : undefined
-    const raw = cached ?? (await source.fetchRaw(board, getJsonFor(slug), { roles: options.roles ?? [] }))
+    const raw = cached ?? (await source.fetchRaw(board, getJsonFor(slug), options.search))
     if (cache && cached === undefined) await writeCachedBoard(cache.dir, source.ats, slug, raw, now)
 
     const jobs = withCompanyName(source.readJobs(raw, slug, now.toISOString()), board)

@@ -12,6 +12,7 @@ import { brokenRunReason } from "../fetching/runHealth"
 import { formatSummary } from "../fetching/summary"
 import { loadSettings } from "../settings"
 import { readCompanyFile, readJsonFile, writeJobsFile, writeJsonFile } from "../storage/files"
+import type { BoardSearch } from "../types"
 
 const CACHE_HOURS = 12
 const PROGRESS_EVERY = 25
@@ -32,14 +33,15 @@ async function boardsToRead(args: readonly string[], dataDir: string, dead: Dead
   return { boards, skipped: companies.length - boards.length }
 }
 
-// Returns the roles to search Workday boards for, from data/settings.json, or throws when there are none: listing every job on
+// Returns what to search Workday boards for, from data/settings.json, or throws when there are no roles: listing every job on
 // a big Workday site would take hours.
-async function workdayRoles(dataDir: string): Promise<string[]> {
+async function workdaySearch(dataDir: string): Promise<BoardSearch> {
   const settings = await loadSettings(join(dataDir, "settings.json")).catch(() => undefined)
   if (!settings || settings.filters.roles.length === 0) {
     throw new Error("--with-workday needs data/settings.json with roles, so only matching Workday jobs are read.")
   }
-  return settings.filters.roles
+  const { roles, excludeTitleWords, includeAbroad } = settings.filters
+  return { roles, excludeTitleWords, includeAbroad }
 }
 
 // Prints a progress line every few boards, and when a job site finishes.
@@ -64,7 +66,7 @@ export async function runCollect(
 
   // Workday boards take about 8 requests each (a search per role, then each matching job), so they are read only when asked.
   const withWorkday = args.includes("--with-workday") || listed.some((board) => board.ats === "workday" && namesBoards(args))
-  const roles = withWorkday ? await workdayRoles(dataDir) : []
+  const search = withWorkday ? await workdaySearch(dataDir) : undefined
   const boards = withWorkday ? listed : listed.filter((board) => board.ats !== "workday")
   const leftOut = listed.length - boards.length
   if (leftOut > 0) print(`Skipping ${leftOut} Workday board${leftOut === 1 ? "" : "s"}. Add --with-workday to read them; it takes about 8 seconds a board.`)
@@ -73,7 +75,7 @@ export async function runCollect(
   const started = new Date()
   const { jobs, results } = await collectAll(boards, {
     ...options,
-    roles,
+    search,
     cache: { dir: join(dataDir, "cache"), maxAgeHours: args.includes("--fresh") ? 0 : CACHE_HOURS },
     onBoard: progressPrinter(print),
     onRequest: (url, at) => requests.push(`${at.toISOString()} ${new URL(url).host}\n`),

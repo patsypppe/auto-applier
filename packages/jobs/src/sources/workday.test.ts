@@ -52,6 +52,36 @@ describe("workday: the requests", () => {
     expect(new Set(details).size).toBe(details.length)
   })
 
+  // Builds a request stand-in whose one search page holds the given postings, and which answers any detail request.
+  function boardWith(postings: { title: string; externalPath: string; locationsText: string }[]) {
+    return vi.fn(async (url: string, _body?: unknown) => (url === `${BASE}/jobs` ? { total: postings.length, jobPostings: postings } : SAVED.details["/job/Lehi/Data-Scientist_R171177-1"]))
+  }
+
+  test("does not fetch details for a job whose listed location is abroad, since the feed hides it", async () => {
+    const getJson = boardWith([
+      { title: "Data Scientist", externalPath: "/job/Bangalore/DS_1", locationsText: "Bangalore, Karnataka, India" },
+      { title: "Data Scientist", externalPath: "/job/Austin/DS_2", locationsText: "US, TX, Austin" },
+      { title: "Data Scientist", externalPath: "/job/Many/DS_3", locationsText: "3 Locations" },
+    ])
+
+    await workday.fetchRaw(BOARD, getJson, { roles: ["data scientist"] })
+
+    const details = getJson.mock.calls.filter(([url]) => url !== `${BASE}/jobs`).map(([url]) => url.slice(BASE.length))
+    expect(details).toEqual(["/job/Austin/DS_2", "/job/Many/DS_3"])
+  })
+
+  test("does not fetch details for a title holding a word the settings leave out, such as Senior", async () => {
+    const getJson = boardWith([
+      { title: "Senior Data Scientist", externalPath: "/job/Austin/DS_1", locationsText: "US, TX, Austin" },
+      { title: "Data Scientist", externalPath: "/job/Austin/DS_2", locationsText: "US, TX, Austin" },
+    ])
+
+    await workday.fetchRaw(BOARD, getJson, { roles: ["data scientist"], excludeTitleWords: ["senior"] })
+
+    const details = getJson.mock.calls.filter(([url]) => url !== `${BASE}/jobs`).map(([url]) => url.slice(BASE.length))
+    expect(details).toEqual(["/job/Austin/DS_2"])
+  })
+
   test("refuses to read a Workday board without roles, since listing every job would take hours", async () => {
     await expect(workday.fetchRaw(BOARD, savedBoard(), { roles: [] })).rejects.toThrow(
       "Workday board 'adobe|wd5|external_experienced' needs roles in data/settings.json, so only matching jobs are read.",

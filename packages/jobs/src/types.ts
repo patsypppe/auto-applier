@@ -36,10 +36,13 @@ export type JobRecord = {
 
 export type GetJson = (url: string, body?: unknown) => Promise<unknown>
 
+// What to search a board for, from the user's settings; only Workday, which has no plain job list, uses it.
+export type BoardSearch = { roles: readonly string[]; excludeTitleWords?: readonly string[]; includeAbroad?: boolean }
+
 export type BoardSource = {
   ats: Ats
   name: string
-  fetchRaw: (board: Pick<Board, "slug" | "region">, getJson: GetJson, search?: { roles: readonly string[] }) => Promise<unknown>
+  fetchRaw: (board: Pick<Board, "slug" | "region">, getJson: GetJson, search?: BoardSearch) => Promise<unknown>
   readJobs: (raw: unknown, slug: string, seenAt: string) => JobRecord[]
 }
 
