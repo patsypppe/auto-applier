@@ -13,10 +13,13 @@ const RESTRICTIONS: ReadonlySet<AuthTag> = new Set([
   "unclear",
 ])
 
-// Returns the tags one sentence carries: every rule that matches, or "unclear" when it is about work authorization but no rule could read it.
+// Returns the tags one sentence carries: every rule that matches one of its parts, or "unclear" when it is about work
+// authorization but no rule could read it. Parts are split at semicolons, so "must be a U.S. person; a clearance may be
+// required" keeps the firm first part even though the second is hedged.
 function tagsOfSentence(sentence: string): AuthTag[] {
   if (namesOnlyAnotherCountry(sentence)) return []
-  const tags = RULES.filter((rule) => rule.matches(sentence)).map((rule) => rule.tag)
+  const parts = sentence.split(/;\s*/)
+  const tags = RULES.filter((rule) => parts.some((part) => rule.matches(part))).map((rule) => rule.tag)
   return tags.length > 0 ? tags : isUnclear(sentence) ? ["unclear"] : []
 }
 

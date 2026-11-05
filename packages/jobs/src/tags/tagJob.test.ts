@@ -110,6 +110,44 @@ describe("tagJob: OPT, CPT and E-Verify", () => {
   })
 })
 
+describe("tagJob: sentences found in the hand check of the full feed", () => {
+  test("reads a hedged citizenship sentence as unclear, not as citizens only", () => {
+    const text = "For purposes of transparency, U.S. Citizenship may be required for some positions with a government clearance and certain other restricted positions."
+
+    expect(tagsOf(text)).not.toContain("citizen-only")
+    expect(tagsOf(text)).toContain("unclear")
+  })
+
+  test("reads a request to disclose a sponsorship need as unclear, not as a refusal", () => {
+    const text = "Candidates must disclose any current or future need for employment-based immigration sponsorship (including, but not limited to, OPT, STEM OPT, or visa sponsorship) before an offer."
+
+    expect(tagsOf(text)).toEqual(["unclear"])
+  })
+
+  test("reads 'Must be US Citizenship' as citizens only", () => {
+    expect(tagsOf("- Must be US Citizenship")).toEqual(["citizen-only"])
+  })
+
+  test("reads a government clearance that requires citizenship as both", () => {
+    const tags = tagsOf("Must be eligible to obtain and maintain a US Government clearance (requires US citizenship).")
+
+    expect(tags).toContain("clearance")
+    expect(tags).toContain("citizen-only")
+  })
+
+  test("reads security clearances in the plural as a clearance", () => {
+    expect(tagsOf("Positions at STR require employees to obtain national security clearances.")).toContain("clearance")
+  })
+
+  test("reads 'We do sponsor visas!' as sponsors", () => {
+    expect(tagsOf("Visa sponsorship: We do sponsor visas!")).toEqual(["sponsors"])
+  })
+
+  test("reads citizenship, permanent residency or refugee status as U.S. persons", () => {
+    expect(tagsOf("U.S. Citizenship, Lawful Permanent Residency, or Refugee/Asylee Status Required")).toEqual(["us-person"])
+  })
+})
+
 describe("tagJob: evidence and jobs abroad", () => {
   test("gives each tag the sentence it came from and the sentences around it", () => {
     const [found] = tagJob({ description: "About us.\nWe are unable to sponsor visas. Apply today.", country: "US" })

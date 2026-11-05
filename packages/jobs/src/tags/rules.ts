@@ -14,16 +14,21 @@ const REFUSES_SPONSORSHIP = [
   /\bno\s+(visa\s+|employer\s+|H-?1B\s+)?sponsorship\b/i,
   /\bsponsorship\s+(is\s+|will\s+)?(not|un)\s*(available|offered|provided|possible)\b/i,
 ]
+// "Disclose any need for sponsorship" asks a question rather than refusing, and "not limited to" is not a refusal either.
+const ASKS_ONLY = /\b(disclose|let us know|tell us|indicate)\b/i
+const NOT_LIMITED_TO = /\bnot limited to\b/gi
 const LATER_TOO = /\b(now or in the future|current or future|now or at any time in the future|in the future)\b/i
 
 const OFFERS_SPONSORSHIP = [
   /\b(will|can|could|is able to|are able to|happy to|open to|may)\s+(\w+\s+){0,2}sponsor(s|ship)?\b/i,
   /\b(visa|H-?1B)\s+sponsorship\s+(is\s+)?(available|offered|provided)\b/i,
+  /\b(we|they)\s+(do|does)\s+sponsor\b/i,
 ]
 
 const CITIZENS_ONLY = [
   new RegExp(String.raw`\b${US}\s+citizenship\b[^.;]{0,30}\brequired\b`, "i"),
-  new RegExp(String.raw`\bmust be (a\s+)?${US}\s+citizens?\b`, "i"),
+  new RegExp(String.raw`\bmust be (a\s+)?${US}\s+citizen(s|ship)?\b`, "i"),
+  new RegExp(String.raw`\brequires?\s+${US}\s+citizenship\b`, "i"),
   new RegExp(String.raw`\brequires?\b[^.;]{0,40}\bto be\s+${US}\s+citizens\b`, "i"),
   new RegExp(String.raw`\bonly\s+(hire\s+)?${US}\s+citizens\b`, "i"),
   /\bcitizenship (is )?required\b/i,
@@ -31,14 +36,19 @@ const CITIZENS_ONLY = [
 // A rule that also lets in green card holders, refugees or asylees is a U.S. person rule, not a citizens-only one.
 const NAMES_OTHER_PERSONS = /\b(permanent resident|green card|lawful permanent|refugee|asyl(ee|um)|protected individual|U\.?S\.? persons?|or national)\b/i
 
+// "May be required for some positions" describes other jobs, not a rule for this one.
+const HEDGED = /\b(may|might|could)\s+(be\s+)?(required|need)|\bsome positions\b|\bcertain (other )?(restricted )?positions\b/i
+
 const US_PERSONS = [
   /\bU\.?S\.?\s+persons?\b/i,
   /\bUS persons?\b/i,
   /\bcitizens?\b[^;]{0,200}\b(permanent resident|green card)/i,
+  /\bcitizenship\b[^;]{0,120}\b(permanent residen\w*|refugee|asylee)/i,
 ]
 const A_REQUIREMENT = /\b(must|only|required|requires|requirement|eligible|conform|policy)\b/i
 
-const CLEARANCE = /\b(security clearance|TS\/SCI|top secret|secret clearance|secret security|DOE\s+(level\s+)?Q|clearance level|active clearance|polygraph)\b/i
+const CLEARANCE =
+  /\b(security clearances?|(government|federal|national security|DoD|DoW) clearances?|TS\/SCI|top secret|secret clearance|secret security|DOE\s+(level\s+)?Q|clearance level|active clearance|polygraph)\b/i
 const PUBLIC_TRUST = /\bpublic trust\b/i
 const REAL_CLEARANCE = /\b(secret|TS\/SCI|SCI|DOE|polygraph)\b/i
 
@@ -78,21 +88,23 @@ function onlyASkill(sentence: string): boolean {
 
 // Returns true when the sentence refuses visa sponsorship.
 function refusesSponsorship(sentence: string): boolean {
-  return any(REFUSES_SPONSORSHIP, sentence) && (VISA_CONTEXT.test(sentence) || /\bsponsorship\b/i.test(sentence))
+  const plain = sentence.replace(NOT_LIMITED_TO, "")
+  if (ASKS_ONLY.test(plain)) return false
+  return any(REFUSES_SPONSORSHIP, plain) && (VISA_CONTEXT.test(plain) || /\bsponsorship\b/i.test(plain))
 }
 
 export const RULES: readonly Rule[] = [
   {
     tag: "citizen-only",
-    matches: (s) => any(CITIZENS_ONLY, s) && !NAMES_OTHER_PERSONS.test(s) && !NOT_A_RULE.test(s),
+    matches: (s) => any(CITIZENS_ONLY, s) && !NAMES_OTHER_PERSONS.test(s) && !NOT_A_RULE.test(s) && !HEDGED.test(s),
   },
   {
     tag: "us-person",
-    matches: (s) => any(US_PERSONS, s) && A_REQUIREMENT.test(s) && !NOT_A_RULE.test(s) && !onlyASkill(s),
+    matches: (s) => any(US_PERSONS, s) && A_REQUIREMENT.test(s) && !NOT_A_RULE.test(s) && !onlyASkill(s) && !HEDGED.test(s),
   },
   {
     tag: "clearance",
-    matches: (s) => CLEARANCE.test(s) && !(PUBLIC_TRUST.test(s) && !REAL_CLEARANCE.test(s)) && !onlyASkill(s),
+    matches: (s) => CLEARANCE.test(s) && !(PUBLIC_TRUST.test(s) && !REAL_CLEARANCE.test(s)) && !onlyASkill(s) && !HEDGED.test(s),
   },
   { tag: "no-future-sponsorship", matches: (s) => refusesSponsorship(s) && LATER_TOO.test(s) },
   { tag: "no-sponsorship", matches: (s) => refusesSponsorship(s) && !LATER_TOO.test(s) },
