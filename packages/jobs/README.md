@@ -30,7 +30,7 @@ The slug is the part of the board's address after the site name, such as `stripe
 
 - `-- --board greenhouse:stripe --board lever:spotify` reads only those boards into `data/jobs.boards.jsonl`, leaving the full feed alone.
 - `-- --fresh` asks every board again instead of using answers saved in the last 12 hours.
-- `-- --with-workday` also reads the Workday boards. Workday has no plain job list, so it searches each board for every role in `data/settings.json` and reads only jobs whose title holds a role. It takes about 20 seconds a board, so all of them take hours. After changing roles, add `--fresh`.
+- `-- --with-workday` also reads the Workday boards. Workday has no plain job list, so it searches each board for every role in `data/settings.json` and reads only jobs whose title holds a role. It skips jobs listed abroad and titles with your left-out words before asking for details. It still takes about 20 seconds a board, so all of them take hours: run it overnight, or name a few companies with `--board workday:<tenant>|<wdN>|<site>`. After changing roles, add `--fresh`.
 
 It sends one request at a time to each job site, waits 1 second between requests, and retries after 1, 3 and 9 seconds when a site is busy, or longer if the site asks (up to a minute). A site that cannot be reached for 5 boards in a row is skipped for the rest of the run. If no board could be read, or more than half failed for reasons other than 404, the run stops with an error and keeps the earlier `jobs.jsonl`. Files are written to a temporary file first and swapped in when complete.
 
