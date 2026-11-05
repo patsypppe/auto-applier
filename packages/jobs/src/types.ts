@@ -12,6 +12,8 @@ export type Company = Board & {
   sources: string[]
 }
 
+export type JobCopy = { id: string; url: string; locations: string[] }
+
 export type JobRecord = {
   key: string
   ats: Ats
@@ -29,6 +31,7 @@ export type JobRecord = {
   description: string
   textHash?: string
   repostOf?: string
+  copies?: JobCopy[]
 }
 
 export type GetJson = (url: string, body?: unknown) => Promise<unknown>

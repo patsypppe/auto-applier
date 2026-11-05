@@ -2,10 +2,13 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, test } from "vitest"
+import { greenhouse } from "../sources/greenhouse"
 import type { JobRecord } from "../types"
 import { mergeCopies } from "./mergeCopies"
 
 const FIXTURE = JSON.parse(readFileSync(join(import.meta.dirname, "../../test/fixtures/repeat-postings.json"), "utf8")) as JobRecord[]
+const ANDURIL = JSON.parse(readFileSync(join(import.meta.dirname, "../../test/fixtures/greenhouse-anduril-openings.json"), "utf8"))
+const SEEN_AT = "2026-11-04T12:00:00.000Z"
 const [spacexRedmond, spacexBastrop, tsmgRouen, tsmgBordeaux, deepgramUs, deepgramSingapore] = FIXTURE
 
 describe("mergeCopies", () => {
@@ -51,6 +54,35 @@ describe("mergeCopies", () => {
     const [merged] = mergeCopies([newer, older])
 
     expect([merged!.postedAt, merged!.updatedAt]).toEqual(["2026-09-01T00:00:00Z", "2026-10-05T00:00:00Z"])
+  })
+
+  test("keeps two real openings apart when only their experience and pay differ", () => {
+    const jobs = mergeCopies(greenhouse.readJobs(ANDURIL, "andurilindustries", SEEN_AT))
+
+    expect(jobs.map((job) => job.id)).toEqual(["5010190007", "5010389007"])
+  })
+
+  test("never joins two copies listed at the same place, since they are separate openings", () => {
+    const second = { ...tsmgRouen!, id: "zzz", key: "lever:tsmg:zzz", url: "https://jobs.lever.co/tsmg/zzz" }
+
+    expect(mergeCopies([tsmgRouen!, second, tsmgBordeaux!]).map((job) => job.locations)).toEqual([
+      ["Rouen", "Bordeaux"],
+      ["Rouen"],
+    ])
+  })
+
+  test("keeps every copy's own link and places on the joined job", () => {
+    const [merged] = mergeCopies([tsmgRouen!, tsmgBordeaux!])
+
+    expect(merged!.copies).toEqual(
+      [tsmgRouen!, tsmgBordeaux!]
+        .map((copy) => ({ id: copy.id, url: copy.url, locations: copy.locations }))
+        .sort((a, b) => a.id.localeCompare(b.id)),
+    )
+  })
+
+  test("leaves the copies list off a job that was not joined with anything", () => {
+    expect(mergeCopies([deepgramUs!])[0]!.copies).toBeUndefined()
   })
 
   test("keeps jobs in the order their first copy appeared and stores the hash", () => {
