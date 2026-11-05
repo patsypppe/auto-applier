@@ -12,6 +12,7 @@
     "tags": "node build.mjs && node dist/cli.js tags",
     "top": "node build.mjs && node dist/cli.js top",
     "feed": "node build.mjs && node dist/cli.js feed",
+    "export-applied": "node build.mjs && node dist/cli.js export-applied",
     "test": "vitest run",
     "typecheck": "tsc -p . --noEmit"
   },
