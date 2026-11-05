@@ -94,3 +94,16 @@
 - Clean-up: `data/seen.json` was restored from the copy taken before this slice. `data/jobs.jsonl` still has the 35 wrong repost marks until the next run.
 - A rerun to confirm the repost fix on real data was stopped from outside (exit 137) before it wrote anything. Not rerun.
 - Left for slice 4b: F1/F7 (keep the old feed when most boards fail, atomic writes), F3, F4, F5, F6, F8, F9, the doc drift list, and the README's 597 MB figure (549 MB, and now about 564 MB with the copies lists).
+- Rest of slice 4b, test first:
+  - F1/F7: `writeJobsFile` and `writeJsonFile` write to a `.tmp` file and rename it when complete. A site that cannot be reached for 5 boards in a row is skipped for the rest of the run. `brokenRunReason` stops the run with an error, keeping the earlier feed, when no board worked or more than half failed for reasons other than 404.
+  - F3: `--board` writes `jobs.boards.jsonl` and does not touch `seen.json`.
+  - F8: the data folder is found from the built file's location, so a run from the repo root still writes to `packages/jobs/data`.
+  - F9: request-log lines are collected during the run and written once, awaited.
+  - F4: the timeout now covers reading the body (an endless body times out). F5: a `Retry-After` in seconds or as a date is honored, up to a minute.
+  - F6: codes that are both a state and a country (IN, DE, IL, CA, CO, AR, PA, MA, ID) next to a known city abroad read as abroad; "Paris, TX" and "Indianapolis, IN" stay US.
+  - `collect` now has tests, using a fake network. The first failing test runs, before `runCollect` took a fake network, sent about 12 real requests to Greenhouse for the made-up boards acme, globex and initech. That can't happen now.
+- Found on the real rerun: F12 was worse than the review rated it. All 96 boards that returned 404 were skipped as "dead on two different days" after only a few hours, because the days were UTC dates and 4 pm in California is already the next day in UTC. Fixed: dead means two 404s at least 20 hours apart, using times. `data/dead-boards.json` was reset to one 404 per board, at the time of the first full run (2026-11-04 about 23:09 UTC, approximate).
+- Real rerun from the cache after all fixes: 98,179 postings became 90,254 jobs (60,311 US, 23,303 other, 6,640 undecided), 2,179 joined jobs, 0 repost marks, no `.tmp` files left. It took 19 s, but that run skipped the 96 boards it wrongly thought dead.
+- Docs: SPEC and PLAN brought in line with what was built (jobs.jsonl, USCIS first, retries and timeout, aggregator opt-in, hashing rule, dead-board file, request log, user agent). RESEARCH: Lever's CORS header vs its README, appendix #22 (a U.S. person rule) and #43 (Public Trust is not a clearance) corrected, so the count is 53 right and 7 wrong. README numbers and limits updated.
+- Not done in 4b: Lever US and EU boards with the same slug still share a cache file (F10, low); invalid numeric entities can throw (F11, low); Lever slugs are not URL-decoded (F13, low). Reposts are still tested only with fixtures.
+- Next: slice 5, work-authorization tags.

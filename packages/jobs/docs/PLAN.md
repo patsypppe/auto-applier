@@ -43,7 +43,9 @@ packages/jobs/
       readAggregator.ts   reads the MIT aggregator slug lists
       buildCompanyList.ts merges, dedupes, applies companies.extra.json
     dedupe/
-      mergeReposts.ts     one job per company + title + description, locations combined
+      textHash.ts         fingerprint of board, title and text without the job's own places and dates
+      mergeCopies.ts      one job per opening, copies at different places joined, every copy's link kept
+      linkReposts.ts      first-seen dates across runs, links to an earlier copy that is gone
     tags/
       sentences.ts        sentence splitter that knows "U.S.", "Inc.", "e.g."
       rules.ts            the phrase rules as data
@@ -82,7 +84,6 @@ export type Company = {
   ats: Ats
   slug: string            // Workday: "tenant|wd5|site"
   sources: string[]       // "simplify-new-grad", "aggregator", "extra"
-  deadSince?: string      // ISO date of the second 404 in a row
 }
 
 export type JobRecord = {
@@ -95,13 +96,14 @@ export type JobRecord = {
   url: string
   locations: string[]
   country?: "US" | "other"   // undefined when the location does not say
-  remote?: boolean
   postedAt?: string
   updatedAt?: string
   firstSeenAt: string
   lastSeenAt: string
   description: string     // plain text
-  textHash: string        // hash of company + title + description, for reposts
+  textHash?: string       // set when copies are joined, used to find reposts
+  repostOf?: string
+  copies?: { id: string; url: string; locations: string[] }[]   // only on a joined job
   repostOf?: string       // key of the earlier copy
 }
 
@@ -158,19 +160,19 @@ The resume profile is the core's `Profile`, loaded from `data/profile.json` and 
 ## Collecting
 
 - `fetchJson(url, options)` makes one request with a 30 s timeout. On 429, 500, 502, 503 or 504 (`isRetryableStatus` from core) or a dropped connection, it waits 1 s, 3 s, then 9 s and tries again. Other statuses throw an error saying which board and what status, such as `"Greenhouse board 'acme' returned 404. It may have moved to another job site."`. It takes `fetchFn` and `sleep`, like `GeminiLLMClient` and `RetryingLLMClient`.
-- One user agent string for every request, generic and fixed (for example `Mozilla/5.0 (compatible; job-feed)`), never rotated.
+- One user agent string for every request, generic and fixed (`Mozilla/5.0 (compatible; job-feed/0.1)`), never rotated.
 - `collectBoards(companies, fetchBoard, options)` goes through one ATS's boards one at a time, with `delayMs` (default 1000) between requests. Greenhouse, Lever and Ashby run at the same time because they are different hosts. That gives "one request at a time per host" without a queue class.
 - Each board's raw response is cached in `data/cache/<ats>/<slug>.json` with its fetch time. A cache younger than `cacheHours` is reused unless `--fresh`.
 - Greenhouse is fetched with `content=true` in the first version, because one call is simpler than two. Stage 1 measured about 0.6 MB per board. If the full run is too slow or too big, the next step is lists without content plus `GET /v1/boards/{slug}/jobs/{id}` only for jobs that pass the title and location filters.
 - Workday (later slice): 20 per page, stop at `total` or at an empty page, then one detail call per job that passes the filters, at the same pause.
-- A board that returns 404 gets `deadSince` on the second 404 on a different day, and is skipped afterwards.
-- The run log (`data/collect-log.json`) records each request's host, time and status, so politeness can be checked in Stage 5.
+- A board that returns 404 on two different days is recorded in `data/dead-boards.json` and skipped afterwards.
+- The run log (`data/requests.log`) records each request's time and host, so politeness can be checked in Stage 5. Retries are not logged.
 
 ## Reposts and duplicates
 
-- Inside one run: jobs with the same company, a title equal after lowercasing and squashing spaces, and the same `textHash` become one record with the locations combined and the lowest id as its key. This covers the multi-location copies seen at SpaceX and Databricks.
-- Across runs: a job with a key seen before keeps `firstSeenAt`. A new key whose `textHash` matches a job seen in the last 60 days gets `repostOf`, and its applied entry is found through that link.
-- The description is normalised before hashing (whitespace, dates and requisition numbers removed), so a repost with a new date still matches. Tests use saved pairs.
+- Inside one run: jobs on the same board with the same title and the same `textHash` become one record, but only when they are listed at different places; two copies at one place are separate openings. The joined record has the locations combined, the lowest id as its key, and a `copies` list with each copy's own link. This covers the multi-location copies seen at SpaceX and Databricks.
+- Across runs: a job with a key seen before keeps `firstSeenAt`. A new key whose `textHash` matches a job seen in the last 60 days, and no longer listed, gets `repostOf`, and its applied entry is found through that link.
+- The description is normalised before hashing (lowercase, whitespace squashed, the job's own place names and dates removed). Other numbers stay, so openings with different pay or experience stay apart. Tests use saved real pairs.
 
 ## Resume
 
@@ -268,9 +270,9 @@ Written into `docs/INTEGRATION.md`, kept current as slices land.
 
 Each slice: tests first, then code, then the package tests, the typecheck and the root tests, then one or more small commits. Stop after each.
 
-1. **Package and Greenhouse.** `package.json`, `tsconfig.json`, `build.mjs`, `.gitignore`, `fetchJson`, `plainText`, `country`, `fetchGreenhouseBoard`, and `collect --board greenhouse:<slug>` writing `data/jobs.json`. Usable: collect one Greenhouse board.
+1. **Package and Greenhouse.** `package.json`, `tsconfig.json`, `build.mjs`, `.gitignore`, `fetchJson`, `plainText`, `country`, `fetchGreenhouseBoard`, and `collect --board greenhouse:<slug>` writing `data/jobs.jsonl`. Usable: collect one Greenhouse board.
 2. **Lever and Ashby.** Their collectors, the three ATSs at once with the pause and the cache, and the run summary.
-3. **Company list.** `npm run companies` from the Simplify and aggregator files, `companies.extra.json`, dead-board marking, and a full `collect`.
+3. **Company list.** `npm run companies` from the Simplify files (aggregator lists opt-in), `companies.extra.json`, dead-board marking, and a full `collect`.
 4. **Dedupe and reposts.**
 5. **Work-authorization tags and effects**, with the appendix fixture.
 6. **Settings, profile, matching, `getJobs`, `applyFilters`**, with a small `npm run feed -- --text` that prints the top jobs in the terminal.

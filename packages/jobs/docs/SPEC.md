@@ -24,7 +24,7 @@ Both are made up.
 **Priya, F-1 student, MS in Statistics (on the DHS STEM list), graduating May 2027, will use OPT then STEM OPT, needs H-1B later.**
 1. Same setup. Sets status `f1_opt`, `stemDegree: true`, `needsSponsorshipLater: true`.
 2. After collecting, the feed hides jobs tagged "U.S. citizenship required", "U.S. person (ITAR)", "Security clearance" and "No sponsorship". The header says "Hidden by work authorization: 212 (show)". Clicking shows them greyed, with the reason.
-3. Jobs whose posting says nothing are shown with "Not stated" and, next to it, "Employer filed 340 H-1B LCAs in FY2026, 41 at wage level I". Jobs at employers with no filings say "No H-1B LCAs found for this employer".
+3. Jobs whose posting says nothing are shown with "Not stated" and, next to it, "USCIS approved 340 H-1B petitions for this employer in FY2026". Jobs at employers with none say "No H-1B approvals found for this employer".
 4. A posting that says "We participate in E-Verify" gets an "E-Verify" tag, which matters for STEM OPT.
 5. A posting with an odd sentence, such as "sponsorship may be considered for exceptional candidates", gets "Unclear" with the sentence, and Priya decides.
 6. Tracks applications the same way as Sam.
@@ -34,7 +34,7 @@ Both are made up.
 Each item lists checks you can run by hand or that tests cover. "Saved sample" means a real response saved to `test/fixtures`, with personal names removed.
 
 ### F1. Company list
-`npm run companies` builds `data/companies.json` from the Simplify new-grad and internship listing files and the MIT aggregator lists (downloaded at run time, not committed), plus `data/companies.extra.json` if present.
+`npm run companies` builds `data/companies.json` from the Simplify new-grad and internship listing files (downloaded at run time, not committed), plus `data/companies.extra.json` if present. The much longer MIT aggregator lists are added only with `--with-aggregator`.
 - Each entry has `name`, `ats` (`greenhouse`, `lever`, `ashby`, later `workday`), `slug` (Workday: tenant, host number, site), and `sources`.
 - The same board found in several lists appears once.
 - Entries from `companies.extra.json` win over downloaded ones.
@@ -42,9 +42,9 @@ Each item lists checks you can run by hand or that tests cover. "Saved sample" m
 - A board marked dead (404 twice in a row on different days) is skipped by `collect` until the user clears the mark.
 
 ### F2. Collecting
-`npm run collect` reads every board in the list, then writes `data/jobs.json`.
+`npm run collect` reads every board in the list, then writes `data/jobs.jsonl`, one job per line.
 - Greenhouse, Lever and Ashby in the first version. Workday in a later slice.
-- One request at a time per host, a pause between requests (default 1 s), retries on 429 and 5xx after waits that grow each time (1 s, 3 s, 9 s), at most 3 tries, a 30 s timeout. One fixed, generic user agent, never rotated.
+- One request at a time per host, a pause between requests (default 1 s), retries on 429, 5xx and dropped connections after waits that grow each time (1 s, 3 s, 9 s, or longer when a `Retry-After` asks, up to a minute), so at most 4 tries, and a 30 s timeout that covers reading the whole answer. A site that cannot be reached for 5 boards in a row is skipped for the rest of the run, and a run where most boards failed keeps the earlier feed. One fixed, generic user agent, never rotated.
 - A board that fails is listed in the summary with its status and is not retried in the same run. One failed board never stops the run.
 - Jobs outside the United States are kept but tagged `country` so the default filters can hide them.
 - Descriptions are stored as plain text. HTML tags and entities are removed.
@@ -70,13 +70,13 @@ Every job gets zero or more tags, each with the sentence that triggered it. When
 Settings give one work-authorization status. Each tag has a fixed effect for each status: `blocked`, `likely-blocked`, `ok` or `positive`. The table is in `RESEARCH.md` section 5 and is kept as one data table in code.
 - Default view hides `blocked` jobs and shows `likely-blocked` jobs with a warning. Both can be changed in settings.
 - The header always shows how many jobs are hidden and why, and one click shows them.
-- No job is ever removed from `jobs.json` because of a tag.
+- No job is ever removed from `jobs.jsonl` because of a tag.
 
-### F6. H-1B filing history
-`npm run h1b` reads a DOL LCA disclosure file the user downloaded (path in settings) and writes `data/h1b.json`: per employer, the certified H-1B LCA count for the fiscal year, the count at wage level I, and the top job titles.
-- Company names are matched after normalising: case, punctuation, and endings like Inc, LLC, Corp, Ltd. The trade name column is checked too.
-- `data/aliases.json` (hand-kept) maps a board name to a DOL name when they differ.
-- Each card shows the count, or "No H-1B LCAs found for this employer", or "Several possible employers, not matched" when the match is ambiguous.
+### F6. H-1B history
+Changed in `PLAN.md`: USCIS first. `npm run h1b` reads the USCIS H-1B Employer Data Hub CSV the user downloaded (path in settings) and writes `data/h1b.json`: per employer, the H-1B approvals for each fiscal year. DOL LCA data (wage levels and job titles) comes in a later slice; since the H-1B lottery is now weighted by wage level, wage level I counts matter for new grads.
+- Company names are matched after normalising: case, punctuation, and endings like Inc, LLC, Corp, Ltd.
+- `data/aliases.json` (hand-kept) maps a board name to a USCIS employer name when they differ.
+- Each card shows the count, or "No H-1B approvals found for this employer", or "Several possible employers, not matched" when the match is ambiguous.
 - History is never turned into a posting tag.
 - The command prints the match rate (companies matched / companies with at least one US job).
 
@@ -164,7 +164,7 @@ Measured in Stage 5 on a real collection and reported with the numbers, pass or 
 | Restriction tag precision | Hand-check 100 jobs: 50 with any restriction tag, 50 picked at random. For each restriction tag, is the sentence a real restriction that applies to this US job? | At least 95% correct |
 | Restriction tag recall | In the same 100, find restrictions by reading the full text, and count the ones the tags missed | At least 90% found |
 | Not stated | Of jobs tagged `not-stated` in the sample, how many really say nothing | At least 95% |
-| Nothing lost | Jobs in `jobs.json` = jobs shown + jobs hidden, per filter reason | Exactly equal |
+| Nothing lost | Jobs in `jobs.jsonl` = jobs shown + jobs hidden, per filter reason | Exactly equal |
 | Company-name match to DOL | Companies with a matched DOL employer / companies with at least one US job. Hand-check 50 matches for correctness and 30 non-matches for missed ones | Report the rate; at least 95% of hand-checked matches correct |
 | Match quality | For Sam and Priya's example settings, the top 20 jobs each: how many would they reasonably apply to (judged by you) | At least 15 of 20 |
 | Collection time | Full run of Greenhouse, Lever and Ashby on a home connection, from an empty cache | Under 30 minutes for about 2,000 boards; report the real time |
