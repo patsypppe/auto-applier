@@ -1,5 +1,5 @@
 // Tests that the job and company files are written and read back, and that bad or missing files give clear messages.
-import { mkdtemp, readFile, writeFile } from "node:fs/promises"
+import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { beforeEach, describe, expect, test } from "vitest"
@@ -35,6 +35,26 @@ describe("jobs file", () => {
 
     expect((await readFile(file, "utf8")).trim().split("\n")).toHaveLength(2)
     expect((await readJobsFile(file)).map((job) => job.id)).toEqual(["1", "2"])
+  })
+
+  test("replaces the file only once the new one is complete, leaving no temporary file", async () => {
+    const file = join(dir, "jobs.jsonl")
+    await writeJobsFile(file, [JOB])
+
+    await writeJobsFile(file, [{ ...JOB, key: "lever:spotify:2", id: "2" }])
+
+    expect((await readJobsFile(file)).map((job) => job.id)).toEqual(["2"])
+    expect(await readdir(dir)).toEqual(["jobs.jsonl"])
+  })
+
+  test("keeps the earlier file whole when writing the new one fails halfway", async () => {
+    const file = join(dir, "jobs.jsonl")
+    await writeJobsFile(file, [JOB])
+    const unwritable = { ...JOB, id: 3n } as unknown as JobRecord
+
+    await expect(writeJobsFile(file, [{ ...JOB, id: "2" }, unwritable])).rejects.toThrow()
+
+    expect((await readJobsFile(file)).map((job) => job.id)).toEqual(["1"])
   })
 
   test("reads a missing jobs file as no jobs", async () => {

@@ -1,6 +1,6 @@
 // Reads and writes the job feed's files in data/: the collected jobs, one per line, and the company lists.
 import { createReadStream } from "node:fs"
-import { open, readFile, writeFile } from "node:fs/promises"
+import { open, readFile, rename, rm, writeFile } from "node:fs/promises"
 import { createInterface } from "node:readline"
 import * as z from "zod/mini"
 import en from "zod/v4/locales/en.js"
@@ -31,19 +31,26 @@ export async function readJsonFile<T>(file: string, fallback: T): Promise<T> {
   }
 }
 
-// Writes a value as indented JSON, so the file is easy to read and edit by hand.
+// Writes a value as indented JSON, so the file is easy to read and edit by hand, replacing the old file only when done.
 export async function writeJsonFile(file: string, value: unknown): Promise<void> {
-  await writeFile(file, `${JSON.stringify(value, null, 2)}\n`)
+  await writeFile(`${file}.tmp`, `${JSON.stringify(value, null, 2)}\n`)
+  await rename(`${file}.tmp`, file)
 }
 
 // Writes the jobs one JSON object per line, so a large collection never has to fit in one string.
+// The lines go to a temporary file that replaces the old one only once it is complete, so a crash never leaves half a feed.
 export async function writeJobsFile(file: string, jobs: readonly JobRecord[]): Promise<void> {
-  const handle = await open(file, "w")
+  const temporary = `${file}.tmp`
+  const handle = await open(temporary, "w")
   try {
     for (const job of jobs) await handle.write(`${JSON.stringify(job)}\n`)
-  } finally {
+  } catch (error: unknown) {
     await handle.close()
+    await rm(temporary, { force: true })
+    throw error
   }
+  await handle.close()
+  await rename(temporary, file)
 }
 
 // Reads the jobs written by writeJobsFile; a file that does not exist yet means no jobs.

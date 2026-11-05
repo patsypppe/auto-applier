@@ -130,6 +130,36 @@ describe("collectBoards: reading boards", () => {
   })
 })
 
+describe("collectBoards: a job site that cannot be reached", () => {
+  test("stops asking a site after five boards in a row could not be reached", async () => {
+    const fetchFn = vi.fn(async () => {
+      throw new TypeError("fetch failed")
+    })
+
+    const { results } = await collectBoards(fakeSite, boards("a", "b", "c", "d", "e", "f", "g"), {
+      fetchFn,
+      sleep: fakeSleep(),
+      now: NOW,
+    })
+
+    expect(fetchFn).toHaveBeenCalledTimes(5 * 4)
+    expect(results.map((result) => result.outcome)).toEqual(Array(7).fill("failed"))
+    expect(results[6]!.error).toBe("Skipped: Greenhouse could not be reached for 5 boards in a row.")
+  })
+
+  test("keeps going when boards are missing but the site answers", async () => {
+    const fetchFn = fetchFrom({ g: { titles: ["SWE"] } })
+
+    const { results } = await collectBoards(fakeSite, boards("a", "b", "c", "d", "e", "f", "g"), {
+      fetchFn,
+      sleep: fakeSleep(),
+      now: NOW,
+    })
+
+    expect(results[6]).toMatchObject({ slug: "g", outcome: "fetched", jobs: 1 })
+  })
+})
+
 describe("collectBoards: the cache", () => {
   test("uses a fresh saved answer without asking the board or waiting", async () => {
     const dir = await mkdtemp(join(tmpdir(), "collect-"))

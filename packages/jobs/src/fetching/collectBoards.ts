@@ -8,6 +8,7 @@ import { fetchJson, RequestError } from "./fetchJson"
 
 const SOURCES: Record<Ats, BoardSource> = { greenhouse, lever, ashby }
 const DEFAULT_DELAY_MS = 1000
+const GIVE_UP_AFTER = 5
 
 export type BoardToRead = Board & { name?: string }
 
@@ -82,6 +83,12 @@ async function collectBoard(
   }
 }
 
+// Records a board that was not asked because its site stopped answering.
+function skipped(source: BoardSource, slug: string): BoardResult {
+  const error = `Skipped: ${source.name} could not be reached for ${GIVE_UP_AFTER} boards in a row.`
+  return { ats: source.ats, slug, outcome: "failed", jobs: 0, error }
+}
+
 // Reads the given boards of one job site in order; a board that fails is recorded and the rest still run.
 export async function collectBoards(
   source: BoardSource,
@@ -93,8 +100,16 @@ export async function collectBoards(
 
   const jobs: JobRecord[] = []
   const results: BoardResult[] = []
+  let unreachableInARow = 0
   for (const board of boards) {
-    const collected = await collectBoard(source, board, getJsonFor, options, now)
+    // After several boards in a row with no answer at all, the site or the network is down, so the rest are skipped.
+    const collected =
+      unreachableInARow >= GIVE_UP_AFTER
+        ? { jobs: [], result: skipped(source, board.slug) }
+        : await collectBoard(source, board, getJsonFor, options, now)
+    const unreachable = collected.result.outcome === "failed" && collected.result.status === undefined
+    unreachableInARow = unreachable ? unreachableInARow + 1 : 0
+
     jobs.push(...collected.jobs)
     results.push(collected.result)
     options.onBoard?.(collected.result, results.length, boards.length)
