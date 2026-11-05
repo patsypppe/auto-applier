@@ -187,3 +187,26 @@
   - Copies on another board show only their places, not the board's name.
   - `confirm()` before clearing a status could not be checked through the browser tools.
 - Next: slice 8, H-1B history from the USCIS Data Hub (needs Pranjal's OK to download). Measuring how accurate `yearsRequired` is would also be good.
+
+## 2026-11-04: Slice 8, H-1B history from USCIS
+
+- Download (approved by Pranjal):
+  - USCIS's archive page of CSV files stops at FY2023 and is marked out of date. The current Hub is a Tableau dashboard served from bigdataanalyticspub-sb.uscis.dhs.gov, so I read its sheet names from the embedded viz.
+  - "H1B-Employer Data Hub" gives only the top 100. "H1B Public" (`/views/H1BEmployerDataHub-Final/H1BPublic.csv`) gives the full crosstab: 100,283,127 bytes, 785,664 rows, all FY2026, 57,674 employer names, 12 measures per employer location. Saved as `data/h1b/h1b-employers-fy2026.csv`.
+  - Approvals added up by name match the dashboard (Amazon 12,010, Google 6,163).
+- Built test first: `normalizeName`, `readH1bCsv` (streams the file; joins names that normalize the same, such as STRIPE LLC and STRIPE INC, giving 340; shows the name with the most approvals) and `matchEmployer` (alias, then exact, then a filing name that only adds generic words like Labs, AI or Opco; anything else ambiguous or none). Also the `h1b` command (its test was written after the code), `loadHistory`, the history on cards and in `top`, and `data.example/aliases.example.json` (SpaceX, Ramp, checked in the file).
+- Measured on 1,678 companies with US jobs:
+  - First version: 690 matched (41%).
+  - Hand check of 50 matches: the 30 exact looked right (Cartesian uncertain), but about 4 of the 20 similar-name matches were wrong (Klarity to KLARITY HEALTH, STR to STR GROUP USA, Pico to PICO SERVICES, Relay to RELAY ROBOTICS).
+  - Of 30 non-matches, one was clearly missed (Osmo files as "OSMO LABS PBC DBA OSMO"); the rest had no similar USCIS name.
+- Fixes, test first:
+  - The legal name before "DBA" is used.
+  - Names under 5 letters are never matched by a similar name, only marked ambiguous.
+  - Similar-name matches say "Matched by a similar name, so check it is the same company."
+  - The ambiguous wording now fits a single candidate.
+- After the fixes: 668 matched (40%) = 546 exact, 120 similar name, 2 alias. 25 or more are ambiguous and 963 have no filings found under their name.
+  - A fresh sample of 19 similar-name matches had 2 or 3 doubtful (Relay, Paradigm to PARADIGM HEALTH, Realm to REALM LABS).
+  - My estimate is about 95% of all matches right, but the similar-name ones only about 85 to 90%, which is why they are flagged.
+  - "No filings found" is not proof a company never sponsors: many are small startups, some file under another legal name.
+- Feed page with history (example profile): of 146 shown, 48 exact, 20 similar name, 6 ambiguous, 72 none. Checked in the browser.
+- Next: slice 9, Workday. Still to measure: yearsRequired accuracy.

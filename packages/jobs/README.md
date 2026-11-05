@@ -1,6 +1,6 @@
 # Job feed
 
-Collects job postings from companies' own public job boards (Greenhouse, Lever and Ashby) onto your computer, and tags what each one says about work authorization, with the sentence as evidence. It ranks them against your own profile and settings, showing the skills you have and lack, on a local page where you can also track your applications. H-1B history and Workday come in later steps; see `docs/PLAN.md`.
+Collects job postings from companies' own public job boards (Greenhouse, Lever and Ashby) onto your computer, and tags what each one says about work authorization, with the sentence as evidence. It ranks them against your own profile and settings, showing the skills you have and lack, on a local page where you can also track your applications. It also shows each employer's H-1B approvals from USCIS. Workday comes in a later step; see `docs/PLAN.md`.
 
 Nothing is sent anywhere except the requests to the job boards and to GitHub for the company lists. Everything it saves goes in `packages/jobs/data/`, which git ignores.
 
@@ -71,6 +71,16 @@ The menu on each card tracks your application: saved, applied, interviewing, off
 npm run export-applied -w @auto-applier/jobs
 ```
 
+### H-1B history
+
+Download the full table from the USCIS H-1B Employer Data Hub (one fiscal year, about 100 MB) to `data/h1b/h1b-employers-fy2026.csv`, then:
+
+```bash
+npm run h1b -w @auto-applier/jobs
+```
+
+It adds the file up per employer into `data/h1b.json`, matches the collected companies by name, prints the match rate and lists unmatched names in `data/h1b-unmatched.txt`. To fix a name, add it to `data/aliases.json` (see `data.example/aliases.example.json`), for example `{"SpaceX": "SPACE EXPLORATION TECHNOLOGIES CORP"}`. `top` and the feed page then show, next to the tags, how many H-1B petitions USCIS approved for that employer and how many were for new employment. This is the employer's history, not a promise about the posting.
+
 ## What it took on 2026-11-04
 
 1,931 boards, 17 minutes from an empty cache, 98,179 postings, which became 90,254 jobs after joining copies (60,311 in the US). 96 boards returned 404. The saved answers took 1.2 GB and the jobs file 564 MB. A run from the saved answers took 20 to 75 seconds.
@@ -89,3 +99,4 @@ npm run export-applied -w @auto-applier/jobs
 - The same posting on two of a company's boards is joined only when the title and text match apart from punctuation, dates and places.
 - `postedWithinDays` defaults to 90, because Greenhouse dates a job from when it was first published and many postings stay open for months. A posting older than that may still be open.
 - The page ranks the jobs when `feed` starts, so after a new `collect`, stop it and start it again.
+- H-1B history matches 40% of companies with US jobs by name. "No approvals found" can mean the company files under another legal name. Matches made by a similar name (Notion to NOTION LABS INC) are marked for checking and were right about 85 to 90% of the time in a hand check.
