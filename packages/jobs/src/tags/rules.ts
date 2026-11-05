@@ -9,7 +9,7 @@ const US = String.raw`(?:U\.?S\.?A?|United States|American)`
 const VISA_CONTEXT = /\b(visas?|immigration|H-?1B|green card|authori[sz]ed to work|work authori[sz]ation|work permit|employment pass|transfers?)\b/i
 
 const REFUSES_SPONSORSHIP = [
-  /\b(unable to|not able to|cannot|can ?not|will not|won't|do not|does not|don't|doesn't|not)\b[^.;]{0,40}?\bsponsor(s|ship|ing)?\b/i,
+  /\b(unable to|not able to|cannot|can ?not|can't|will not|won't|do not|does not|don't|doesn't|aren't|isn't|not)\b[^.;]{0,40}?\bsponsor(s|ship|ing)?\b/i,
   /\bwithout\b[^.;]{0,40}?\bsponsorship\b/i,
   /\bno\s+(visa\s+|employer\s+|H-?1B\s+)?sponsorship\b/i,
   /\bsponsorship\s+(is\s+|will\s+)?(not|un)\s*(available|offered|provided|possible)\b/i,
@@ -17,6 +17,8 @@ const REFUSES_SPONSORSHIP = [
 // "Disclose any need for sponsorship" asks a question rather than refusing, and "not limited to" is not a refusal either.
 const ASKS_ONLY = /\b(disclose|let us know|tell us|indicate)\b/i
 const NOT_LIMITED_TO = /\bnot limited to\b/gi
+// "Not for every role" qualifies an offer of sponsorship rather than refusing it.
+const NOT_EVERY_ROLE = /\b(for|to) (every|all|each) (role|position|candidate)s?\b|\bnot all (roles|positions)\b/i
 const LATER_TOO = /\b(now or in the future|current or future|now or at any time in the future|in the future)\b/i
 
 const OFFERS_SPONSORSHIP = [
@@ -89,7 +91,7 @@ function onlyASkill(sentence: string): boolean {
 // Returns true when the sentence refuses visa sponsorship.
 function refusesSponsorship(sentence: string): boolean {
   const plain = sentence.replace(NOT_LIMITED_TO, "")
-  if (ASKS_ONLY.test(plain)) return false
+  if (ASKS_ONLY.test(plain) || NOT_EVERY_ROLE.test(plain)) return false
   return any(REFUSES_SPONSORSHIP, plain) && (VISA_CONTEXT.test(plain) || /\bsponsorship\b/i.test(plain))
 }
 

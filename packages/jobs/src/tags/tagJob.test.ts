@@ -139,6 +139,20 @@ describe("tagJob: sentences found in the hand check of the full feed", () => {
     expect(tagsOf("Positions at STR require employees to obtain national security clearances.")).toContain("clearance")
   })
 
+  test.each([["We aren't able to sponsor visas for this role."], ["This role isn't eligible for visa sponsorship."], ["We can't sponsor work visas."]])(
+    "reads the short form %s as no sponsorship",
+    (text) => {
+      expect(tagsOf(text)).toEqual(["no-sponsorship"])
+    },
+  )
+
+  test("does not read 'not for every role' as a refusal, as in Anthropic's sponsorship note", () => {
+    const text = "Visa sponsorship: We do sponsor visas! However, we aren't able to successfully sponsor visas for every role and every candidate."
+
+    expect(tagsOf(text)).toContain("sponsors")
+    expect(tagsOf(text)).not.toContain("no-sponsorship")
+  })
+
   test("reads 'We do sponsor visas!' as sponsors", () => {
     expect(tagsOf("Visa sponsorship: We do sponsor visas!")).toEqual(["sponsors"])
   })
