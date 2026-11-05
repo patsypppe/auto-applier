@@ -11,6 +11,7 @@
     "collect": "node build.mjs && node dist/cli.js collect",
     "tags": "node build.mjs && node dist/cli.js tags",
     "top": "node build.mjs && node dist/cli.js top",
+    "feed": "node build.mjs && node dist/cli.js feed",
     "test": "vitest run",
     "typecheck": "tsc -p . --noEmit"
   },

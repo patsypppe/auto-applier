@@ -1,6 +1,6 @@
-// Bundles the job feed's command line tool with esbuild, so Node can run it without a TypeScript loader.
+// Bundles the job feed's command line tool and its feed page with esbuild, so Node and the browser can run them.
 import { build } from "esbuild"
-import { rm } from "node:fs/promises"
+import { cp, rm } from "node:fs/promises"
 
 await rm("dist", { recursive: true, force: true })
 
@@ -13,3 +13,15 @@ await build({
   target: "node22",
   sourcemap: true,
 })
+
+await build({
+  entryPoints: { page: "src/page/page.ts" },
+  outdir: "dist",
+  bundle: true,
+  platform: "browser",
+  format: "iife",
+  target: "es2022",
+  sourcemap: true,
+})
+
+await cp("src/page/index.html", "dist/index.html")
