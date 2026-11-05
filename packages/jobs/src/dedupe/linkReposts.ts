@@ -11,12 +11,14 @@ function isRecent(seen: SeenJob, now: Date): boolean {
   return now.getTime() - Date.parse(seen.lastSeenAt) <= REMEMBER_DAYS * 86_400_000
 }
 
-// Indexes the recently seen jobs by text hash, each pointing at the key of the oldest copy in its chain.
-function earlierCopies(seen: SeenJobs, now: Date): Map<string, { key: string; firstSeenAt: string }> {
+// Indexes the recently seen jobs that are gone from this run by text hash, each pointing at the oldest copy in its chain.
+// A job whose earlier copy is still listed is a separate opening with the same text, not a repost.
+function earlierCopies(seen: SeenJobs, current: Set<string>, now: Date): Map<string, { key: string; firstSeenAt: string }> {
   const byHash = new Map<string, { key: string; firstSeenAt: string }>()
   for (const [key, entry] of Object.entries(seen)) {
-    if (isRecent(entry, now) && !byHash.has(entry.textHash)) {
-      byHash.set(entry.textHash, { key: entry.repostOf ?? key, firstSeenAt: entry.firstSeenAt })
+    const oldest = entry.repostOf ?? key
+    if (isRecent(entry, now) && !current.has(key) && !current.has(oldest) && !byHash.has(entry.textHash)) {
+      byHash.set(entry.textHash, { key: oldest, firstSeenAt: entry.firstSeenAt })
     }
   }
   return byHash
@@ -25,7 +27,7 @@ function earlierCopies(seen: SeenJobs, now: Date): Map<string, { key: string; fi
 // Gives each job its first-seen date and repost link from earlier runs, and returns the updated memory of seen jobs.
 export function linkReposts(jobs: readonly JobRecord[], seen: SeenJobs, now: Date): { jobs: JobRecord[]; seen: SeenJobs } {
   const nowText = now.toISOString()
-  const byHash = earlierCopies(seen, now)
+  const byHash = earlierCopies(seen, new Set(jobs.map((job) => job.key)), now)
 
   const linked = jobs.map((job): JobRecord => {
     const known = seen[job.key]

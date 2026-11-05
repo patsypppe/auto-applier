@@ -53,6 +53,15 @@ describe("linkReposts", () => {
     expect(jobs[0]!.repostOf).toBe("greenhouse:acme:1")
   })
 
+  test("does not call a job a repost while its earlier copy is still listed in this run", () => {
+    const seen: SeenJobs = { "greenhouse:acme:1": { textHash: "h1", firstSeenAt: "2026-10-01T00:00:00Z", lastSeenAt: "2026-11-03T00:00:00Z" } }
+
+    const { jobs } = linkReposts([job("greenhouse:acme:1", "h1"), job("greenhouse:acme:2", "h1")], seen, TODAY)
+
+    expect(jobs[1]!.repostOf).toBeUndefined()
+    expect(jobs[1]!.firstSeenAt).toBe(TODAY.toISOString())
+  })
+
   test("does not link to a posting last seen more than 60 days ago", () => {
     const seen: SeenJobs = { "greenhouse:acme:1": { textHash: "h1", firstSeenAt: "2026-06-01T00:00:00Z", lastSeenAt: "2026-08-01T00:00:00Z" } }
 
