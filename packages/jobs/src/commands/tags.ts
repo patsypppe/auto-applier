@@ -1,12 +1,12 @@
 // The "tags" command: tags every collected job, prints how often each tag appears and what that means for one status,
 // and writes data/tag-check.json, a fixed sample to check the tags by hand.
 import { join } from "node:path"
+import { STATUSES } from "../settings"
 import { eachJob, writeJsonFile } from "../storage/files"
 import { jobEffect } from "../tags/effects"
 import { tagJob } from "../tags/tagJob"
-import type { AuthTag, Effect, Tag, WorkAuth, WorkAuthStatus } from "../types"
+import type { AuthTag, Effect, Tag, WorkAuth } from "../types"
 
-const STATUSES: readonly WorkAuthStatus[] = ["citizen", "permanent-resident", "f1-cpt", "f1-opt", "f1-stem-opt", "h1b", "other-needs-sponsorship"]
 const SAMPLE_SIZE = 50
 
 type CheckEntry = { company: string; title: string; url: string; locations: string[]; tags: Pick<Tag, "tag" | "evidence">[] }

@@ -74,3 +74,5 @@ export type WorkAuth = {
 }
 
 export type Effect = "blocked" | "likely-blocked" | "ok" | "positive"
+
+export type Level = "intern" | "new-grad" | "entry" | "mid" | "senior" | "staff"
