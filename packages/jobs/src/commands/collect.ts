@@ -48,7 +48,7 @@ export async function runCollect(
   const deadFile = join(dataDir, "dead-boards.json")
   const dead = await readJsonFile<DeadBoards>(deadFile, {})
   const { boards, skipped } = await boardsToRead(args, dataDir, dead)
-  if (skipped > 0) print(`Skipping ${skipped} boards that returned 404 on two different days (see ${deadFile}).`)
+  if (skipped > 0) print(`Skipping ${skipped} boards that returned 404 twice, at least 20 hours apart (see ${deadFile}).`)
 
   const requests: string[] = []
   const started = new Date()
@@ -59,7 +59,7 @@ export async function runCollect(
     onRequest: (url, at) => requests.push(`${at.toISOString()} ${new URL(url).host}\n`),
   })
   await appendFile(join(dataDir, "requests.log"), requests.join(""))
-  await writeJsonFile(deadFile, updateDeadBoards(dead, results, started.toISOString().slice(0, 10)))
+  await writeJsonFile(deadFile, updateDeadBoards(dead, results, started))
   print(formatSummary(results, (Date.now() - started.getTime()) / 1000))
 
   const broken = brokenRunReason(results)
