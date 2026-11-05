@@ -163,3 +163,27 @@
 - Real data from the cache: 98,179 postings became 89,927 jobs (was 90,254). With the example profile, 146 shown. Hidden: experience 124, role 52,065, abroad 23,211, blocked 13,893, old 88, level 80, title-word 320. Integra FEC now shows its 4 different internships once each.
 - Not checked: how often `yearsRequired` is wrong on real postings. A hand check of 30 or more is the next measurement.
 - Next: slice 7, the feed page and applied history.
+
+## 2026-11-04: Slice 7, feed page and applied history
+
+- Built test first:
+  - `feed/applied.ts`: statuses saved, applied, interviewing, offer and rejected, each change dated; "none" removes the job; notes kept.
+  - `server/serveFeed.ts`: node:http on 127.0.0.1 only. Routes: `/`, `/page.js`, `GET /api/feed` (shown cards, hidden counts, `?show=<reason>` for up to 300 hidden cards, the history) and `POST /api/applied` (checked; a job in the history but no longer listed can still be updated). Cards leave out the description.
+  - `page/renderCard.ts`: text only through `textContent`; links only to http(s), so a `javascript:` link does nothing; tags as `<details>` chips with the evidence and context; a status menu with "since" date; other copies' links.
+  - `page/filterCards.ts`: search, work-authorization effect, status, and sort by score or date. `page/page.ts` and `index.html` (light and dark) are not unit-tested and were checked in the browser.
+  - `export-applied` writes `data/applied.csv`, quoting cells and putting a ' before cells that start with = + - @, so a spreadsheet does not run them.
+- Checked in the built-in browser on the real feed (example profile):
+  - 146 cards shown; the summary buttons work.
+  - Opening a "no sponsorship" chip shows its sentences.
+  - Setting a status saved it to `data/applied.json` and listed it under "Your applications".
+  - "blocked" listed 300 greyed cards, the first an Accenture Federal TS/SCI job.
+  - Searching "intern" left 24 cards.
+  - No `<img>` came from job text.
+  - The test status was removed afterwards through the API.
+- Found in the browser: status dates showed the UTC day, which is already tomorrow on a California evening. They now use the local date (test run with TZ=America/Los_Angeles).
+- Known limits:
+  - Ranking happens once when `feed` starts (about a minute for the full list), so a new `collect` needs a restart.
+  - Changing a status redraws the cards, which closes any open tag.
+  - Copies on another board show only their places, not the board's name.
+  - `confirm()` before clearing a status could not be checked through the browser tools.
+- Next: slice 8, H-1B history from the USCIS Data Hub (needs Pranjal's OK to download). Measuring how accurate `yearsRequired` is would also be good.

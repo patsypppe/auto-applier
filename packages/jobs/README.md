@@ -1,6 +1,6 @@
 # Job feed
 
-Collects job postings from companies' own public job boards (Greenhouse, Lever and Ashby) onto your computer, and tags what each one says about work authorization, with the sentence as evidence. It ranks them against your own profile and settings, showing the skills you have and lack. A page to browse them and an applied tracker come in later steps; see `docs/PLAN.md`.
+Collects job postings from companies' own public job boards (Greenhouse, Lever and Ashby) onto your computer, and tags what each one says about work authorization, with the sentence as evidence. It ranks them against your own profile and settings, showing the skills you have and lack, on a local page where you can also track your applications. H-1B history and Workday come in later steps; see `docs/PLAN.md`.
 
 Nothing is sent anywhere except the requests to the job boards and to GitHub for the company lists. Everything it saves goes in `packages/jobs/data/`, which git ignores.
 
@@ -57,6 +57,20 @@ npm run top -w @auto-applier/jobs -- --limit 20
 
 The score is 70 points for the share of the skills a posting names that are in your profile (counting at least three, so a posting that names one skill cannot score full marks), plus 30 if the title holds one of your roles. Jobs that ask for more years of experience than `maxYearsRequired` (default 2) are hidden; the years are read from phrases like "3+ years of experience", ignoring ones marked preferred.
 
+### The feed page
+
+```bash
+npm run feed -w @auto-applier/jobs
+```
+
+It ranks the jobs once (about a minute for the full list), then serves a page at http://127.0.0.1:4317, reachable only from this computer. Each card shows the score, the skills you have and lack, the years asked for, and the work-authorization tags; click a tag to read the sentences it came from. The summary line counts the hidden jobs by reason, and clicking a reason lists them greyed out. Search, filter and sort at the top; the page remembers your choices in this browser.
+
+The menu on each card tracks your application: saved, applied, interviewing, offer or rejected, with the date of each change, kept in `data/applied.json`. To get a spreadsheet:
+
+```bash
+npm run export-applied -w @auto-applier/jobs
+```
+
 ## What it took on 2026-11-04
 
 1,931 boards, 17 minutes from an empty cache, 98,179 postings, which became 90,254 jobs after joining copies (60,311 in the US). 96 boards returned 404. The saved answers took 1.2 GB and the jobs file 564 MB. A run from the saved answers took 20 to 75 seconds.
@@ -74,3 +88,4 @@ The score is 70 points for the share of the skills a posting names that are in y
 - Years of experience are read only from phrases with a number, so "several years" or a requirement written another way is missed. Most titles state no level.
 - The same posting on two of a company's boards is joined only when the title and text match apart from punctuation, dates and places.
 - `postedWithinDays` defaults to 90, because Greenhouse dates a job from when it was first published and many postings stay open for months. A posting older than that may still be open.
+- The page ranks the jobs when `feed` starts, so after a new `collect`, stop it and start it again.
