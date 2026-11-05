@@ -59,3 +59,8 @@ export function countryOf(locations: readonly string[]): "US" | "other" | undefi
   if (countries.includes("US")) return "US"
   return countries.includes("other") ? "other" : undefined
 }
+
+// Returns true when a sentence names a country or city abroad and not the United States, as in "authorized to work in Canada".
+export function namesOnlyAnotherCountry(sentence: string): boolean {
+  return OTHER_COUNTRIES.test(sentence) && !/\b(United States|U\.S\.A?\.?|USA|US|America)\b/.test(sentence)
+}

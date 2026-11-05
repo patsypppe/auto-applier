@@ -42,3 +42,35 @@ export type BoardSource = {
   fetchRaw: (board: Pick<Board, "slug" | "region">, getJson: GetJson) => Promise<unknown>
   readJobs: (raw: unknown, slug: string, seenAt: string) => JobRecord[]
 }
+
+export type AuthTag =
+  | "citizen-only"
+  | "us-person"
+  | "clearance"
+  | "no-sponsorship"
+  | "no-future-sponsorship"
+  | "sponsors"
+  | "opt-cpt-welcome"
+  | "e-verify"
+  | "unclear"
+  | "not-stated"
+
+export type Tag = { tag: AuthTag; evidence: string; context: string }
+
+export type WorkAuthStatus =
+  | "citizen"
+  | "permanent-resident"
+  | "f1-cpt"
+  | "f1-opt"
+  | "f1-stem-opt"
+  | "h1b"
+  | "other-needs-sponsorship"
+
+export type WorkAuth = {
+  status: WorkAuthStatus
+  needsSponsorshipLater: boolean
+  stemDegree: boolean
+  clearance: "none" | "can-obtain" | "active"
+}
+
+export type Effect = "blocked" | "likely-blocked" | "ok" | "positive"
