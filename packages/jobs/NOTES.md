@@ -83,3 +83,14 @@
 - Known limit: numbers are ignored, so copies whose pay range differs by city are joined, and the job shows one copy's range.
 - A test mistake caught along the way: changing a copy's location in a test left the old city in its text, so the copies no longer matched. The test was fixed, not the code.
 - Next: slice 5, work-authorization tags.
+
+## 2026-11-04: Slice 4b, review fixes (in progress)
+
+- An independent two-reviewer review (kept outside the repo) confirmed two serious problems: joining hid real separate openings and their links (F2), and a run during an outage empties the feed (F1). It also found medium issues: F3 (`--board` replaces the feed), F4 (the timeout covers headers only), F5 (`Retry-After` is ignored), F6 (", IN" and ", DE" read as US states), F7 (writes are not atomic), F8 (the data folder follows the current directory). The docs have drifted in about 14 places.
+- Done, test first:
+  - F2: the text hash now ignores only dates (ISO, slash dates, bare years), so pay and years of experience keep openings apart. Copies at the same place are never joined. A joined job lists every copy's id, link and places in `copies`. The real Anduril pair (5010190007 and 5010389007, same city, "2+" vs "5+" years) is a fixture and stays apart.
+  - Reposts: a job is linked as a repost only when its earlier copy is no longer listed. The first run after the F2 fix wrongly linked 35 same-day jobs whose "earlier copy" was still live.
+- Real data from the cache, after F2: 98,179 postings became 90,254 jobs (was 87,820). 2,179 joined jobs hold 10,104 copies, and each copy keeps its own link. Anduril's DC opening 5215557007 is kept as a copy with its own link.
+- Clean-up: `data/seen.json` was restored from the copy taken before this slice. `data/jobs.jsonl` still has the 35 wrong repost marks until the next run.
+- A rerun to confirm the repost fix on real data was stopped from outside (exit 137) before it wrote anything. Not rerun.
+- Left for slice 4b: F1/F7 (keep the old feed when most boards fail, atomic writes), F3, F4, F5, F6, F8, F9, the doc drift list, and the README's 597 MB figure (549 MB, and now about 564 MB with the copies lists).
