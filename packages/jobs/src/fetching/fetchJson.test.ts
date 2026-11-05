@@ -85,7 +85,59 @@ describe("fetchJson: temporary failures", () => {
   })
 })
 
+describe("fetchJson: Retry-After", () => {
+  // Builds a fetch stand-in that answers 429 with the given Retry-After header once, then 200.
+  function busyOnce(retryAfter: string) {
+    return vi
+      .fn()
+      .mockResolvedValueOnce(new Response("{}", { status: 429, headers: { "Retry-After": retryAfter } }))
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }))
+  }
+
+  test("waits as long as the site asks when that is longer than the usual wait", async () => {
+    const sleep = fakeSleep()
+
+    await fetchJson(URL, { label: LABEL, fetchFn: busyOnce("20"), sleep })
+
+    expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([20_000])
+  })
+
+  test("never waits more than a minute, however long the site asks for", async () => {
+    const sleep = fakeSleep()
+
+    await fetchJson(URL, { label: LABEL, fetchFn: busyOnce("3600"), sleep })
+
+    expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([60_000])
+  })
+
+  test("reads a Retry-After written as a date", async () => {
+    const sleep = fakeSleep()
+    const now = new Date("2026-11-04T12:00:00Z")
+
+    await fetchJson(URL, { label: LABEL, fetchFn: busyOnce("Wed, 04 Nov 2026 12:00:30 GMT"), sleep, now: () => now })
+
+    expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([30_000])
+  })
+
+  test("keeps the usual wait when the site asks for less, or says nothing it can read", async () => {
+    const sleep = fakeSleep()
+
+    await fetchJson(URL, { label: LABEL, fetchFn: busyOnce("soon"), sleep })
+
+    expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([1000])
+  })
+})
+
 describe("fetchJson: permanent failures", () => {
+  test("stops waiting for a body that never finishes arriving", async () => {
+    const endless = new ReadableStream({ start: () => undefined })
+    const fetchFn = vi.fn(async () => new Response(endless, { status: 200 }))
+
+    await expect(fetchJson(URL, { label: LABEL, fetchFn, sleep: fakeSleep(), timeoutMs: 20 })).rejects.toThrow(
+      "Greenhouse board 'acme' did not answer in time.",
+    )
+  })
+
   test("does not retry a 404 and says the board was not found", async () => {
     const fetchFn = fetchAnswering(404)
     const sleep = fakeSleep()
