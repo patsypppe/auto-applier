@@ -57,6 +57,15 @@ describe("jobs file", () => {
     expect((await readJobsFile(file)).map((job) => job.id)).toEqual(["1"])
   })
 
+  test("reads back a description holding Unicode line separators, which real postings contain", async () => {
+    const file = join(dir, "jobs.jsonl")
+    const description = "First line second line third\rfourth"
+
+    await writeJobsFile(file, [{ ...JOB, description }, { ...JOB, id: "2" }])
+
+    expect((await readJobsFile(file)).map((job) => job.description)).toEqual([description, JOB.description])
+  })
+
   test("reads a missing jobs file as no jobs", async () => {
     expect(await readJobsFile(join(dir, "nothing.jsonl"))).toEqual([])
   })

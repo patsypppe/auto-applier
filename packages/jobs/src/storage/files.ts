@@ -1,7 +1,6 @@
 // Reads and writes the job feed's files in data/: the collected jobs, one per line, and the company lists.
 import { createReadStream } from "node:fs"
 import { open, readFile, rename, rm, writeFile } from "node:fs/promises"
-import { createInterface } from "node:readline"
 import * as z from "zod/mini"
 import en from "zod/v4/locales/en.js"
 import type { Company, JobRecord } from "../types"
@@ -54,14 +53,20 @@ export async function writeJobsFile(file: string, jobs: readonly JobRecord[]): P
 }
 
 // Reads the jobs written by writeJobsFile one at a time, so a large feed never has to be in memory at once.
+// Lines are split only at "\n": Node's readline also splits at U+2028, which JSON leaves unescaped and real postings contain.
 // A file that does not exist yet means no jobs.
 export async function eachJob(file: string, visit: (job: JobRecord) => void): Promise<void> {
+  let rest = ""
   try {
-    const lines = createInterface({ input: createReadStream(file, "utf8"), crlfDelay: Infinity })
-    for await (const line of lines) if (line.trim() !== "") visit(JSON.parse(line) as JobRecord)
+    for await (const chunk of createReadStream(file, "utf8")) {
+      const lines = (rest + String(chunk)).split("\n")
+      rest = lines.pop() ?? ""
+      for (const line of lines) if (line.trim() !== "") visit(JSON.parse(line) as JobRecord)
+    }
   } catch (error: unknown) {
     if (!isMissing(error)) throw error
   }
+  if (rest.trim() !== "") visit(JSON.parse(rest) as JobRecord)
 }
 
 // Reads every job written by writeJobsFile into a list.
