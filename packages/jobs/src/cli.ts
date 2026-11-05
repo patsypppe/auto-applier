@@ -1,10 +1,11 @@
 // Command line entry point for the job feed: "companies" builds the company list, "collect" reads the boards.
 import { mkdir } from "node:fs/promises"
-import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { runCollect } from "./commands/collect"
 import { runCompanies } from "./commands/companies"
 
-const DATA_DIR = join(process.cwd(), "data")
+// The data folder sits next to dist/, inside the package, wherever the command is run from, so git always ignores it.
+const DATA_DIR = fileURLToPath(new URL("../data", import.meta.url))
 const USAGE = "Commands: companies [--with-aggregator], collect [--board site:slug ...] [--fresh]"
 
 // Writes one line to the terminal.
