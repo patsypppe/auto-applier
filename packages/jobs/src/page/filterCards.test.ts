@@ -27,7 +27,7 @@ const CARDS = [
   card("c", { effect: "positive", score: 60, reasons: { matchedSkills: ["Tableau"], missingSkills: [], titleMatches: true } }),
 ]
 const APPLIED: AppliedEntry[] = [{ key: "a", company: "Globex", title: "Data Scientist", url: "u", status: "applied", changes: [] }]
-const ANY = { search: "", effect: "any", status: "any", sort: "score" } as const
+const ANY = { search: "", effect: "any", status: "any", sort: "score", newOnly: false } as const
 
 describe("filterCards", () => {
   test("keeps every card, best score first, when nothing is chosen", () => {
@@ -46,6 +46,13 @@ describe("filterCards", () => {
   test("keeps cards with a status, or only those without one", () => {
     expect(filterCards(CARDS, { ...ANY, status: "applied" }, APPLIED).map((found) => found.key)).toEqual(["a"])
     expect(filterCards(CARDS, { ...ANY, status: "not-tracked" }, APPLIED).map((found) => found.key)).toEqual(["b", "c"])
+  })
+
+  test("keeps only the cards first seen after the last visit when asked", () => {
+    const fresh = [card("old", { firstSeenAt: "2026-11-01T00:00:00Z" }), card("new", { firstSeenAt: "2026-11-05T09:00:00Z" })]
+
+    expect(filterCards(fresh, { ...ANY, newOnly: true }, [], "2026-11-04T00:00:00Z").map((found) => found.key)).toEqual(["new"])
+    expect(filterCards(fresh, { ...ANY, newOnly: true }, []).map((found) => found.key)).toEqual(["new", "old"])
   })
 
   test("sorts by posting date, newest first, when asked", () => {

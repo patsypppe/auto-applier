@@ -10,6 +10,7 @@ import { toCard } from "../feed/card"
 import type { RankedJob } from "../feed/getJobs"
 import type { FeedSettings } from "../settings"
 import { readJsonFile, writeJsonFile } from "../storage/files"
+import { filtersFromQuery } from "./queryFilters"
 
 const MAX_BODY_BYTES = 10_000
 const MAX_EXTRA = 300
@@ -54,9 +55,17 @@ function countByReason(hidden: readonly { reason: HideReason }[]): { reason: Hid
   return [...counts].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason))
 }
 
-// Answers GET /api/feed: shown cards, hidden counts, the hidden cards for one reason when ?show= asks, and the history.
+// Answers GET /api/feed: shown cards, hidden counts, the hidden cards for one reason when ?show= asks, the history, and
+// the filters used, which are the saved ones with the page's chips put over them.
 async function sendFeed(response: ServerResponse, url: URL, options: FeedServerOptions, appliedFile: string): Promise<void> {
-  const { shown, hidden } = applyFilters(options.ranked, options.settings)
+  let filters: FeedSettings["filters"]
+  try {
+    filters = filtersFromQuery(options.settings.filters, url.searchParams)
+  } catch (error: unknown) {
+    return sendJson(response, 400, { error: (error as Error).message })
+  }
+
+  const { shown, hidden } = applyFilters(options.ranked, { ...options.settings, filters })
   const show = url.searchParams.get("show")
   const extra = show ? hidden.filter(({ reason }) => reason === show).slice(0, MAX_EXTRA).map(({ job }) => toCard(job)) : []
   sendJson(response, 200, {
@@ -65,6 +74,7 @@ async function sendFeed(response: ServerResponse, url: URL, options: FeedServerO
     hidden: countByReason(hidden),
     extra,
     applied: await readJsonFile<AppliedEntry[]>(appliedFile, []),
+    filters,
   })
 }
 

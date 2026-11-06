@@ -102,11 +102,18 @@ function statusBlock(applied: AppliedEntry | undefined, onStatus: (status: Appli
   return block
 }
 
-// Builds the card: title link, company, places, date and score, then skills, tags, other links and the status menu.
-export function renderCard(card: Card, applied: AppliedEntry | undefined, onStatus: (status: ApplicationStatus | "none") => void): HTMLElement {
+// Builds the card: title link (marked new when first seen since the last visit), company, places, date and score, then
+// skills, tags, other links and the status menu.
+export function renderCard(
+  card: Card,
+  applied: AppliedEntry | undefined,
+  onStatus: (status: ApplicationStatus | "none") => void,
+  options: { isNew?: boolean } = {},
+): HTMLElement {
   const article = element("article", "card")
 
   const heading = element("h2")
+  if (options.isNew) heading.append(element("span", "new", "New"), " ")
   heading.append(link(card.url, card.title))
   article.append(heading)
 

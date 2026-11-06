@@ -137,6 +137,9 @@ It returns every collected job with its tags, effects, score, reasons and histor
 | `filters.companies.include` / `.exclude` | lists | empty |
 | `filters.maxYearsRequired` | years | 2 (added in slice 6b) |
 | `filters.myDegree` | `associate`, `bachelor`, `master`, `phd` | unset, so no job is hidden for its degree (added in slice 11b) |
+| `filters.workplaces` | `remote`, `hybrid`, `onsite` | `[]` (any); jobs whose board does not say are kept (added in slice 11c) |
+| `filters.jobTypes` | `full-time`, `part-time`, `contract`, `intern`, `temporary` | `[]` (any); jobs whose board does not say are kept (added in slice 11c) |
+| `filters.minYearlyPay` | US dollars a year; hourly pay counts 2,080 hours | 0; jobs with no pay or pay in another currency are kept (added in slice 11c) |
 | `filters.minScore` | 0 to 100 | 0 |
 | `collect.delayMs` | number | 1000 |
 | `collect.cacheHours` | number | 12 |

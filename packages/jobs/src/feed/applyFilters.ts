@@ -1,7 +1,7 @@
 // Splits ranked jobs into the ones to show and the ones hidden, each hidden job with the first reason that hid it.
 import { DEGREES } from "../matching/degree"
 import type { FeedSettings } from "../settings"
-import type { Degree } from "../types"
+import type { Degree, Pay } from "../types"
 import type { RankedJob } from "./getJobs"
 
 export type HideReason =
@@ -15,9 +15,14 @@ export type HideReason =
   | "degree"
   | "location"
   | "remote"
+  | "workplace"
+  | "job-type"
+  | "pay"
   | "old"
   | "company"
   | "score"
+
+const HOURS_A_YEAR = 2080
 
 export type Filtered = { shown: RankedJob[]; hidden: { job: RankedJob; reason: HideReason }[] }
 
@@ -25,6 +30,13 @@ export type Filtered = { shown: RankedJob[]; hidden: { job: RankedJob; reason: H
 function hasWords(text: string, words: string): boolean {
   const escaped = words.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
   return new RegExp(`(?<![a-z0-9])${escaped}(?![a-z0-9])`).test(text.toLowerCase())
+}
+
+// Returns true when the most a job pays in US dollars is below the yearly minimum, taking a year as 2,080 paid hours.
+// A job with no pay, or pay in another currency, is kept.
+function paysLess(pay: Pay | undefined, minimum: number): boolean {
+  if (!pay || minimum <= 0 || pay.currency !== "USD") return false
+  return (pay.per === "hour" ? pay.max * HOURS_A_YEAR : pay.max) < minimum
 }
 
 // Returns true when the job requires a higher degree than the user's; a user who has not given a degree sees every job.
@@ -44,11 +56,14 @@ function reasonToHide(entry: RankedJob, settings: FeedSettings, now: Date): Hide
   if (effect === "likely-blocked" && filters.hideLikelyBlocked) return "likely-blocked"
   if (filters.roles.length > 0 && !reasons.titleMatches) return "role"
   if (filters.excludeTitleWords.some((word) => hasWords(job.title, word))) return "title-word"
-  if (reasons.level && !filters.levels.includes(reasons.level)) return "level"
+  if (reasons.level && filters.levels.length > 0 && !filters.levels.includes(reasons.level)) return "level"
   if (reasons.yearsRequired !== undefined && reasons.yearsRequired > filters.maxYearsRequired) return "experience"
   if (needsMoreDegree(reasons.degreeRequired, filters.myDegree)) return "degree"
   if (filters.locations.length > 0 && !job.locations.some((place) => filters.locations.some((wanted) => hasWords(place, wanted)))) return "location"
   if (filters.remoteOnly && !job.locations.some((place) => hasWords(place, "remote"))) return "remote"
+  if (job.workplace && filters.workplaces.length > 0 && !filters.workplaces.includes(job.workplace)) return "workplace"
+  if (job.jobType && filters.jobTypes.length > 0 && !filters.jobTypes.includes(job.jobType)) return "job-type"
+  if (paysLess(entry.pay, filters.minYearlyPay)) return "pay"
   if (ageDays > filters.postedWithinDays) return "old"
   if (filters.companies.include.length > 0 && !filters.companies.include.some((name) => hasWords(job.company, name))) return "company"
   if (filters.companies.exclude.some((name) => hasWords(job.company, name))) return "company"

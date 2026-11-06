@@ -139,6 +139,42 @@ describe("applyFilters", () => {
     expect(hiddenReasons(jobs)).toEqual([])
   })
 
+  test("hides jobs at another kind of workplace or of another job type, and keeps jobs whose board does not say", () => {
+    const jobs = [
+      job("remote", { workplace: "remote", jobType: "full-time" }),
+      job("onsite", { workplace: "onsite", jobType: "full-time" }),
+      job("contract", { workplace: "remote", jobType: "contract" }),
+      job("unknown"),
+    ]
+    const settings = parseSettings({ workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"], workplaces: ["remote", "hybrid"], jobTypes: ["full-time", "intern"] } })
+
+    expect(hiddenReasons(jobs, settings)).toEqual([
+      ["onsite", "workplace"],
+      ["contract", "job-type"],
+    ])
+  })
+
+  test("keeps jobs of every level when no level is chosen, like the other lists", () => {
+    const jobs = [job("senior", { title: "Data Analyst III" }), job("intern", { title: "Data Analyst Intern" })]
+    const settings = parseSettings({ workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"], levels: [] } })
+
+    expect(hiddenReasons(jobs, settings)).toEqual([])
+  })
+
+  test("hides jobs whose pay tops out below the minimum, counting an hour as a 2,080th of a year, and keeps jobs with no pay", () => {
+    const usd = (min: number, max: number, per: "year" | "hour") => ({ min, max, currency: "USD", per, from: "board" as const })
+    const jobs = [
+      job("low", { pay: usd(50000, 70000, "year") }),
+      job("high", { pay: usd(90000, 120000, "year") }),
+      job("hourly", { pay: usd(40, 45, "hour") }),
+      job("cad", { pay: { ...usd(50000, 60000, "year"), currency: "CAD" } }),
+      job("none"),
+    ]
+    const settings = parseSettings({ workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"], minYearlyPay: 80000 } })
+
+    expect(hiddenReasons(jobs, settings)).toEqual([["low", "pay"]])
+  })
+
   test("shows likely-blocked jobs unless the settings hide them", () => {
     const jobs = [job("1", { description: "Python. We are unable to sponsor visas." })]
 

@@ -264,3 +264,15 @@
   - Read as associate's: the readings match the postings (defense contractors' "Associate's degree plus 10 years, or Bachelor's plus 8 ..." tiers).
 - Over the 9,847 jobs: PhD 142, master's 341, bachelor's 2,597, associate's 98, none 6,669.
 - Feed with the example profile and a master's: 129 shown of 89,784; 5 hidden for degree.
+
+## 2026-11-05: Slice 11c, filter chips on the page
+
+- Built test first:
+  - Settings gain `workplaces`, `jobTypes` and `minYearlyPay`, with the hide reasons `workplace`, `job-type` and `pay`. A job whose board gives no workplace or job type, or that has no pay or pay in another currency, is kept. Hourly pay counts 2,080 hours a year, and the most a job pays is compared.
+  - `filtersFromQuery` puts the page's chips (`within`, `workplace`, `jobType`, `level`, `maxYears`, `minPay`, `degree`) over the saved filters for one request; "any" clears a list or the degree, and a value it cannot use is refused with a 400 that names what it takes. `GET /api/feed` sends back the filters it used.
+  - The page draws the chips from those filters (`renderChips`), keeps only the chips the user changed in the browser, reloads the feed when a server filter changes, and drops saved chips the server refuses.
+  - "New since last visit": `nextVisits` treats a reload within 30 minutes as the same visit; cards first seen after the previous visit get a "New" mark, and the chip keeps only them.
+  - The level, workplace and job-type value lists moved to `feed/filterValues.ts`, since `settings.ts` reads files and cannot go into the page bundle.
+- Found by trying the chips against the real feed: an empty level list hid every job with a level (117) while the other empty lists meant "any". Now an empty level list means any level, with a test.
+- Real data, example profile, through the server: no chips 129 shown; remote 68 (92 hidden for workplace); $150k+ 97 (38 for pay); last 7 days 17; any level, up to 10 years, any degree 260. Shown plus hidden is 89,784 every time. `workplace=office` is refused with its message.
+- In the browser: pressing "remote" and picking "$100k+" gave 61 shown, and only those two chips were saved. Greenhouse jobs stay under "remote" when their board does not say, as designed. "New since last visit" was only tested with unit tests, since it needs a second visit later.

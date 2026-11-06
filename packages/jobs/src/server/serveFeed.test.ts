@@ -94,6 +94,21 @@ describe("serveFeed: the feed", () => {
     ])
   })
 
+  test("applies the page's filter chips for that request only, and sends back the filters it used", async () => {
+    const narrowed = await (await fetch(`${server.url}/api/feed?within=7&workplace=remote`)).json()
+    const plain = await (await fetch(`${server.url}/api/feed`)).json()
+
+    expect(narrowed.filters).toMatchObject({ postedWithinDays: 7, workplaces: ["remote"] })
+    expect(plain.filters).toMatchObject({ postedWithinDays: 90, workplaces: [] })
+  })
+
+  test("refuses a filter chip it cannot use, saying what it takes", async () => {
+    const answer = await fetch(`${server.url}/api/feed?workplace=office`)
+
+    expect(answer.status).toBe(400)
+    expect(await answer.json()).toEqual({ error: "workplace may only use remote, hybrid, onsite." })
+  })
+
   test("leaves the long description out of each card", async () => {
     const feed = await (await fetch(`${server.url}/api/feed`)).json()
 

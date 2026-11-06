@@ -16,9 +16,12 @@ describe("parseSettings: defaults", () => {
         locations: [],
         remoteOnly: false,
         levels: ["intern", "new-grad", "entry"],
+        workplaces: [],
+        jobTypes: [],
         excludeTitleWords: ["senior", "staff", "principal", "manager", "director"],
         postedWithinDays: 90,
         maxYearsRequired: 2,
+        minYearlyPay: 0,
         companies: { include: [], exclude: [] },
         minScore: 0,
       },
@@ -74,6 +77,22 @@ describe("parseSettings: mistakes", () => {
   test("asks for a number of years that is not negative", () => {
     expect(() => parseSettings({ ...MINIMAL, filters: { roles: ["analyst"], maxYearsRequired: -1 } })).toThrow(
       "filters.maxYearsRequired must be a number of years, 0 or more.",
+    )
+  })
+
+  test("reads the wanted workplaces, job types and lowest yearly pay, which hide nothing by default", () => {
+    const base = { workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"] } }
+    const chosen = parseSettings({ ...base, filters: { ...base.filters, workplaces: ["remote"], jobTypes: ["intern"], minYearlyPay: 90000 } }).filters
+
+    expect([chosen.workplaces, chosen.jobTypes, chosen.minYearlyPay]).toEqual([["remote"], ["intern"], 90000])
+    expect(parseSettings(base).filters).toMatchObject({ workplaces: [], jobTypes: [], minYearlyPay: 0 })
+  })
+
+  test("names a workplace, job type or pay it cannot use", () => {
+    const filters = { roles: ["data analyst"], workplaces: ["office"], jobTypes: ["gig"], minYearlyPay: -5 }
+
+    expect(() => parseSettings({ workAuth: { status: "f1-opt" }, filters })).toThrow(
+      "filters.workplaces may only use remote, hybrid, onsite.\nfilters.jobTypes may only use full-time, part-time, contract, intern, temporary.\nfilters.minYearlyPay must be a number of dollars, 0 or more.",
     )
   })
 

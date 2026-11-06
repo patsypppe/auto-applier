@@ -1,45 +1,83 @@
-// The feed page's script: loads the feed from the local server, draws the cards and filters, and saves status changes.
+// The feed page's script: loads the feed from the local server with the chosen filter chips, draws the chips, cards and
+// filters, marks what is new since the last visit, and saves status changes.
 import type { AppliedEntry, ApplicationStatus } from "../feed/applied"
 import type { Card } from "../feed/card"
-import { filterCards, type PageFilters } from "./filterCards"
+import { choicesFrom, renderChips, type ChipChoices, type ChipFilters } from "./chips"
+import { filterCards, isNewSince, type PageFilters } from "./filterCards"
 import { localDate, renderCard } from "./renderCard"
+import { nextVisits, type Visits } from "./visits"
 
-type Feed = { total: number; shown: Card[]; hidden: { reason: string; count: number }[]; extra: Card[]; applied: AppliedEntry[] }
+type Feed = {
+  total: number
+  shown: Card[]
+  hidden: { reason: string; count: number }[]
+  extra: Card[]
+  applied: AppliedEntry[]
+  filters?: ChipFilters
+}
 
 const SAVED_FILTERS = "job-feed-filters"
-const DEFAULT_FILTERS: PageFilters = { search: "", effect: "any", status: "any", sort: "score" }
+const SAVED_CHIPS = "job-feed-chips"
+const SAVED_VISITS = "job-feed-visits"
+const DEFAULT_FILTERS: Omit<PageFilters, "newOnly"> = { search: "", effect: "any", status: "any", sort: "score" }
 
 let feed: Feed = { total: 0, shown: [], hidden: [], extra: [], applied: [] }
 let showing = ""
+let chips: Partial<ChipChoices> = readStored<Partial<ChipChoices>>(SAVED_CHIPS, {})
+let lastVisit: string | undefined
+
+// Reads a value saved in this browser, or the fallback when there is none or storage is blocked.
+function readStored<T>(key: string, fallback: T): T {
+  try {
+    const text = localStorage.getItem(key)
+    return text === null ? fallback : (JSON.parse(text) as T)
+  } catch {
+    return fallback
+  }
+}
+
+// Saves a value in this browser; storage can be blocked, and the page then simply starts fresh next time.
+function store(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Nothing to do: the choice lasts until the page is closed.
+  }
+}
 
 // Returns the element with the given id; the page's HTML always has it.
 function byId<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T
 }
 
-// Reads the filters saved in this browser, or the defaults when there are none or storage is blocked.
-function savedFilters(): PageFilters {
-  try {
-    return { ...DEFAULT_FILTERS, ...(JSON.parse(localStorage.getItem(SAVED_FILTERS) ?? "{}") as Partial<PageFilters>) }
-  } catch {
-    return DEFAULT_FILTERS
-  }
-}
-
-// Reads the filter controls and remembers them in this browser.
+// Reads the filter controls and the "new only" chip, and remembers the controls in this browser.
 function currentFilters(): PageFilters {
-  const filters: PageFilters = {
+  const filters = {
     search: byId<HTMLInputElement>("search").value,
     effect: byId<HTMLSelectElement>("effect").value as PageFilters["effect"],
     status: byId<HTMLSelectElement>("status").value as PageFilters["status"],
     sort: byId<HTMLSelectElement>("sort").value as PageFilters["sort"],
   }
-  try {
-    localStorage.setItem(SAVED_FILTERS, JSON.stringify(filters))
-  } catch {
-    // Storage can be blocked; the filters then simply start fresh next time.
-  }
-  return filters
+  store(SAVED_FILTERS, filters)
+  return { ...filters, newOnly: chips.newOnly === "true" }
+}
+
+// Keeps the chips the user changed, compared with the filters the server used, so the rest follow settings.json. Reloads
+// the feed when a server filter changed, or only redraws when just "new only" did.
+function changeChips(choices: ChipChoices): void {
+  if (!feed.filters) return
+  const before = choicesFrom(feed.filters, chips.newOnly === "true")
+  const changed = Object.entries(choices).filter(([name, value]) => value !== before[name as keyof ChipChoices])
+  chips = { ...chips, ...Object.fromEntries(changed) }
+  store(SAVED_CHIPS, chips)
+  if (changed.some(([name]) => name !== "newOnly")) void load(showing)
+  else draw()
+}
+
+// Draws the chips row from the filters the server used.
+function drawChips(): void {
+  if (!feed.filters) return
+  byId("chips").replaceChildren(renderChips(feed.filters, chips.newOnly === "true", changeChips))
 }
 
 // Sends a status change to the server and redraws with the saved history. Clearing a status asks first.
@@ -57,10 +95,12 @@ async function changeStatus(card: Card, status: ApplicationStatus | "none"): Pro
   draw()
 }
 
-// Draws a list of cards into a container.
+// Draws a list of cards into a container, marking the ones first seen since the last visit.
 function drawCards(container: HTMLElement, cards: readonly Card[]): void {
   const applied = new Map(feed.applied.map((entry) => [entry.key, entry]))
-  container.replaceChildren(...cards.map((card) => renderCard(card, applied.get(card.key), (status) => void changeStatus(card, status))))
+  container.replaceChildren(
+    ...cards.map((card) => renderCard(card, applied.get(card.key), (status) => void changeStatus(card, status), { isNew: isNewSince(card, lastVisit) })),
+  )
 }
 
 // Draws the summary line with a button per hidden reason that shows those jobs below the feed.
@@ -89,7 +129,8 @@ function drawHistory(): void {
 
 // Redraws everything from the loaded feed and the current filters.
 function draw(): void {
-  const cards = filterCards(feed.shown, currentFilters(), feed.applied)
+  const cards = filterCards(feed.shown, currentFilters(), feed.applied, lastVisit)
+  drawChips()
   drawSummary(cards.length)
   drawCards(byId("cards"), cards)
   byId("extra-title").textContent = showing ? `Hidden as ${showing} (at most 300 shown)` : ""
@@ -97,15 +138,28 @@ function draw(): void {
   drawHistory()
 }
 
-// Loads the feed from the server, with the hidden jobs for one reason when asked, and draws it.
+// Loads the feed from the server with the chosen chips, and the hidden jobs for one reason when asked, and draws it.
+// Chips the server refuses, saved by an older page, are dropped and the feed is loaded without them.
 async function load(show: string): Promise<void> {
   showing = show
-  const answer = await fetch(`/api/feed${show ? `?show=${encodeURIComponent(show)}` : ""}`)
-  feed = (await answer.json()) as Feed
+  const params = new URLSearchParams(Object.entries(chips).filter(([name, value]) => name !== "newOnly" && value !== undefined) as [string, string][])
+  if (show) params.set("show", show)
+  const answer = await fetch(`/api/feed?${params}`)
+  const body = (await answer.json()) as Feed & { error?: string }
+  if (answer.status === 400 && Object.keys(chips).length > 0) {
+    chips = {}
+    store(SAVED_CHIPS, chips)
+    return load(show)
+  }
+  feed = body
   draw()
 }
 
-const filters = savedFilters()
+const visits = nextVisits(readStored<Visits | undefined>(SAVED_VISITS, undefined), new Date().toISOString())
+store(SAVED_VISITS, visits)
+lastVisit = visits.previous
+
+const filters = { ...DEFAULT_FILTERS, ...readStored<Partial<PageFilters>>(SAVED_FILTERS, {}) }
 byId<HTMLInputElement>("search").value = filters.search
 byId<HTMLSelectElement>("effect").value = filters.effect
 byId<HTMLSelectElement>("status").value = filters.status

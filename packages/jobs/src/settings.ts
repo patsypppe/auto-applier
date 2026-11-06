@@ -1,10 +1,11 @@
 // Reads data/settings.json: the user's work authorization and what jobs to show, with defaults and a message for each mistake.
 import { readFile } from "node:fs/promises"
+import { JOB_TYPES, LEVELS, WORKPLACES } from "./feed/filterValues"
 import { DEGREES } from "./matching/degree"
-import type { Degree, Level, WorkAuth, WorkAuthStatus } from "./types"
+import type { Degree, JobType, Level, WorkAuth, WorkAuthStatus, Workplace } from "./types"
 
 export const STATUSES: readonly WorkAuthStatus[] = ["citizen", "permanent-resident", "f1-cpt", "f1-opt", "f1-stem-opt", "h1b", "other-needs-sponsorship"]
-export const LEVELS: readonly Level[] = ["intern", "new-grad", "entry", "mid", "senior", "staff"]
+export { JOB_TYPES, LEVELS, WORKPLACES }
 
 export type Filters = {
   roles: string[]
@@ -14,10 +15,13 @@ export type Filters = {
   locations: string[]
   remoteOnly: boolean
   levels: Level[]
+  workplaces: Workplace[]
+  jobTypes: JobType[]
   excludeTitleWords: string[]
   postedWithinDays: number
   maxYearsRequired: number
   myDegree?: Degree
+  minYearlyPay: number
   companies: { include: string[]; exclude: string[] }
   minScore: number
 }
@@ -84,6 +88,16 @@ function readFilters(raw: Raw, problems: string[]): Filters {
   }
   for (const [name, value] of Object.entries(lists)) if (value === undefined) problems.push(`filters.${name} must be a list of words.`)
 
+  // Jobs whose board gives no workplace or job type are kept, so these lists only narrow what is known.
+  const workplaces = stringsAt(raw.workplaces, [])
+  const knownWorkplaces = workplaces?.every((place) => WORKPLACES.some((name) => name === place)) ? (workplaces as Workplace[]) : undefined
+  if (!knownWorkplaces) problems.push(`filters.workplaces may only use ${WORKPLACES.join(", ")}.`)
+  const jobTypes = stringsAt(raw.jobTypes, [])
+  const knownJobTypes = jobTypes?.every((type) => JOB_TYPES.some((name) => name === type)) ? (jobTypes as JobType[]) : undefined
+  if (!knownJobTypes) problems.push(`filters.jobTypes may only use ${JOB_TYPES.join(", ")}.`)
+  const minYearlyPay = raw.minYearlyPay ?? 0
+  if (typeof minYearlyPay !== "number" || minYearlyPay < 0) problems.push("filters.minYearlyPay must be a number of dollars, 0 or more.")
+
   const companies = objectAt(raw.companies)
   const include = stringsAt(companies.include, [])
   const exclude = stringsAt(companies.exclude, [])
@@ -108,10 +122,13 @@ function readFilters(raw: Raw, problems: string[]): Filters {
     locations: lists.locations ?? [],
     remoteOnly: flags.remoteOnly ?? false,
     levels: knownLevels ?? [],
+    workplaces: knownWorkplaces ?? [],
+    jobTypes: knownJobTypes ?? [],
     excludeTitleWords: lists.excludeTitleWords ?? [],
     postedWithinDays: typeof days === "number" ? days : 90,
     maxYearsRequired: typeof maxYears === "number" ? maxYears : 2,
     ...(myDegree ? { myDegree } : {}),
+    minYearlyPay: typeof minYearlyPay === "number" ? minYearlyPay : 0,
     companies: { include: include ?? [], exclude: exclude ?? [] },
     minScore: typeof minScore === "number" ? minScore : 0,
   }

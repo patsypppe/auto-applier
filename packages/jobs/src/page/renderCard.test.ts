@@ -46,6 +46,11 @@ describe("renderCard", () => {
     expect(card.textContent).toContain(line)
   })
 
+  test("marks a job first seen since the last visit as new", () => {
+    expect(renderCard(CARD, undefined, vi.fn(), { isNew: true }).textContent).toContain("New")
+    expect(renderCard(CARD, undefined, vi.fn()).querySelector(".new")).toBeNull()
+  })
+
   test("says which degree the posting requires", () => {
     const card = renderCard({ ...CARD, reasons: { ...CARD.reasons, degreeRequired: "phd" } }, undefined, vi.fn())
 
