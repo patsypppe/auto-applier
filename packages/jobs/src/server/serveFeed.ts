@@ -10,6 +10,7 @@ import { toCard } from "../feed/card"
 import type { RankedJob } from "../feed/getJobs"
 import type { FeedSettings } from "../settings"
 import { readJsonFile, writeJsonFile } from "../storage/files"
+import { canUseStemOpt } from "../tags/effects"
 import { filtersFromQuery } from "./queryFilters"
 
 const MAX_BODY_BYTES = 10_000
@@ -56,7 +57,7 @@ function countByReason(hidden: readonly { reason: HideReason }[]): { reason: Hid
 }
 
 // Answers GET /api/feed: shown cards, hidden counts, the hidden cards for one reason when ?show= asks, the history, and
-// the filters used, which are the saved ones with the page's chips put over them.
+// the filters used, which are the saved ones with the page's chips put over them, and whether the STEM OPT rule applies.
 async function sendFeed(response: ServerResponse, url: URL, options: FeedServerOptions, appliedFile: string): Promise<void> {
   let filters: FeedSettings["filters"]
   try {
@@ -75,6 +76,7 @@ async function sendFeed(response: ServerResponse, url: URL, options: FeedServerO
     extra,
     applied: await readJsonFile<AppliedEntry[]>(appliedFile, []),
     filters,
+    stemOpt: canUseStemOpt(options.settings.workAuth),
   })
 }
 

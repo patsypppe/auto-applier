@@ -27,8 +27,13 @@ const clearance: Rule = (auth) => {
 // An offer of sponsorship matters to students and anyone who needs a visa.
 const sponsors: Rule = (auth) => (F1.includes(auth.status) || NEEDS_SPONSORSHIP_NOW.includes(auth.status) ? "positive" : "ok")
 
+// Returns true for someone on STEM OPT, or an F-1 student with a STEM degree who can move on to it.
+export function canUseStemOpt(auth: WorkAuth): boolean {
+  return auth.status === "f1-stem-opt" || (F1.includes(auth.status) && auth.stemDegree)
+}
+
 // STEM OPT needs an employer enrolled in E-Verify, so it is a plus for a student with a STEM degree.
-const eVerify: Rule = (auth) => (auth.status === "f1-stem-opt" || (F1.includes(auth.status) && auth.stemDegree) ? "positive" : "ok")
+const eVerify: Rule = (auth) => (canUseStemOpt(auth) ? "positive" : "ok")
 
 const EFFECTS: Record<AuthTag, Rule> = {
   "citizen-only": (auth) => (auth.status === "citizen" ? "ok" : "blocked"),

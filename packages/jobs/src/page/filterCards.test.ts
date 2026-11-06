@@ -27,7 +27,7 @@ const CARDS = [
   card("c", { effect: "positive", score: 60, reasons: { matchedSkills: ["Tableau"], missingSkills: [], titleMatches: true } }),
 ]
 const APPLIED: AppliedEntry[] = [{ key: "a", company: "Globex", title: "Data Scientist", url: "u", status: "applied", changes: [] }]
-const ANY = { search: "", effect: "any", status: "any", sort: "score", newOnly: false } as const
+const ANY = { search: "", effect: "any", status: "any", sort: "score", newOnly: false, eVerifyOnly: false } as const
 
 describe("filterCards", () => {
   test("keeps every card, best score first, when nothing is chosen", () => {
@@ -57,5 +57,12 @@ describe("filterCards", () => {
 
   test("sorts by posting date, newest first, when asked", () => {
     expect(filterCards(CARDS, { ...ANY, sort: "date" }, APPLIED).map((found) => found.key)).toEqual(["c", "b", "a"])
+  })
+
+  test("keeps only E-Verify employers when that chip is on", () => {
+    const cards = [card("e", { tags: [{ tag: "e-verify", evidence: "We use E-Verify.", context: "We use E-Verify." }] }), card("n")]
+
+    expect(filterCards(cards, { ...ANY, eVerifyOnly: true }, []).map((found) => found.key)).toEqual(["e"])
+    expect(filterCards(cards, ANY, []).map((found) => found.key)).toEqual(["e", "n"])
   })
 })

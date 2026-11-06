@@ -1,7 +1,7 @@
 // Tests what each work-authorization tag means for each kind of applicant, and how a job's tags add up.
 import { describe, expect, test } from "vitest"
 import type { WorkAuth } from "../types"
-import { effectOf, jobEffect } from "./effects"
+import { canUseStemOpt, effectOf, jobEffect } from "./effects"
 
 const citizen: WorkAuth = { status: "citizen", needsSponsorshipLater: false, stemDegree: false, clearance: "can-obtain" }
 const resident: WorkAuth = { status: "permanent-resident", needsSponsorshipLater: false, stemDegree: false, clearance: "none" }
@@ -67,6 +67,16 @@ describe("effectOf", () => {
     for (const who of [citizen, resident, optStudent, cptIntern, h1bHolder]) {
       expect([effectOf("unclear", who), effectOf("not-stated", who)]).toEqual(["ok", "ok"])
     }
+  })
+})
+
+describe("canUseStemOpt", () => {
+  test("is true on STEM OPT, or for an F-1 student with a STEM degree, and false for everyone else", () => {
+    expect(canUseStemOpt({ ...cptIntern, status: "f1-stem-opt" })).toBe(true)
+    expect(canUseStemOpt(optStudent)).toBe(true)
+    expect(canUseStemOpt({ ...optStudent, stemDegree: false })).toBe(false)
+    expect(canUseStemOpt({ ...citizen, stemDegree: true })).toBe(false)
+    expect(canUseStemOpt(h1bHolder)).toBe(false)
   })
 })
 

@@ -46,6 +46,16 @@ describe("renderCard", () => {
     expect(card.textContent).toContain(line)
   })
 
+  test("says a STEM OPT student can work at an E-Verify employer, when nothing else blocks the job", () => {
+    const eVerify: Card = { ...CARD, effect: "positive", tags: [{ tag: "e-verify", evidence: "We participate in E-Verify.", context: "We participate in E-Verify." }] }
+    const badge = "E-Verify employer: STEM OPT can work here"
+
+    expect(renderCard(eVerify, undefined, vi.fn(), { stemOpt: true }).querySelector(".stem-opt")?.textContent).toBe(badge)
+    expect(renderCard(eVerify, undefined, vi.fn()).textContent).not.toContain(badge)
+    expect(renderCard({ ...eVerify, effect: "likely-blocked" }, undefined, vi.fn(), { stemOpt: true }).textContent).not.toContain(badge)
+    expect(renderCard({ ...CARD, effect: "positive" }, undefined, vi.fn(), { stemOpt: true }).textContent).not.toContain(badge)
+  })
+
   test("marks a job first seen since the last visit as new", () => {
     expect(renderCard(CARD, undefined, vi.fn(), { isNew: true }).textContent).toContain("New")
     expect(renderCard(CARD, undefined, vi.fn()).querySelector(".new")).toBeNull()

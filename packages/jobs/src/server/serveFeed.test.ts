@@ -102,6 +102,10 @@ describe("serveFeed: the feed", () => {
     expect(plain.filters).toMatchObject({ postedWithinDays: 90, workplaces: [] })
   })
 
+  test("says whether the STEM OPT E-Verify rule applies to the user", async () => {
+    expect((await (await fetch(`${server.url}/api/feed`)).json()).stemOpt).toBe(false)
+  })
+
   test("refuses a filter chip it cannot use, saying what it takes", async () => {
     const answer = await fetch(`${server.url}/api/feed?workplace=office`)
 

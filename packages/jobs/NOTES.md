@@ -276,3 +276,12 @@
 - Found by trying the chips against the real feed: an empty level list hid every job with a level (117) while the other empty lists meant "any". Now an empty level list means any level, with a test.
 - Real data, example profile, through the server: no chips 129 shown; remote 68 (92 hidden for workplace); $150k+ 97 (38 for pay); last 7 days 17; any level, up to 10 years, any degree 260. Shown plus hidden is 89,784 every time. `workplace=office` is refused with its message.
 - In the browser: pressing "remote" and picking "$100k+" gave 61 shown, and only those two chips were saved. Greenhouse jobs stay under "remote" when their board does not say, as designed. "New since last visit" was only tested with unit tests, since it needs a second visit later.
+
+## 2026-11-05: Slice 11d, STEM OPT badge
+
+- Built test first:
+  - `canUseStemOpt(workAuth)`: true on STEM OPT, or for an F-1 student with a STEM degree. The E-Verify effect now uses it, and `GET /api/feed` sends it as `stemOpt`.
+  - For those users, a card with the `e-verify` tag whose effect is "a plus" says "E-Verify employer: STEM OPT can work here". A job that another tag makes likely blocked or blocked gets no badge, so the card never says both.
+  - An "E-Verify only" chip, shown only to those users, keeps the cards with the `e-verify` tag, whatever their effect. It is a page-only chip like "new since last visit": it is not sent to the server and does not reload the feed.
+- Real data, example profile (F-1 OPT, STEM degree): 5 of the 129 shown jobs have the tag, 4 get the badge (ID.me, Wilson Elser, Twilio, Superhuman); MegazoneCloud's co-op is likely blocked by another tag and gets none. In the browser the chip showed those 5 and was cleared afterwards.
+- Not handled: 136 of the 3,116 US jobs with an E-Verify sentence say it applies only "in certain locations" or "where required" (Twilio and Analytic Partners, for example). They are still tagged `e-verify` and get the badge, which may overstate it. Counted with a one-off script over data/jobs.jsonl.

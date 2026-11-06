@@ -82,6 +82,12 @@ function tagsBlock(card: Card): HTMLElement {
   return block
 }
 
+// Says that a STEM OPT student can work here: the employer uses E-Verify and nothing else blocks the job.
+function stemOptBadge(card: Card): HTMLElement | undefined {
+  const usesEVerify = card.tags.some((found) => found.tag === "e-verify")
+  return usesEVerify && card.effect === "positive" ? element("p", "stem-opt", "E-Verify employer: STEM OPT can work here") : undefined
+}
+
 // Makes the status menu, showing since when the current status holds, and reports each change.
 function statusBlock(applied: AppliedEntry | undefined, onStatus: (status: ApplicationStatus | "none") => void): HTMLElement {
   const block = element("div", "status")
@@ -103,12 +109,12 @@ function statusBlock(applied: AppliedEntry | undefined, onStatus: (status: Appli
 }
 
 // Builds the card: title link (marked new when first seen since the last visit), company, places, date and score, then
-// skills, tags, other links and the status menu.
+// skills, tags, the STEM OPT badge for a user it applies to, other links and the status menu.
 export function renderCard(
   card: Card,
   applied: AppliedEntry | undefined,
   onStatus: (status: ApplicationStatus | "none") => void,
-  options: { isNew?: boolean } = {},
+  options: { isNew?: boolean; stemOpt?: boolean } = {},
 ): HTMLElement {
   const article = element("article", "card")
 
@@ -124,6 +130,8 @@ export function renderCard(
   const facts = [kind, card.pay ? payText(card.pay) : undefined].filter((part) => part !== undefined)
   if (facts.length > 0) article.append(element("p", "facts", facts.join(" · ")))
   article.append(skillsLine(card), tagsBlock(card))
+  const badge = options.stemOpt ? stemOptBadge(card) : undefined
+  if (badge) article.append(badge)
   if (card.history) article.append(element("p", "history", historySentence(card.history)))
 
   const others = (card.copies ?? []).filter((copy) => copy.url !== card.url)

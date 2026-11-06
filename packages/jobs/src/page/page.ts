@@ -1,8 +1,8 @@
 // The feed page's script: loads the feed from the local server with the chosen filter chips, draws the chips, cards and
-// filters, marks what is new since the last visit, and saves status changes.
+// filters, marks what is new since the last visit and where STEM OPT can work, and saves status changes.
 import type { AppliedEntry, ApplicationStatus } from "../feed/applied"
 import type { Card } from "../feed/card"
-import { choicesFrom, renderChips, type ChipChoices, type ChipFilters } from "./chips"
+import { choicesFrom, PAGE_ONLY, renderChips, type ChipChoices, type ChipFilters } from "./chips"
 import { filterCards, isNewSince, type PageFilters } from "./filterCards"
 import { localDate, renderCard } from "./renderCard"
 import { nextVisits, type Visits } from "./visits"
@@ -14,12 +14,13 @@ type Feed = {
   extra: Card[]
   applied: AppliedEntry[]
   filters?: ChipFilters
+  stemOpt?: boolean
 }
 
 const SAVED_FILTERS = "job-feed-filters"
 const SAVED_CHIPS = "job-feed-chips"
 const SAVED_VISITS = "job-feed-visits"
-const DEFAULT_FILTERS: Omit<PageFilters, "newOnly"> = { search: "", effect: "any", status: "any", sort: "score" }
+const DEFAULT_FILTERS: Omit<PageFilters, "newOnly" | "eVerifyOnly"> = { search: "", effect: "any", status: "any", sort: "score" }
 
 let feed: Feed = { total: 0, shown: [], hidden: [], extra: [], applied: [] }
 let showing = ""
@@ -50,7 +51,13 @@ function byId<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T
 }
 
-// Reads the filter controls and the "new only" chip, and remembers the controls in this browser.
+// Returns the page's own chips: "new only", "E-Verify only" (which counts only when the STEM OPT rule applies) and that rule.
+function pageChips(): { newOnly: boolean; eVerifyOnly: boolean; stemOpt: boolean } {
+  const stemOpt = feed.stemOpt === true
+  return { newOnly: chips.newOnly === "true", eVerifyOnly: stemOpt && chips.eVerifyOnly === "true", stemOpt }
+}
+
+// Reads the filter controls and the page's own chips, and remembers the controls in this browser.
 function currentFilters(): PageFilters {
   const filters = {
     search: byId<HTMLInputElement>("search").value,
@@ -59,25 +66,26 @@ function currentFilters(): PageFilters {
     sort: byId<HTMLSelectElement>("sort").value as PageFilters["sort"],
   }
   store(SAVED_FILTERS, filters)
-  return { ...filters, newOnly: chips.newOnly === "true" }
+  const { newOnly, eVerifyOnly } = pageChips()
+  return { ...filters, newOnly, eVerifyOnly }
 }
 
 // Keeps the chips the user changed, compared with the filters the server used, so the rest follow settings.json. Reloads
-// the feed when a server filter changed, or only redraws when just "new only" did.
+// the feed when a server filter changed, or only redraws when just the page's own chips did.
 function changeChips(choices: ChipChoices): void {
   if (!feed.filters) return
-  const before = choicesFrom(feed.filters, chips.newOnly === "true")
+  const before = choicesFrom(feed.filters, pageChips())
   const changed = Object.entries(choices).filter(([name, value]) => value !== before[name as keyof ChipChoices])
   chips = { ...chips, ...Object.fromEntries(changed) }
   store(SAVED_CHIPS, chips)
-  if (changed.some(([name]) => name !== "newOnly")) void load(showing)
+  if (changed.some(([name]) => !PAGE_ONLY.includes(name as keyof ChipChoices))) void load(showing)
   else draw()
 }
 
 // Draws the chips row from the filters the server used.
 function drawChips(): void {
   if (!feed.filters) return
-  byId("chips").replaceChildren(renderChips(feed.filters, chips.newOnly === "true", changeChips))
+  byId("chips").replaceChildren(renderChips(feed.filters, pageChips(), changeChips))
 }
 
 // Sends a status change to the server and redraws with the saved history. Clearing a status asks first.
@@ -95,11 +103,12 @@ async function changeStatus(card: Card, status: ApplicationStatus | "none"): Pro
   draw()
 }
 
-// Draws a list of cards into a container, marking the ones first seen since the last visit.
+// Draws a list of cards into a container, marking the ones first seen since the last visit and, for a user the STEM OPT
+// rule applies to, the E-Verify employers.
 function drawCards(container: HTMLElement, cards: readonly Card[]): void {
   const applied = new Map(feed.applied.map((entry) => [entry.key, entry]))
   container.replaceChildren(
-    ...cards.map((card) => renderCard(card, applied.get(card.key), (status) => void changeStatus(card, status), { isNew: isNewSince(card, lastVisit) })),
+    ...cards.map((card) => renderCard(card, applied.get(card.key), (status) => void changeStatus(card, status), { isNew: isNewSince(card, lastVisit), stemOpt: feed.stemOpt })),
   )
 }
 
@@ -142,7 +151,7 @@ function draw(): void {
 // Chips the server refuses, saved by an older page, are dropped and the feed is loaded without them.
 async function load(show: string): Promise<void> {
   showing = show
-  const params = new URLSearchParams(Object.entries(chips).filter(([name, value]) => name !== "newOnly" && value !== undefined) as [string, string][])
+  const params = new URLSearchParams(Object.entries(chips).filter(([name, value]) => !PAGE_ONLY.includes(name as keyof ChipChoices) && value !== undefined) as [string, string][])
   if (show) params.set("show", show)
   const answer = await fetch(`/api/feed?${params}`)
   const body = (await answer.json()) as Feed & { error?: string }
