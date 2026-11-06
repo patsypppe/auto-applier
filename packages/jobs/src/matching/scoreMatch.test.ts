@@ -1,6 +1,6 @@
 // Tests that scoreMatch scores a job by the share of its named skills the user has and by its title, and says why.
 import { describe, expect, test } from "vitest"
-import { scoreMatch } from "./scoreMatch"
+import { readMatch, roleMatcher, scoreMatch, scoreReads } from "./scoreMatch"
 
 const ME = { skills: ["Python", "SQL", "Tableau"], roles: ["data analyst", "data scientist"] }
 
@@ -49,5 +49,13 @@ describe("scoreMatch", () => {
     const second = scoreMatch({ title: "Data Analyst", description: "Looker then SQL then Python." }, ME).score
 
     expect(first).toBe(second)
+  })
+
+  test("scores reads saved earlier the same as reading the job again, so new roles need no new read", () => {
+    const job = { title: "Data Scientist", description: "Python, SQL and Spark. 3+ years of experience." }
+    const reads = readMatch(job, ME.skills)
+
+    expect(scoreReads(reads, roleMatcher(ME.roles)(job.title))).toEqual(scoreMatch(job, ME))
+    expect(scoreReads(reads, roleMatcher(["data engineer"])(job.title))).toEqual(scoreMatch(job, { ...ME, roles: ["data engineer"] }))
   })
 })

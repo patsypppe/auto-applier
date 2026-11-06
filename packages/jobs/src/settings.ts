@@ -1,11 +1,10 @@
 // Reads data/settings.json: the user's work authorization and what jobs to show, with defaults and a message for each mistake.
 import { readFile } from "node:fs/promises"
-import { JOB_TYPES, LEVELS, WORKPLACES } from "./feed/filterValues"
+import { CLEARANCES, JOB_TYPES, LEVELS, STATUSES, WORKPLACES } from "./feed/filterValues"
 import { DEGREES } from "./matching/degree"
-import type { Degree, JobType, Level, WorkAuth, WorkAuthStatus, Workplace } from "./types"
+import type { Degree, JobType, Level, WorkAuth, Workplace } from "./types"
 
-export const STATUSES: readonly WorkAuthStatus[] = ["citizen", "permanent-resident", "f1-cpt", "f1-opt", "f1-stem-opt", "h1b", "other-needs-sponsorship"]
-export { JOB_TYPES, LEVELS, WORKPLACES }
+export { JOB_TYPES, LEVELS, STATUSES, WORKPLACES }
 
 export type Filters = {
   roles: string[]
@@ -58,9 +57,8 @@ function readWorkAuth(raw: Raw, problems: string[]): WorkAuth {
   if (needsSponsorshipLater === undefined) problems.push("workAuth.needsSponsorshipLater must be true or false.")
   if (stemDegree === undefined) problems.push("workAuth.stemDegree must be true or false.")
 
-  const clearances = ["none", "can-obtain", "active"] as const
-  const clearance = raw.clearance === undefined ? (known === "citizen" ? "can-obtain" : "none") : clearances.find((name) => name === raw.clearance)
-  if (!clearance) problems.push("workAuth.clearance must be one of none, can-obtain, active.")
+  const clearance = raw.clearance === undefined ? (known === "citizen" ? "can-obtain" : "none") : CLEARANCES.find((name) => name === raw.clearance)
+  if (!clearance) problems.push(`workAuth.clearance must be one of ${CLEARANCES.join(", ")}.`)
 
   return { status: known, needsSponsorshipLater: needsSponsorshipLater ?? false, stemDegree: stemDegree ?? false, clearance: clearance ?? "none" }
 }
@@ -142,6 +140,18 @@ export function parseSettings(raw: unknown): FeedSettings {
   const settings = { workAuth: readWorkAuth(objectAt((raw as Raw).workAuth), problems), filters: readFilters(objectAt((raw as Raw).filters), problems) }
   if (problems.length > 0) throw new Error(problems.join("\n"))
   return settings
+}
+
+// Reads and checks the settings file, or returns undefined when there is none yet, so the feed page can ask for them.
+export async function loadSettingsIfAny(file: string): Promise<FeedSettings | undefined> {
+  let text: string
+  try {
+    text = await readFile(file, "utf8")
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined
+    throw error
+  }
+  return parseSettings(JSON.parse(text))
 }
 
 // Reads and checks the settings file, or says how to create one.

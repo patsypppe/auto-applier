@@ -1,11 +1,12 @@
-// The "feed" command: ranks the collected jobs once, then serves the feed page on this computer until stopped.
+// The "feed" command: reads the collected jobs once, then serves the feed page on this computer until stopped. Settings
+// saved on the page rank the jobs again without reading them again.
 import { fileURLToPath } from "node:url"
 import { join } from "node:path"
-import { getJobs } from "../feed/getJobs"
+import { prepareJobs } from "../feed/getJobs"
 import { loadHistory } from "../history/loadHistory"
 import { loadProfile } from "../profile"
 import { serveFeed } from "../server/serveFeed"
-import { loadSettings } from "../settings"
+import { loadSettingsIfAny } from "../settings"
 import { readJobsFile } from "../storage/files"
 
 const DEFAULT_PORT = 4317
@@ -18,15 +19,17 @@ function portFrom(args: readonly string[]): number {
   return port
 }
 
-// Loads everything, ranks the jobs and starts the page server. The page files sit next to the built command in dist/.
+// Loads everything, reads the jobs and starts the page server. The page files sit next to the built command in dist/.
+// With no settings.json yet, the page opens its settings panel and the jobs are ranked once they are saved.
 export async function runFeed(args: readonly string[], dataDir: string, print: (line: string) => void): Promise<void> {
-  const settings = await loadSettings(join(dataDir, "settings.json"))
+  const settings = await loadSettingsIfAny(join(dataDir, "settings.json"))
   const profile = await loadProfile(join(dataDir, "profile.json"))
   const jobs = await readJobsFile(join(dataDir, "jobs.jsonl"))
 
-  print(`Ranking ${jobs.length.toLocaleString("en-US")} jobs. This takes about a minute for the full list.`)
-  const ranked = getJobs(settings, profile, jobs, await loadHistory(dataDir))
+  print(`Reading ${jobs.length.toLocaleString("en-US")} jobs. This takes about two minutes for the full list.`)
+  const prepared = prepareJobs(profile, jobs, await loadHistory(dataDir))
   const pageDir = fileURLToPath(new URL(".", import.meta.url))
-  const { url } = await serveFeed({ ranked, settings, dataDir, pageDir, port: portFrom(args) })
+  const { url } = await serveFeed({ prepared, settings, dataDir, pageDir, port: portFrom(args) })
+  if (!settings) print("There is no data/settings.json yet. Fill in the settings on the page.")
   print(`The feed is at ${url} (only on this computer). Press Ctrl+C to stop.`)
 }

@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest"
 import { parseSettings } from "../settings"
 import type { JobRecord } from "../types"
 import { applyFilters } from "./applyFilters"
-import { getJobs } from "./getJobs"
+import { getJobs, prepareJobs, rankJobs } from "./getJobs"
 
 const NOW = new Date("2026-11-04T12:00:00Z")
 
@@ -95,6 +95,16 @@ describe("getJobs", () => {
 
     expect(entry!.tags.map((found) => found.tag)).toEqual(["citizen-only"])
     expect(entry!.effect).toBe("blocked")
+  })
+
+  test("ranks jobs prepared once for new settings the same as ranking them from the start", () => {
+    const jobs = [job("1", { description: "Python. U.S. citizenship required." }), job("2", { title: "Data Engineer" }), job("3", { description: "SQL." })]
+    const prepared = prepareJobs(PROFILE, jobs)
+    const citizen = parseSettings({ workAuth: { status: "citizen" }, filters: { roles: ["data engineer"] } })
+
+    expect(rankJobs(SETTINGS, prepared)).toEqual(getJobs(SETTINGS, PROFILE, jobs))
+    expect(rankJobs(citizen, prepared)).toEqual(getJobs(citizen, PROFILE, jobs))
+    expect(rankJobs(citizen, prepared).map(({ job: entry }) => entry.id)).toEqual(["2", "1", "3"])
   })
 })
 

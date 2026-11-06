@@ -33,9 +33,20 @@
       .new { font-size: 12px; font-weight: 600; color: var(--plus); border: 1px solid var(--plus); border-radius: 10px; padding: 0 6px; }
       .facts { margin: 4px 0; }
       .stem-opt { margin: 4px 0; color: var(--plus); font-weight: 600; }
+      #settings-panel { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+      #settings-panel summary { cursor: pointer; font-weight: 600; }
+      .settings fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+      .settings .role-group { flex-basis: 100%; }
+      .settings input[type="text"] { min-width: 260px; }
+      .settings input[type="number"] { width: 5em; }
+      .errors { color: var(--blocked); white-space: pre-line; }
     </style>
   </head>
   <body>
+    <details id="settings-panel">
+      <summary>Settings</summary>
+      <div id="settings"></div>
+    </details>
     <header>
       <input id="search" type="search" placeholder="Search title, company or skill" />
       <select id="effect">

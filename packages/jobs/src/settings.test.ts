@@ -1,6 +1,9 @@
 // Tests that parseSettings fills in sensible defaults for each status and explains each mistake in a settings file.
 import { describe, expect, test } from "vitest"
-import { parseSettings } from "./settings"
+import { mkdtemp, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { loadSettingsIfAny, parseSettings } from "./settings"
 
 const MINIMAL = { workAuth: { status: "f1-opt" }, filters: { roles: ["data scientist"] } }
 
@@ -106,5 +109,15 @@ describe("parseSettings: mistakes", () => {
 
   test("refuses a file that is not an object", () => {
     expect(() => parseSettings([])).toThrow("The settings file must be an object with workAuth and filters.")
+  })
+})
+
+describe("loadSettingsIfAny", () => {
+  test("returns nothing when there is no settings file yet, and still refuses a broken one", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "settings-"))
+    await writeFile(join(dir, "bad.json"), JSON.stringify({ workAuth: { status: "student" }, filters: { roles: ["analyst"] } }))
+
+    expect(await loadSettingsIfAny(join(dir, "settings.json"))).toBeUndefined()
+    await expect(loadSettingsIfAny(join(dir, "bad.json"))).rejects.toThrow("workAuth.status must be one of")
   })
 })

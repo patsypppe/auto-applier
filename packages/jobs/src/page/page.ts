@@ -1,13 +1,16 @@
 // The feed page's script: loads the feed from the local server with the chosen filter chips, draws the chips, cards and
-// filters, marks what is new since the last visit and where STEM OPT can work, and saves status changes.
+// filters, marks what is new since the last visit and where STEM OPT can work, and saves status changes and settings.
 import type { AppliedEntry, ApplicationStatus } from "../feed/applied"
 import type { Card } from "../feed/card"
 import { choicesFrom, PAGE_ONLY, renderChips, type ChipChoices, type ChipFilters } from "./chips"
 import { filterCards, isNewSince, type PageFilters } from "./filterCards"
 import { localDate, renderCard } from "./renderCard"
+import { renderSettingsForm, type SettingsDraft } from "./settingsForm"
 import { nextVisits, type Visits } from "./visits"
+import type { FeedSettings } from "../settings"
 
 type Feed = {
+  needsSettings?: boolean
   total: number
   shown: Card[]
   hidden: { reason: string; count: number }[]
@@ -136,8 +139,29 @@ function drawHistory(): void {
   byId("history").replaceChildren(...rows)
 }
 
-// Redraws everything from the loaded feed and the current filters.
+// Sends the settings to the server, which saves them and ranks the jobs again, then reloads the feed and the panel.
+// Returns the server's mistakes, one per line, when it refused them.
+async function saveSettings(draft: SettingsDraft): Promise<string | undefined> {
+  const answer = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(draft) })
+  const body = (await answer.json()) as { settings?: FeedSettings; error?: string }
+  if (!answer.ok || !body.settings) return body.error ?? "The settings could not be saved."
+  drawSettings(body.settings)
+  await load(showing)
+  return undefined
+}
+
+// Draws the settings panel from the saved settings, or empty for a first setup.
+function drawSettings(saved: FeedSettings | undefined): void {
+  byId("settings").replaceChildren(renderSettingsForm(saved, saveSettings))
+}
+
+// Redraws everything from the loaded feed and the current filters. With no settings yet, it opens the settings panel.
 function draw(): void {
+  if (feed.needsSettings) {
+    byId<HTMLDetailsElement>("settings-panel").open = true
+    byId("summary").textContent = `${feed.total.toLocaleString()} jobs are ready. Fill in the settings above to see the ones for you.`
+    return
+  }
   const cards = filterCards(feed.shown, currentFilters(), feed.applied, lastVisit)
   drawChips()
   drawSummary(cards.length)
@@ -174,4 +198,7 @@ byId<HTMLSelectElement>("effect").value = filters.effect
 byId<HTMLSelectElement>("status").value = filters.status
 byId<HTMLSelectElement>("sort").value = filters.sort
 for (const id of ["search", "effect", "status", "sort"]) byId(id).addEventListener("input", draw)
+void fetch("/api/settings")
+  .then((answer) => answer.json() as Promise<{ settings: FeedSettings | null }>)
+  .then(({ settings }) => drawSettings(settings ?? undefined))
 void load("")

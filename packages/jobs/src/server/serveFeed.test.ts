@@ -4,7 +4,7 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, test } from "vitest"
-import { getJobs } from "../feed/getJobs"
+import { prepareJobs } from "../feed/getJobs"
 import { parseSettings } from "../settings"
 import type { JobRecord } from "../types"
 import { serveFeed } from "./serveFeed"
@@ -38,7 +38,10 @@ function job(id: string, details: Partial<JobRecord> = {}): JobRecord {
   }
 }
 
+const JOBS = [job("1"), job("2", { description: "U.S. citizenship required." }), job("3", { title: "Sales Lead" })]
+
 let dataDir = ""
+let pageFiles = ""
 let server: { url: string; close: () => Promise<void> }
 
 beforeEach(async () => {
@@ -46,8 +49,8 @@ beforeEach(async () => {
   const pageDir = await mkdtemp(join(tmpdir(), "serve-page-"))
   await writeFile(join(pageDir, "index.html"), "<!doctype html><title>Job feed</title>")
   await writeFile(join(pageDir, "page.js"), "console.info('page')")
-  const ranked = getJobs(SETTINGS, PROFILE, [job("1"), job("2", { description: "U.S. citizenship required." }), job("3", { title: "Sales Lead" })])
-  server = await serveFeed({ ranked, settings: SETTINGS, dataDir, pageDir, port: 0 })
+  pageFiles = pageDir
+  server = await serveFeed({ prepared: prepareJobs(PROFILE, JOBS), settings: SETTINGS, dataDir, pageDir, port: 0 })
 })
 
 afterEach(async () => {
@@ -157,5 +160,53 @@ describe("serveFeed: statuses", () => {
     )
 
     expect((await post({ key: "greenhouse:gone:5", status: "rejected" })).status).toBe(200)
+  })
+})
+
+describe("serveFeed: settings", () => {
+  // Sends settings to the server and returns the answer.
+  function postSettings(url: string, body: unknown) {
+    return fetch(`${url}/api/settings`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+  }
+
+  test("sends the settings in use", async () => {
+    expect(await (await fetch(`${server.url}/api/settings`)).json()).toEqual({ settings: SETTINGS })
+  })
+
+  test("saves new settings to data/settings.json and ranks the feed again with them", async () => {
+    const answer = await postSettings(server.url, { workAuth: { status: "citizen" }, filters: { roles: ["sales lead"], levels: [] } })
+    const feed = await (await fetch(`${server.url}/api/feed`)).json()
+
+    expect(answer.status).toBe(200)
+    expect((await answer.json()).settings.filters.roles).toEqual(["sales lead"])
+    expect(JSON.parse(await readFile(join(dataDir, "settings.json"), "utf8")).workAuth.status).toBe("citizen")
+    expect(feed.shown.map((card: { key: string }) => card.key)).toEqual(["greenhouse:acme:3"])
+  })
+
+  test("refuses settings with mistakes, lists every one, and changes nothing", async () => {
+    const answer = await postSettings(server.url, { workAuth: { status: "student" }, filters: { roles: [] } })
+
+    expect(answer.status).toBe(400)
+    expect((await answer.json()).error).toBe(
+      'workAuth.status must be one of citizen, permanent-resident, f1-cpt, f1-opt, f1-stem-opt, h1b, other-needs-sponsorship.\nfilters.roles must list at least one job title keyword, such as "data analyst".',
+    )
+    await expect(readFile(join(dataDir, "settings.json"), "utf8")).rejects.toThrow()
+    expect((await (await fetch(`${server.url}/api/feed`)).json()).shown).toHaveLength(1)
+  })
+
+  test("asks for settings when there are none yet, and shows the feed once they are saved", async () => {
+    const fresh = await serveFeed({ prepared: prepareJobs(PROFILE, JOBS), dataDir, pageDir: pageFiles, port: 0 })
+    try {
+      const before = await (await fetch(`${fresh.url}/api/feed`)).json()
+      const none = await (await fetch(`${fresh.url}/api/settings`)).json()
+      await postSettings(fresh.url, { workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"] } })
+      const after = await (await fetch(`${fresh.url}/api/feed`)).json()
+
+      expect([before.needsSettings, before.total, before.shown]).toEqual([true, 3, []])
+      expect(none).toEqual({ settings: null })
+      expect([after.needsSettings, after.shown.length]).toEqual([false, 1])
+    } finally {
+      await fresh.close()
+    }
   })
 })

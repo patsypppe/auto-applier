@@ -285,3 +285,18 @@
   - An "E-Verify only" chip, shown only to those users, keeps the cards with the `e-verify` tag, whatever their effect. It is a page-only chip like "new since last visit": it is not sent to the server and does not reload the feed.
 - Real data, example profile (F-1 OPT, STEM degree): 5 of the 129 shown jobs have the tag, 4 get the badge (ID.me, Wilson Elser, Twilio, Superhuman); MegazoneCloud's co-op is likely blocked by another tag and gets none. In the browser the chip showed those 5 and was cleared afterwards.
 - Not handled: 136 of the 3,116 US jobs with an E-Verify sentence say it applies only "in certain locations" or "where required" (Twilio and Analytic Partners, for example). They are still tagged `e-verify` and get the badge, which may overstate it. Counted with a one-off script over data/jobs.jsonl.
+
+## 2026-11-05: Slice 11e, settings panel
+
+- Built test first:
+  - Matching is split: `readMatch` (skills, level, years, degree; the slow part, and it does not depend on settings) and `scoreReads` (adds the title match). `prepareJobs` does tags, reads, pay and H-1B history once; `rankJobs` scores and orders for given settings. `getJobs` is the two together, so `top` and `tags` are unchanged.
+  - The server keeps the prepared jobs. `GET /api/settings` sends the settings in use (or null). `POST /api/settings` checks them with `parseSettings`, writes data/settings.json with the safe write (temporary file, then rename), and ranks again; a mistake answers 400 with every problem and changes nothing.
+  - With no settings.json the feed starts anyway: `/api/feed` answers `needsSettings: true` with no jobs, and the page opens the panel.
+  - The panel (`renderSettingsForm`) shows status, sponsorship later, STEM degree, clearance, roles (four groups of common roles plus free text), levels, places, remote only, posted within, years and degree. It sends the saved settings it does not show unchanged. The status and clearance lists moved to `feed/filterValues.ts` so the page bundle stays free of file code.
+- Timings on the full list (89,784 jobs), one process, this laptop (8 GB RAM, other programs open):
+  - Before: ranking at startup took 119 s (tags 40 s, matching 77 s, pay 1 s). Startup with the new build: 147 s to the first answer.
+  - `prepareJobs`: 131 s, once. `rankJobs` after that: 2.2 s to 2.5 s in the runs that were not paging, but 11 s, 33 s and 40 s in runs where the machine was. Swap use was 13.5 GB of 14 GB during these runs, and the server process was almost fully swapped out.
+  - Through the server: a save took 16 s to 37 s on curl, and 100 s for one, all while paging. From the page, a save took over a minute. So on this machine a save is minutes faster than a restart (about 2.5 minutes), but not quick. What it costs on a machine with free memory is unverified.
+  - Building the role patterns once per re-rank instead of once per job made no difference I could measure.
+- In the browser: the panel showed the saved settings; unticking every role and saving showed the roles message and left the file alone; ticking "analytics engineer" and choosing citizen gave 168 shown (129 before), the same as the one-process run. The original settings.json was put back afterwards and is byte for byte the same.
+- Not tried by hand: the first-setup path with no settings.json (covered by a server test and a form test only).
