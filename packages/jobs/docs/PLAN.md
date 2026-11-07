@@ -357,6 +357,50 @@ Questions:
    Default: no, settings only; skills stay in profile.json.
 2. Min-pay chip: keep jobs that state no pay (default), or hide them?
 
+## Slice 12: memory, E-Verify wording, review leftovers
+
+Status: draft for review, 2026-11-06. Slice 11 is done (6ba5232). Main has the branch up to slice 8 (3a9f395, merged
+on 2026-11-04); slices 9 to 11 are on job-feed only.
+
+What was checked before writing this:
+
+- The feed server keeps every job's full description after `prepareJobs`, but nothing reads it again: `applyFilters`,
+  `toCard` and the server routes never use `description` (checked with grep). The jobs file is 562 MB.
+- On this laptop (8 GB RAM, about 13.5 GB swap in use) the server was almost fully swapped out, and a settings save
+  took 16 s to 100 s against 2.2 s to 2.5 s for `rankJobs` in a run that was not paging (NOTES.md, slice 11e).
+- 136 of the 3,116 US jobs with an E-Verify sentence say it applies only in certain locations or where required
+  (NOTES.md, slice 11d). They get the STEM OPT badge today.
+
+Each part is tests first, then code, then the tests, the typecheck and a check on the real data, then a stop.
+
+**12a. Smaller feed server.**
+- `prepareJobs` keeps what the server needs and drops the description, so the prepared job holds no long text. The
+  tag evidence and context sentences stay, since the cards show them.
+- The feed command reads the jobs file one job at a time (`eachJob`) and prepares each as it goes, so the whole file is
+  never in memory at once.
+- Measured before and after: peak memory (`/usr/bin/time -l`), memory once serving, startup time, and save time, each
+  noted with the swap in use, since this machine's numbers swing.
+
+**12b. E-Verify only in some places.**
+- New tag `e-verify-some-places` for "in certain locations", "where required by law" and similar, instead of
+  `e-verify`. Its effect is "ok" for everyone, so it is not a plus and gets no badge.
+- The card shows it as a tag with its sentence, so the user can see it. "E-Verify only" keeps both tags.
+- Checked by reading the sentences that move from one tag to the other.
+
+**12c. Review leftovers (all low).**
+- F10: Lever EU boards get their own cache file, list entry and dead mark (`-eu` in the key).
+- F11: an invalid numeric entity such as `&#99999999;` is left as it is instead of failing the whole board.
+- F13: Lever slugs are URL-decoded, a bad `%` in an Ashby slug no longer throws, and `--board lever-eu:slug` works.
+
+Not in this slice: the lockfile entry, full text only for filtered jobs, Databricks and Coinbase, extra statuses
+(asylee, refugee, H-4 EAD, TN), myworkdaysite.com links. These still wait for a decision.
+
+Questions:
+1. 12b: should "E-Verify in some places" still count as a plus for a STEM student? Default: no, it is "ok", because
+   the posting does not say the job's own place is covered.
+2. 12a: is it fine that a job's description is no longer in memory? Only the server is affected; `top`, `tags` and
+   `collect` keep reading the file as now. Default: yes.
+
 ## Changes to the spec
 
 - **H-1B history from USCIS first, DOL later.** The USCIS Data Hub gives actual petition decisions per employer as CSV. The DOL file is a 252 MB Excel file, and reading it without a new dependency means writing a zip and XML reader. The DOL data adds wage levels and job titles, which are useful but not needed for the first version. F6 changes accordingly: the card says "USCIS approved N H-1B petitions for this employer in FY2026".
