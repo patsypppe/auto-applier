@@ -67,6 +67,7 @@ export type AuthTag =
   | "sponsors"
   | "opt-cpt-welcome"
   | "e-verify"
+  | "e-verify-some-places"
   | "unclear"
   | "not-stated"
 

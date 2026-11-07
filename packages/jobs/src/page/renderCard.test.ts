@@ -54,6 +54,8 @@ describe("renderCard", () => {
     expect(renderCard(eVerify, undefined, vi.fn()).textContent).not.toContain(badge)
     expect(renderCard({ ...eVerify, effect: "likely-blocked" }, undefined, vi.fn(), { stemOpt: true }).textContent).not.toContain(badge)
     expect(renderCard({ ...CARD, effect: "positive" }, undefined, vi.fn(), { stemOpt: true }).textContent).not.toContain(badge)
+    const somePlaces: Card = { ...eVerify, tags: [{ tag: "e-verify-some-places", evidence: "In certain locations.", context: "In certain locations." }] }
+    expect(renderCard(somePlaces, undefined, vi.fn(), { stemOpt: true }).textContent).not.toContain(badge)
   })
 
   test("marks a job first seen since the last visit as new", () => {

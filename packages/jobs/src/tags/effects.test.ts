@@ -63,6 +63,11 @@ describe("effectOf", () => {
     expect(effectOf("e-verify", citizen)).toBe("ok")
   })
 
+  test("counts E-Verify in only some places as fine, not a plus, since the job's own place may not be one of them", () => {
+    expect(effectOf("e-verify-some-places", optStudent)).toBe("ok")
+    expect(effectOf("e-verify-some-places", { ...cptIntern, status: "f1-stem-opt" })).toBe("ok")
+  })
+
   test("never blocks anyone for an unclear statement or for saying nothing", () => {
     for (const who of [citizen, resident, optStudent, cptIntern, h1bHolder]) {
       expect([effectOf("unclear", who), effectOf("not-stated", who)]).toEqual(["ok", "ok"])

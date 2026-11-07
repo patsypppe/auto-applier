@@ -319,3 +319,10 @@
 
 - Startup and save times depend on how much the machine is paging, and the swap use differed between runs, so treat them as rough. The memory numbers are the main result. The feed showed the same 129 of 89,784 jobs afterwards.
 - Side effect of the save test: it re-sent the current settings, so data/settings.json was rewritten with every default written out. The values are the same as before.
+
+## 2026-11-06: Slice 12b, E-Verify in some places
+
+- Built test first: a new tag `e-verify-some-places` for E-Verify used only in "certain", "some" or "select" locations, states or jurisdictions. Its effect is "ok" for everyone, so it is not a plus and gets no STEM OPT badge; the card still shows it with its sentence. `e-verify` no longer matches those sentences. "E-Verify only" keeps both tags.
+- Correction to slice 11d: the 136 jobs counted there also matched "as required by law", which on its own is a firm statement (Zone 5 Technologies: "As required by law, we will verify ... all new employees using the E-Verify system"). Reading the sentences by wording, only "in certain locations" is conditional; "where required" and "some states" appear in no US E-Verify sentence.
+- Real data, `node dist/cli.js tags --status f1-stem-opt`, before and after: `e-verify` 3,153 then 3,085, `e-verify-some-places` 68; jobs that are a plus for STEM OPT 3,426 then 3,359. All 68 moved jobs carry one of two sentences: Twilio (55) and Analytic Partners (13), "participates in the E-Verify program in certain locations, as required by law". Blocked and likely-blocked counts did not change.
+- The `tags` runs rewrote data/tag-check.json, the hand-check sample, which is generated and git-ignored.

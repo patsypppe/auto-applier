@@ -60,9 +60,14 @@ describe("filterCards", () => {
   })
 
   test("keeps only E-Verify employers when that chip is on", () => {
-    const cards = [card("e", { tags: [{ tag: "e-verify", evidence: "We use E-Verify.", context: "We use E-Verify." }] }), card("n")]
+    const some = "We use E-Verify in certain locations."
+    const cards = [
+      card("e", { tags: [{ tag: "e-verify", evidence: "We use E-Verify.", context: "We use E-Verify." }] }),
+      card("s", { score: 40, tags: [{ tag: "e-verify-some-places", evidence: some, context: some }] }),
+      card("n", { score: 30 }),
+    ]
 
-    expect(filterCards(cards, { ...ANY, eVerifyOnly: true }, []).map((found) => found.key)).toEqual(["e"])
-    expect(filterCards(cards, ANY, []).map((found) => found.key)).toEqual(["e", "n"])
+    expect(filterCards(cards, { ...ANY, eVerifyOnly: true }, []).map((found) => found.key)).toEqual(["e", "s"])
+    expect(filterCards(cards, ANY, []).map((found) => found.key)).toEqual(["e", "s", "n"])
   })
 })

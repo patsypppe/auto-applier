@@ -78,6 +78,8 @@ const WELCOMES = /\b(welcome|eligible|encourag\w*|accept\w*|consider\w*|open to)
 const STUDENT_CONTEXT = /\b(F-1|student|STEM OPT|visa|practical training|OPT)\b/
 
 const E_VERIFY = /\bE-?Verify\b/i
+// "Participates in the E-Verify program in certain locations": the job's own place may not be one of them.
+const SOME_PLACES = /\b(certain|some|select) (locations|states|jurisdictions)\b/i
 
 // Words that show a sentence is about work authorization even when no rule above could read it.
 const ABOUT_WORK_AUTHORIZATION = [
@@ -145,7 +147,8 @@ export const RULES: readonly Rule[] = [
     tag: "opt-cpt-welcome",
     matches: (s) => OPT_CPT.test(s) && WELCOMES.test(s) && STUDENT_CONTEXT.test(s) && !/\b(not|no|cannot|unable)\b/i.test(s),
   },
-  { tag: "e-verify", matches: (s) => E_VERIFY.test(s) && !onlyASkill(s) },
+  { tag: "e-verify", matches: (s) => E_VERIFY.test(s) && !SOME_PLACES.test(s) && !onlyASkill(s) },
+  { tag: "e-verify-some-places", matches: (s) => E_VERIFY.test(s) && SOME_PLACES.test(s) && !onlyASkill(s) },
 ]
 
 // Returns true when the sentence is about work authorization but none of the rules could say what it means.

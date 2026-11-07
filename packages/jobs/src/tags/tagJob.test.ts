@@ -101,6 +101,11 @@ describe("tagJob: OPT, CPT and E-Verify", () => {
     },
   )
 
+  test("reads E-Verify used only in certain locations apart from E-Verify used for every hire", () => {
+    expect(tagsOf("Additionally, Twilio participates in the E-Verify program in certain locations, as required by law.")).toEqual(["e-verify-some-places"])
+    expect(tagsOf("As required by law, we will verify the identity and employment authorization of all new employees using the E-Verify system.")).toEqual(["e-verify"])
+  })
+
   test("does not read E-Verify listed as a skill as the employer's own E-Verify use", () => {
     expect(tagsOf("Experience supporting EEO-1, VETS-4212, OFCCP / AAP, I-9 / E-Verify, or similar filings")).toEqual(["not-stated"])
   })

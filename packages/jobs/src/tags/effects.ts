@@ -45,6 +45,7 @@ const EFFECTS: Record<AuthTag, Rule> = {
   sponsors,
   "opt-cpt-welcome": (auth) => (F1.includes(auth.status) ? "positive" : "ok"),
   "e-verify": eVerify,
+  "e-verify-some-places": "ok",
   unclear: "ok",
   "not-stated": "ok",
 }

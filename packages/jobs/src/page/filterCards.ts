@@ -33,7 +33,7 @@ export function filterCards(cards: readonly Card[], filters: PageFilters, applie
       if (!words.every((word) => haystack.includes(word))) return false
       if (filters.effect !== "any" && card.effect !== filters.effect) return false
       if (filters.newOnly && lastVisit !== undefined && !isNewSince(card, lastVisit)) return false
-      if (filters.eVerifyOnly && !card.tags.some((found) => found.tag === "e-verify")) return false
+      if (filters.eVerifyOnly && !card.tags.some((found) => found.tag === "e-verify" || found.tag === "e-verify-some-places")) return false
       const status = statusOf.get(card.key)
       if (filters.status === "not-tracked") return status === undefined
       return filters.status === "any" || status === filters.status
