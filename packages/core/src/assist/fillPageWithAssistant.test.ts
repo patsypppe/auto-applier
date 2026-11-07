@@ -44,7 +44,7 @@ function scriptedLlm(script: Script) {
 async function run(html: string, script: Script = {}, jobContext?: string, setup = DEFAULT_SETUP) {
   document.body.innerHTML = html
   const { llm, prompts } = scriptedLlm(script)
-  const result = await fillPageWithAssistant(document, profile, llm, { jobContext, setup })
+  const result = await fillPageWithAssistant(document, profile, llm, { jobContext, setup, rescan: { waitMs: 0 } })
   return { result, prompts, llm }
 }
 
@@ -506,5 +506,137 @@ describe("fillPageWithAssistant: progress", () => {
 
     const asking = seen.find((progress) => progress.phase === "asking")
     expect(asking).toEqual({ total: 2, filled: 1, phase: "asking" })
+  })
+})
+
+// Builds a model stand-in that gives the next scripted reply on each call.
+function sequencedLlm(replies: { id: number; answer: string }[][]) {
+  const prompts: string[] = []
+  let call = 0
+  const llm: LLMClient = {
+    completeJson: vi.fn(async (prompt: string) => {
+      prompts.push(prompt)
+      const answers = replies[Math.min(call, replies.length - 1)] ?? []
+      call += 1
+      return { answers }
+    }),
+  }
+  return { llm, prompts }
+}
+
+describe("fillPageWithAssistant: context for the model", () => {
+  test("sends each field's limits and help text, and the page it is on", async () => {
+    document.body.innerHTML = `<label for="x">Badge name</label><input id="x" maxlength="12" aria-describedby="h"><p id="h">Shown on your name tag</p>`
+    const { llm, prompts } = sequencedLlm([[]])
+
+    await fillPageWithAssistant(document, profile, llm, {
+      rescan: { waitMs: 0 },
+      page: { host: "jobs.acme.com", title: "Engineer at Acme" },
+    })
+
+    expect(prompts[0]).toContain('"maxLength": 12')
+    expect(prompts[0]).toContain("Shown on your name tag")
+    expect(prompts[0]).toContain("jobs.acme.com")
+  })
+})
+
+describe("fillPageWithAssistant: fields that appear after the first scan", () => {
+  const REVEALING = `<label for="a">Preferred pronouns</label><input id="a"><div id="more"></div>`
+
+  // Makes a second question appear once the first one is changed.
+  function revealOnChange(): void {
+    document.getElementById("a")?.addEventListener("change", () => {
+      const more = document.getElementById("more")
+      if (more && more.innerHTML === "") more.innerHTML = `<label for="b">Pronoun note</label><input id="b">`
+    })
+  }
+
+  test("fills a question that was revealed by an earlier answer, in a second pass", async () => {
+    document.body.innerHTML = REVEALING
+    revealOnChange()
+    const { llm, prompts } = sequencedLlm([[{ id: 0, answer: "they/them" }], [{ id: 0, answer: "Please use they" }]])
+
+    const { reports } = await fillPageWithAssistant(document, profile, llm, { rescan: { waitMs: 0 } })
+
+    expect(valueOf("b")).toBe("Please use they")
+    expect(reports).toHaveLength(2)
+    expect(llm.completeJson).toHaveBeenCalledTimes(2)
+    expect(prompts[1]).toContain("Preferred pronouns")
+    expect(prompts[1]).toContain("they/them")
+  })
+
+  test("stops when a pass finds nothing new, so one call is enough for a static page", async () => {
+    document.body.innerHTML = `<label for="a">Preferred pronouns</label><input id="a">`
+    const { llm } = sequencedLlm([[{ id: 0, answer: "they/them" }]])
+
+    await fillPageWithAssistant(document, profile, llm, { rescan: { waitMs: 0 } })
+
+    expect(llm.completeJson).toHaveBeenCalledTimes(1)
+  })
+
+  test("gives up after the allowed number of passes on a page that keeps adding fields", async () => {
+    document.body.innerHTML = `<div id="box"></div>`
+    let count = 0
+    const add = () => {
+      count += 1
+      const input = document.createElement("input")
+      input.id = `f${count}`
+      input.setAttribute("aria-label", `Question ${count}`)
+      input.addEventListener("change", add)
+      document.getElementById("box")?.append(input)
+    }
+    add()
+    const { llm } = sequencedLlm([[{ id: 0, answer: "yes" }]])
+
+    await fillPageWithAssistant(document, profile, llm, { rescan: { waitMs: 0, passes: 2 } })
+
+    expect(llm.completeJson).toHaveBeenCalledTimes(3)
+  })
+
+  test("counts the new fields in the progress total", async () => {
+    document.body.innerHTML = REVEALING
+    revealOnChange()
+    const seen: FillProgress[] = []
+    const { llm } = sequencedLlm([[{ id: 0, answer: "they/them" }], [{ id: 0, answer: "ok" }]])
+
+    await fillPageWithAssistant(document, profile, llm, { rescan: { waitMs: 0 }, onProgress: (progress) => seen.push(progress) })
+
+    expect(Math.max(...seen.map((progress) => progress.total))).toBe(2)
+    expect(seen[seen.length - 1]?.filled).toBe(2)
+  })
+})
+
+describe("fillPageWithAssistant: checking the work afterwards", () => {
+  // Makes the page reject any value but the right one and show why.
+  function rejectUnlessGood(): void {
+    const input = document.getElementById("e") as HTMLInputElement
+    input.addEventListener("input", () => {
+      if (input.value === "E-123") input.removeAttribute("aria-invalid")
+      else if (input.value !== "") input.setAttribute("aria-invalid", "true")
+    })
+  }
+  const FORM = `<label for="e">Employee ID</label><input id="e" aria-describedby="m"><p id="m">Use the form E-123</p>`
+
+  test("asks again, with the page's error, for a value the page rejected, and fixes it", async () => {
+    document.body.innerHTML = FORM
+    rejectUnlessGood()
+    const { llm, prompts } = sequencedLlm([[{ id: 0, answer: "bad" }], [{ id: 0, answer: "E-123" }]])
+
+    const { reports } = await fillPageWithAssistant(document, profile, llm, { rescan: { waitMs: 0 } })
+
+    expect(valueOf("e")).toBe("E-123")
+    expect(reports[0]?.outcome.status).toBe("filled")
+    expect(prompts[1]).toContain("Use the form E-123")
+  })
+
+  test("asks only once more, then leaves a still-rejected field flagged as failed", async () => {
+    document.body.innerHTML = FORM
+    rejectUnlessGood()
+    const { llm } = sequencedLlm([[{ id: 0, answer: "bad" }], [{ id: 0, answer: "worse" }]])
+
+    const { reports } = await fillPageWithAssistant(document, profile, llm, { rescan: { waitMs: 0 } })
+
+    expect(llm.completeJson).toHaveBeenCalledTimes(2)
+    expect(reports[0]?.outcome).toMatchObject({ status: "failed", code: "page-rejected" })
   })
 })

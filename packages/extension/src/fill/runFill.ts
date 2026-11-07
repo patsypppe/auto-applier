@@ -1,8 +1,9 @@
 // Runs one fill of the current page and returns the reply for the popup, whatever happens along the way.
 import { DEFAULT_SETUP, FileFiller, fillPageWithAssistant, summarizeReports, validateProfile } from "@auto-applier/core"
-import type { LLMClient, LoadResume, ProfileStore, ProgressListener } from "@auto-applier/core"
+import type { LLMClient, LoadResume, ProfileStore, ProgressListener, RescanOptions } from "@auto-applier/core"
 import type { FillResultMessage } from "../messaging"
 import { collectJobContext } from "../page/collectJobContext"
+import { collectPageInfo } from "../page/collectPageInfo"
 import { highlightFlagged } from "../ui/highlightFlagged"
 
 // Wraps an error text in the message the popup expects.
@@ -13,12 +14,13 @@ function failure(error: string): FillResultMessage {
 // Used when no way of fetching the resume is given: there is no file to attach.
 const NO_RESUME: LoadResume = async () => undefined
 
-// Fills this page from the saved profile, with the LLM's help where the rules cannot decide, attaching the saved resume to a resume upload, tells the listener how far it has got, and outlines what needs the user.
+// Fills this page from the saved profile, with the LLM's help where the rules cannot decide and again for fields that appear, attaching the saved resume to a resume upload, tells the listener how far it has got, and outlines what needs the user.
 export async function runFill(
   store: ProfileStore,
   llm: LLMClient,
   loadResume: LoadResume = NO_RESUME,
   onProgress?: ProgressListener,
+  rescan?: Partial<RescanOptions>,
 ): Promise<FillResultMessage> {
   try {
     const saved = await store.load()
@@ -30,6 +32,8 @@ export async function runFill(
     const { reports, notes } = await fillPageWithAssistant(document, checked.profile, llm, {
       setup: { ...DEFAULT_SETUP, fillers: [...DEFAULT_SETUP.fillers, new FileFiller(loadResume)] },
       jobContext: collectJobContext(document),
+      page: collectPageInfo(document, window.location),
+      rescan,
       onProgress,
     })
     highlightFlagged(reports)

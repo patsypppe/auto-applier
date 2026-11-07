@@ -215,3 +215,79 @@ describe("parseFieldAnswers", () => {
     },
   )
 })
+
+describe("buildAnswerFieldsPrompt: context around each field", () => {
+  test("sends the section, help text, limits and error the page gives for a field", () => {
+    const context = { section: "Work authorization", help: "Annual, in USD", required: true, maxLength: 40, error: "Enter a number" }
+
+    const prompt = buildAnswerFieldsPrompt([item({ kind: "text", options: [], context })], PROFILE, "")
+
+    for (const part of ["Work authorization", "Annual, in USD", "Enter a number", '"maxLength": 40', '"required": true']) {
+      expect(prompt).toContain(part)
+    }
+  })
+
+  test("leaves out the context key when the page gave nothing", () => {
+    const prompt = buildAnswerFieldsPrompt([item({ context: {} })], PROFILE, "")
+
+    expect(prompt).not.toContain('"context"')
+  })
+
+  test("tells the model the page, its host and the step, when known", () => {
+    const page = { host: "jobs.acme.com", title: "Software Engineer at Acme", step: "Your information" }
+
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "", { page })
+
+    expect(prompt).toContain("jobs.acme.com")
+    expect(prompt).toContain("Software Engineer at Acme")
+    expect(prompt).toContain("Your information")
+  })
+
+  test("lists answers given earlier on this page so later ones agree with them", () => {
+    const earlier = [{ question: "Visa type", answer: "H-1B" }]
+
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "", { earlier })
+
+    expect(prompt).toContain("Visa type")
+    expect(prompt).toContain("H-1B")
+    expect(prompt).toMatch(/earlier/i)
+  })
+
+  test("has no earlier-answers section when there are none", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "", { earlier: [] })
+
+    expect(prompt).not.toMatch(/earlier answers/i)
+  })
+
+  test("tells the model to respect length limits, formats and error messages", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+
+    expect(prompt).toMatch(/maxLength/)
+    expect(prompt).toMatch(/error/i)
+    expect(prompt).toMatch(/placeholder|format/i)
+  })
+})
+
+describe("parseFieldAnswers: length limits", () => {
+  const text = (overrides: Partial<FieldToAnswer> = {}) => item({ kind: "text", options: [], ...overrides })
+
+  test("drops a short answer that is longer than the field allows, rather than cutting it", () => {
+    const items = [text({ context: { maxLength: 5 } })]
+
+    expect(parseFieldAnswers({ answers: [{ id: 0, answer: "toolongvalue" }] }, items).size).toBe(0)
+  })
+
+  test("cuts a written answer at a word boundary inside the limit", () => {
+    const items = [text({ longAnswer: true, context: { maxLength: 20 } })]
+
+    const answers = parseFieldAnswers({ answers: [{ id: 0, answer: "I build billing systems for teams" }] }, items)
+
+    expect(answers.get(0)).toBe("I build billing")
+  })
+
+  test("keeps an answer that fits", () => {
+    const items = [text({ context: { maxLength: 10 } })]
+
+    expect(parseFieldAnswers({ answers: [{ id: 0, answer: "Seattle" }] }, items).get(0)).toBe("Seattle")
+  })
+})

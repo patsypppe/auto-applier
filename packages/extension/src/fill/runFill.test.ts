@@ -110,6 +110,15 @@ describe("runFill: filling the page", () => {
     expect(jobSection).not.toContain("Referral code")
   })
 
+  test("tells the model which page and host the form is on", async () => {
+    const { llm, prompts } = llmAnswering()
+
+    await runFill(storeHolding(PROFILE), llm)
+
+    expect(prompts[0]).toContain("Software Engineer at Example Co.")
+    expect(prompts[0]).toContain("localhost")
+  })
+
   test("outlines fields that need the user and fields the AI wrote", async () => {
     await runFill(storeHolding(PROFILE), llmAnswering().llm)
 

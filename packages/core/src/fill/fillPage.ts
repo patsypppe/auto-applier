@@ -83,14 +83,13 @@ async function processField(
   return { field, profileKey, outcome: await fillWith(fillers, field, value) }
 }
 
-// Fills every field it can find inside the root, one at a time in page order, and reports each field's outcome; the listener hears the total first and then after every field.
-export async function fillPage(
-  root: ParentNode,
+// Fills the given fields one at a time in the order given and reports each outcome; the listener hears the total first and then after every field.
+export async function fillFields(
+  fields: FormField[],
   profile: Profile,
   setup: FillSetup = DEFAULT_SETUP,
   onProgress?: ProgressListener,
 ): Promise<FieldReport[]> {
-  const fields = discoverFields(root)
   const matchers = setup.matchersFor(fields)
   onProgress?.({ total: fields.length, filled: 0, phase: "rules" })
 
@@ -100,4 +99,14 @@ export async function fillPage(
     onProgress?.({ total: fields.length, filled: countFilled(reports), phase: "rules" })
   }
   return reports
+}
+
+// Fills every field it can find inside the root, one at a time in page order, and reports each field's outcome.
+export async function fillPage(
+  root: ParentNode,
+  profile: Profile,
+  setup: FillSetup = DEFAULT_SETUP,
+  onProgress?: ProgressListener,
+): Promise<FieldReport[]> {
+  return fillFields(discoverFields(root), profile, setup, onProgress)
 }

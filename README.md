@@ -74,7 +74,7 @@ Then open `http://localhost:8000/simple-application.html`, save a profile in the
 
 - Your profile and API keys are stored in the browser (`chrome.storage.local`, plain text). The keys are used only by the extension's background worker, never by the web page.
 - Rules fill everything they can without sending anything. The AI is called only when something is left undecided.
-- **What is sent when it is called: your whole profile** (name, email, phone, links, jobs and their descriptions, education, skills, work-authorization and salary answers, and your notes), the labels and options of the unresolved fields, and for written questions up to 4,000 characters of the job page's text. It is sent in one call.
+- **What is sent when it is called: your whole profile** (name, email, phone, links, jobs and their descriptions, education, skills, work-authorization and salary answers, and your notes), the labels and options of the unresolved fields with what the page says around each (section heading, help text, placeholder, length limit, error message), the page's title, host name and form step, and for written questions up to 4,000 characters of the job page's text. Fields that appear after you answer a question are sent in a further call, and a field the page rejects gets one more call that includes the page's error message.
 - **Resume upload sends the resume text** to the AI.
 - Prompts go to Google (Gemini), and to Groq only if you added a Groq key and Gemini failed.
 - If you use Gemini's free tier, check Google's terms on how free-tier content is used.
