@@ -2,7 +2,7 @@
 
 A Chrome extension that fills in job application forms from a profile you save once. There is no server: everything runs in your browser, and your data stays on your computer.
 
-It is built for personal use (the author and a friend), not for the public. It fills the form and stops. **It never clicks Submit**: you review the page and submit it yourself.
+It started as a personal tool and is now open to contributors. It is not a hosted product: you build it and load it into Chrome yourself, with your own API key. It fills the form and stops. **It never clicks Submit**: you review the page and submit it yourself.
 
 ## What it can do
 
@@ -83,10 +83,12 @@ Then open `http://localhost:8000/simple-application.html`, save a profile in the
 
 | Command | What it does |
 |---|---|
-| `npm install` | Installs dependencies for both packages. |
+| `npm install` | Installs dependencies for all packages. |
 | `npm run build` | Builds the extension into `packages/extension/dist`. |
 | `npm test` | Runs all tests (core first, then the extension). |
-| `npm run typecheck` | Type-checks both packages. |
+| `npm run typecheck` | Type-checks core and the extension. |
+
+The job feed has its own commands; see below.
 
 ## How the project is laid out
 
@@ -95,6 +97,8 @@ packages/core/        The logic, with no browser code: profile, field discovery,
                       matching, filling, the AI steps, resume parsing, LLM clients.
 packages/extension/   The thin Chrome layer: popup, content script, background
                       worker, storage, and the build.
+packages/jobs/        The job feed: collects postings from public job boards and ranks
+                      them against your profile (see "Job feed" below).
 fixtures/             A sample application form for tests and trying it by hand.
 CLAUDE.md             Design notes and working rules for the project.
 plan.md               The roadmap.
@@ -102,13 +106,18 @@ plan.md               The roadmap.
 
 `CLAUDE.md` describes the design in detail (how fields are matched, what the AI is allowed to see, what is not built yet).
 
+## Job feed
+
+`packages/jobs` is a separate command-line tool and local web page. It collects postings from companies' public Greenhouse, Lever and Ashby boards, tags what each says about work authorization, ranks jobs against your profile, and tracks the ones you apply to. Everything stays on your computer. See [packages/jobs/README.md](packages/jobs/README.md) for the commands and their limits.
+
 ## Known limits
 
 - Not tried on real job sites yet.
-- Does not click Next or Submit, does not log in, and does not upload your resume file into file inputs.
-- Fields hidden by the page's CSS are not skipped, so a hidden field could be filled.
+- Does not click Next or Submit and does not log in.
+- Resume file upload into file inputs is built but has not been tried in real Chrome.
+- Fields hidden off-screen (not with `display: none`) are not skipped, so some honeypot fields could be filled.
 - Every field it cannot fill is outlined amber, which can be noisy.
-- English labels only. Custom dropdowns built from plain `div`s, shadow DOM and checkbox groups are not handled.
+- English labels only. Custom dropdowns built from plain `div`s and shadow DOM are not handled.
 - Chinese, Japanese and Korean PDFs read poorly, scanned (image-only) PDFs have no text, and Word documents are not supported.
 - Experience and education can be filled from a resume but cannot be edited by hand in the popup yet.
 
@@ -123,6 +132,14 @@ plan.md               The roadmap.
 | "Could not reach this page. Reload the tab and try again." | Reload the job page tab (and the extension if you just rebuilt it). |
 | "AI help skipped: …" under the fill result | The rules still filled what they could. The note says why the AI step was skipped, usually a missing key or a busy provider. |
 | The popup closes when you pick a resume file | Tell the author. A popup that closes stops the upload, and the fix is to move the panels to a full page. |
+
+## Contributing
+
+Contributions are welcome, with strict rules because this tool types personal data into real applications. Read [CONTRIBUTING.md](CONTRIBUTING.md) first. In short: pick an open issue, ask to be assigned, write the test first, keep the pull request to one issue, and never commit personal data. Look for the `good first issue` and `help wanted` labels. Security problems go through [SECURITY.md](SECURITY.md), not a public issue. Conduct rules are in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+## License
+
+No licence has been chosen yet (tracked in an open issue). Until one is added, all rights are reserved by the author.
 
 ## For a friend using their own copy
 

@@ -1,0 +1,33 @@
+name: Feature or improvement
+description: Propose something new. Wait for a maintainer to agree before you build it.
+labels: ["enhancement", "needs-design"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is hard or impossible today, and for whom.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you suggest
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy and safety
+      description: Does it send data anywhere new, store anything new, or act without the user pressing a button? Say "no" if not.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and the plan.md roadmap.
+          required: true
+        - label: I understand a maintainer must approve the design before I build it.
+          required: true

@@ -1,0 +1,67 @@
+name: Bug report
+description: Something filled wrongly, did not fill, crashed or broke.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Remove personal data from everything you paste. Never paste an API key. Security problems go to the private Security tab, not here.
+  - type: input
+    id: site
+    attributes:
+      label: Site and application system
+      description: The company and the system behind the form (Greenhouse, Lever, Ashby, Workday, iCIMS, a company's own page).
+      placeholder: "Acme, Greenhouse"
+    validations:
+      required: true
+  - type: input
+    id: field
+    attributes:
+      label: Field label as shown on the page
+    validations:
+      required: true
+  - type: dropdown
+    id: outline
+    attributes:
+      label: Outline colour the field got
+      options: ["None (nothing happened)", "Red (failed)", "Amber (not filled)", "Blue (AI wrote it)", "Filled with the wrong value", "Not applicable"]
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: The data-auto-applier-reason text
+      description: Right-click the field, Inspect, and copy the attribute from the element.
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: html
+    attributes:
+      label: HTML of the field (anonymised)
+      description: The input and its label, with any names, emails and ids removed.
+      render: html
+  - type: input
+    id: versions
+    attributes:
+      label: Chrome version, operating system, extension version
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues.
+          required: true
+        - label: I removed personal data and API keys from this report.
+          required: true
