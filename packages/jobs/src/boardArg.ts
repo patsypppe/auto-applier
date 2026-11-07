@@ -2,9 +2,9 @@
 import type { Ats } from "./types"
 
 const SUPPORTED: readonly Ats[] = ["greenhouse", "lever", "ashby", "workday"]
-const USAGE = `Use --board <site>:<slug>, for example --board greenhouse:stripe. Sites: ${SUPPORTED.join(", ")}.`
+const USAGE = "Use --board <site>:<slug>, for example --board greenhouse:stripe. Sites: greenhouse, lever, lever-eu, ashby, workday."
 
-export type BoardChoice = { ats: Ats; slug: string }
+export type BoardChoice = { ats: Ats; slug: string; region?: "eu" }
 
 // Returns every value given after --board, in either "--board x" or "--board=x" form, in order.
 function boardValues(args: readonly string[]): string[] {
@@ -18,6 +18,7 @@ function boardValues(args: readonly string[]): string[] {
 function readBoard(value: string): BoardChoice {
   const [ats = "", slug = ""] = value.split(":")
   if (ats === "" || slug.trim() === "") throw new Error(USAGE)
+  if (ats === "lever-eu") return { ats: "lever", slug: slug.trim(), region: "eu" }
 
   const supported = SUPPORTED.find((name) => name === ats)
   if (!supported) throw new Error(`'${ats}' is not supported yet. ${USAGE}`)

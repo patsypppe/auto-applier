@@ -28,7 +28,7 @@ The slug is the part of the board's address after the site name, such as `stripe
 
 `collect` reads every board in the list and writes `data/jobs.jsonl`, one job per line. Other options:
 
-- `-- --board greenhouse:stripe --board lever:spotify` reads only those boards into `data/jobs.boards.jsonl`, leaving the full feed alone.
+- `-- --board greenhouse:stripe --board lever:spotify` reads only those boards into `data/jobs.boards.jsonl`, leaving the full feed alone. Use `lever-eu:<slug>` for a Lever board in the EU.
 - `-- --fresh` asks every board again instead of using answers saved in the last 12 hours.
 - `-- --with-workday` also reads the Workday boards. Workday has no plain job list, so it searches each board for every role in `data/settings.json` and reads only jobs whose title holds a role. It skips jobs listed abroad and titles with your left-out words before asking for details. It still takes about 20 seconds a board, so all of them take hours: run it overnight, or name a few companies with `--board workday:<tenant>|<wdN>|<site>`. After changing roles, add `--fresh`.
 

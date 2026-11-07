@@ -16,6 +16,7 @@ export type BoardToRead = Board & { name?: string }
 export type BoardResult = {
   ats: Ats
   slug: string
+  region?: "eu"
   outcome: "fetched" | "cached" | "failed"
   jobs: number
   status?: number
@@ -69,18 +70,19 @@ async function collectBoard(
 ): Promise<{ jobs: JobRecord[]; result: BoardResult }> {
   const { cache } = options
   const { slug } = board
+  const named = { ats: source.ats, slug, ...(board.region ? { region: board.region } : {}) }
   try {
-    const cached = cache ? await readCachedBoard(cache.dir, source.ats, slug, cache.maxAgeHours, now) : undefined
+    const cached = cache ? await readCachedBoard(cache.dir, named, cache.maxAgeHours, now) : undefined
     const raw = cached ?? (await source.fetchRaw(board, getJsonFor(slug), options.search))
-    if (cache && cached === undefined) await writeCachedBoard(cache.dir, source.ats, slug, raw, now)
+    if (cache && cached === undefined) await writeCachedBoard(cache.dir, named, raw, now)
 
     const jobs = withCompanyName(source.readJobs(raw, slug, now.toISOString()), board)
     const outcome = cached === undefined ? "fetched" : "cached"
-    return { jobs, result: { ats: source.ats, slug, outcome, jobs: jobs.length } }
+    return { jobs, result: { ...named, outcome, jobs: jobs.length } }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
     const status = error instanceof RequestError ? error.status : undefined
-    const failed: BoardResult = { ats: source.ats, slug, outcome: "failed", jobs: 0, error: message }
+    const failed: BoardResult = { ...named, outcome: "failed", jobs: 0, error: message }
     return { jobs: [], result: status === undefined ? failed : { ...failed, status } }
   }
 }

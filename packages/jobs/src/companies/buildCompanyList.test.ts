@@ -64,4 +64,10 @@ describe("mergeCompanies", () => {
 
     expect(merged[0]!.region).toBe("eu")
   })
+
+  test("keeps a Lever EU board apart from the US board with the same slug", () => {
+    const merged = mergeCompanies([[company({ ats: "lever", slug: "cirrus" }), company({ ats: "lever", slug: "cirrus", region: "eu" })]], [])
+
+    expect(merged.map((entry) => entry.region ?? "us")).toEqual(["us", "eu"])
+  })
 })

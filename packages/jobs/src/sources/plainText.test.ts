@@ -36,4 +36,8 @@ describe("htmlToText", () => {
   test("drops scripts and styles with their contents", () => {
     expect(htmlToText("<style>p{color:red}</style><p>Hi</p><script>alert(1)</script>")).toBe("Hi")
   })
+
+  test("leaves a numeric entity past the last Unicode character as it is, instead of failing the board", () => {
+    expect(htmlToText("<p>Pay &#99999999; and &#x110000; here</p>")).toBe("Pay &#99999999; and &#x110000; here")
+  })
 })

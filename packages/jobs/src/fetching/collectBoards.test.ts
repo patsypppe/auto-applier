@@ -95,6 +95,15 @@ describe("collectBoards: reading boards", () => {
     })
   })
 
+  test("says which region a Lever EU board's result belongs to, so its 404s are kept apart", async () => {
+    const fetchFn = fetchFrom({})
+    const eu = [{ ats: "greenhouse" as const, slug: "gone", region: "eu" as const }]
+
+    const { results } = await collectBoards(fakeSite, eu, { fetchFn, sleep: fakeSleep(), now: NOW })
+
+    expect(results[0]).toMatchObject({ slug: "gone", region: "eu", status: 404 })
+  })
+
   test("records an answer it cannot read as a failure", async () => {
     const fetchFn = fetchFrom({ odd: { something: "else" } })
 
@@ -163,7 +172,7 @@ describe("collectBoards: a job site that cannot be reached", () => {
 describe("collectBoards: the cache", () => {
   test("uses a fresh saved answer without asking the board or waiting", async () => {
     const dir = await mkdtemp(join(tmpdir(), "collect-"))
-    await writeCachedBoard(dir, "greenhouse", "acme", { titles: ["Saved Job"] }, NOW)
+    await writeCachedBoard(dir, { ats: "greenhouse", slug: "acme" }, { titles: ["Saved Job"] }, NOW)
     const fetchFn = fetchFrom({ globex: { titles: ["New Job"] } })
     const sleep = fakeSleep()
 
@@ -187,7 +196,7 @@ describe("collectBoards: the cache", () => {
 
     await collectBoards(fakeSite, boards("acme"), { fetchFn, sleep: fakeSleep(), cache: { dir, maxAgeHours: 12 }, now: NOW })
 
-    expect(await readCachedBoard(dir, "greenhouse", "acme", 12, NOW)).toEqual({ titles: ["Fetched Job"] })
+    expect(await readCachedBoard(dir, { ats: "greenhouse", slug: "acme" }, 12, NOW)).toEqual({ titles: ["Fetched Job"] })
   })
 })
 

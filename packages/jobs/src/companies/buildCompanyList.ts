@@ -1,9 +1,10 @@
 // Joins company lists from several places into one entry per board, with the hand-kept list having the last word.
+import { boardKey } from "../boardKey"
 import type { Ats, Company } from "../types"
 
-// Returns the key that identifies a board, ignoring case in the slug.
-function boardKey(company: Company): string {
-  return `${company.ats}:${company.slug.toLowerCase()}`
+// Returns the key that identifies a board, ignoring case in the slug and keeping Lever EU boards apart.
+function companyKey(company: Company): string {
+  return boardKey({ ...company, slug: company.slug.toLowerCase() })
 }
 
 // Returns true when the name is only the slug, which says less than a real company name ("ramp" rather than "Ramp").
@@ -28,7 +29,7 @@ export function mergeCompanies(lists: readonly Company[][], extra: readonly Comp
   const merged = new Map<string, Company>()
 
   for (const company of lists.flat()) {
-    const key = boardKey(company)
+    const key = companyKey(company)
     const existing = merged.get(key)
     if (!existing) {
       merged.set(key, { ...company, slug: company.slug.toLowerCase() })
@@ -39,7 +40,7 @@ export function mergeCompanies(lists: readonly Company[][], extra: readonly Comp
   }
 
   for (const company of extra) {
-    const key = boardKey(company)
+    const key = companyKey(company)
     const existing = merged.get(key)
     const sources = [...new Set([...(existing?.sources ?? []), ...company.sources])]
     merged.set(key, { ...existing, ...company, slug: company.slug.toLowerCase(), sources })

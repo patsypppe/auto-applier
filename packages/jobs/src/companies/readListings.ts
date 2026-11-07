@@ -7,6 +7,15 @@ z.config(en())
 
 const listingSchema = z.object({ company_name: z.nullish(z.string()), url: z.nullish(z.string()) })
 
+// Decodes a slug written with %-escapes, such as "xpansiv%20", and trims it; a broken escape leaves the slug as written.
+function decodeSlug(slug: string): string {
+  try {
+    return decodeURIComponent(slug).trim()
+  } catch {
+    return slug.trim()
+  }
+}
+
 // Reads the slug from the first part of the link's path, as in jobs.lever.co/<slug>/<id>.
 function firstPathPart(url: URL): string | undefined {
   return url.pathname.split("/").filter((part) => part !== "")[0]
@@ -28,7 +37,8 @@ export function boardFromUrl(link: string): Board | undefined {
     return slug ? { ats: "greenhouse", slug: slug.toLowerCase() } : undefined
   }
   if (host === "jobs.lever.co" || host === "jobs.eu.lever.co") {
-    const slug = firstPathPart(url)
+    const part = firstPathPart(url)
+    const slug = part && decodeSlug(part)
     if (!slug) return undefined
     return host === "jobs.eu.lever.co" ? { ats: "lever", slug: slug.toLowerCase(), region: "eu" } : { ats: "lever", slug: slug.toLowerCase() }
   }
@@ -41,7 +51,7 @@ export function boardFromUrl(link: string): Board | undefined {
   }
   if (host === "jobs.ashbyhq.com") {
     const slug = firstPathPart(url)
-    return slug ? { ats: "ashby", slug: decodeURIComponent(slug).toLowerCase() } : undefined
+    return slug ? { ats: "ashby", slug: decodeSlug(slug).toLowerCase() } : undefined
   }
   return undefined
 }

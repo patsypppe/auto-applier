@@ -2,7 +2,7 @@
 import { describe, expect, test } from "vitest"
 import { readBoardArgs } from "./boardArg"
 
-const USAGE = "Use --board <site>:<slug>, for example --board greenhouse:stripe. Sites: greenhouse, lever, ashby, workday."
+const USAGE = "Use --board <site>:<slug>, for example --board greenhouse:stripe. Sites: greenhouse, lever, lever-eu, ashby, workday."
 
 describe("readBoardArgs", () => {
   test("reads the job site and the board slug", () => {
@@ -14,6 +14,10 @@ describe("readBoardArgs", () => {
       { ats: "lever", slug: "spotify" },
       { ats: "ashby", slug: "ramp" },
     ])
+  })
+
+  test("reads a Lever board in the EU", () => {
+    expect(readBoardArgs(["--board", "lever-eu:cirrus"])).toEqual([{ ats: "lever", slug: "cirrus", region: "eu" }])
   })
 
   test("refuses a missing board", () => {

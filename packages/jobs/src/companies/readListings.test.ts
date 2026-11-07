@@ -19,6 +19,8 @@ describe("boardFromUrl", () => {
       { ats: "ashby", slug: "fundamentalresearchlabs" },
     ],
     ["https://jobs.ashbyhq.com/Nascent/8454aeb0", { ats: "ashby", slug: "nascent" }],
+    ["https://jobs.lever.co/xpansiv%20/4b0c7f3e", { ats: "lever", slug: "xpansiv" }],
+    ["https://jobs.ashbyhq.com/bad%zz/1", { ats: "ashby", slug: "bad%zz" }],
     ["https://avav.wd1.myworkdayjobs.com/en-US/avav/job/Albuquerque-NM/RF-PCB-Layout-Engineer_9319", { ats: "workday", slug: "avav|wd1|avav" }],
     ["https://fourseasons.wd3.myworkdayjobs.com/search/job/Toronto/Analyst_REQ10374076", { ats: "workday", slug: "fourseasons|wd3|search" }],
   ])("reads %s", (url, board) => {

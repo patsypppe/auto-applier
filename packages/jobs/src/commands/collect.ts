@@ -29,7 +29,7 @@ async function boardsToRead(args: readonly string[], dataDir: string, dead: Dead
   if (namesBoards(args)) return { boards: readBoardArgs(args), skipped: 0 }
 
   const companies = await readCompanyFile(join(dataDir, "companies.json"))
-  const boards = companies.filter((company) => !isDead(dead, company.ats, company.slug))
+  const boards = companies.filter((company) => !isDead(dead, company))
   return { boards, skipped: companies.length - boards.length }
 }
 

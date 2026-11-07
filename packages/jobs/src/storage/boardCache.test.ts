@@ -16,46 +16,54 @@ beforeEach(async () => {
 
 describe("board cache", () => {
   test("returns the saved answer while it is younger than the limit", async () => {
-    await writeCachedBoard(dir, "greenhouse", "stripe", { jobs: [1, 2] }, SAVED_AT)
+    await writeCachedBoard(dir, { ats: "greenhouse", slug: "stripe" }, { jobs: [1, 2] }, SAVED_AT)
 
-    expect(await readCachedBoard(dir, "greenhouse", "stripe", 12, hoursLater(11))).toEqual({ jobs: [1, 2] })
+    expect(await readCachedBoard(dir, { ats: "greenhouse", slug: "stripe" }, 12, hoursLater(11))).toEqual({ jobs: [1, 2] })
   })
 
   test("returns nothing once the answer is older than the limit", async () => {
-    await writeCachedBoard(dir, "greenhouse", "stripe", { jobs: [] }, SAVED_AT)
+    await writeCachedBoard(dir, { ats: "greenhouse", slug: "stripe" }, { jobs: [] }, SAVED_AT)
 
-    expect(await readCachedBoard(dir, "greenhouse", "stripe", 12, hoursLater(13))).toBeUndefined()
+    expect(await readCachedBoard(dir, { ats: "greenhouse", slug: "stripe" }, 12, hoursLater(13))).toBeUndefined()
   })
 
   test("returns nothing with a limit of zero, which is how --fresh skips it", async () => {
-    await writeCachedBoard(dir, "greenhouse", "stripe", { jobs: [] }, SAVED_AT)
+    await writeCachedBoard(dir, { ats: "greenhouse", slug: "stripe" }, { jobs: [] }, SAVED_AT)
 
-    expect(await readCachedBoard(dir, "greenhouse", "stripe", 0, SAVED_AT)).toBeUndefined()
+    expect(await readCachedBoard(dir, { ats: "greenhouse", slug: "stripe" }, 0, SAVED_AT)).toBeUndefined()
   })
 
   test("returns nothing for a board that was never saved", async () => {
-    expect(await readCachedBoard(dir, "lever", "nobody", 12, SAVED_AT)).toBeUndefined()
+    expect(await readCachedBoard(dir, { ats: "lever", slug: "nobody" }, 12, SAVED_AT)).toBeUndefined()
   })
 
   test("treats a broken file as not saved", async () => {
-    await writeCachedBoard(dir, "ashby", "ramp", { jobs: [] }, SAVED_AT)
+    await writeCachedBoard(dir, { ats: "ashby", slug: "ramp" }, { jobs: [] }, SAVED_AT)
     const [file] = await readdir(join(dir, "ashby"))
     await writeFile(join(dir, "ashby", file!), "{ not json")
 
-    expect(await readCachedBoard(dir, "ashby", "ramp", 12, SAVED_AT)).toBeUndefined()
+    expect(await readCachedBoard(dir, { ats: "ashby", slug: "ramp" }, 12, SAVED_AT)).toBeUndefined()
   })
 
   test("keeps boards of different job sites apart", async () => {
-    await writeCachedBoard(dir, "greenhouse", "acme", { from: "greenhouse" }, SAVED_AT)
-    await writeCachedBoard(dir, "lever", "acme", { from: "lever" }, SAVED_AT)
+    await writeCachedBoard(dir, { ats: "greenhouse", slug: "acme" }, { from: "greenhouse" }, SAVED_AT)
+    await writeCachedBoard(dir, { ats: "lever", slug: "acme" }, { from: "lever" }, SAVED_AT)
 
-    expect(await readCachedBoard(dir, "lever", "acme", 12, SAVED_AT)).toEqual({ from: "lever" })
+    expect(await readCachedBoard(dir, { ats: "lever", slug: "acme" }, 12, SAVED_AT)).toEqual({ from: "lever" })
   })
 
   test("stores a slug with a slash inside the job site's folder", async () => {
-    await writeCachedBoard(dir, "greenhouse", "../escape", { jobs: [] }, SAVED_AT)
+    await writeCachedBoard(dir, { ats: "greenhouse", slug: "../escape" }, { jobs: [] }, SAVED_AT)
 
     expect(await readdir(dir)).toEqual(["greenhouse"])
-    expect(await readCachedBoard(dir, "greenhouse", "../escape", 12, SAVED_AT)).toEqual({ jobs: [] })
+    expect(await readCachedBoard(dir, { ats: "greenhouse", slug: "../escape" }, 12, SAVED_AT)).toEqual({ jobs: [] })
+  })
+
+  test("keeps a Lever EU board apart from the US board with the same slug", async () => {
+    await writeCachedBoard(dir, { ats: "lever", slug: "acme" }, { from: "us" }, SAVED_AT)
+    await writeCachedBoard(dir, { ats: "lever", slug: "acme", region: "eu" }, { from: "eu" }, SAVED_AT)
+
+    expect(await readCachedBoard(dir, { ats: "lever", slug: "acme" }, 12, SAVED_AT)).toEqual({ from: "us" })
+    expect(await readCachedBoard(dir, { ats: "lever", slug: "acme", region: "eu" }, 12, SAVED_AT)).toEqual({ from: "eu" })
   })
 })

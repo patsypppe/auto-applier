@@ -326,3 +326,13 @@
 - Correction to slice 11d: the 136 jobs counted there also matched "as required by law", which on its own is a firm statement (Zone 5 Technologies: "As required by law, we will verify ... all new employees using the E-Verify system"). Reading the sentences by wording, only "in certain locations" is conditional; "where required" and "some states" appear in no US E-Verify sentence.
 - Real data, `node dist/cli.js tags --status f1-stem-opt`, before and after: `e-verify` 3,153 then 3,085, `e-verify-some-places` 68; jobs that are a plus for STEM OPT 3,426 then 3,359. All 68 moved jobs carry one of two sentences: Twilio (55) and Analytic Partners (13), "participates in the E-Verify program in certain locations, as required by law". Blocked and likely-blocked counts did not change.
 - The `tags` runs rewrote data/tag-check.json, the hand-check sample, which is generated and git-ignored.
+
+## 2026-11-06: Slice 12c, review leftovers
+
+- Built test first, one fix per finding from the review (all low):
+  - F10: `boardKey` and `siteOf` (src/boardKey.ts) name a board as `lever-eu:<slug>` when it is a Lever EU board. The cache (folder `cache/lever-eu/`), the dead-board marks and the company list all use it, and `BoardResult` carries the region, so a US and an EU board with the same slug no longer share anything.
+  - F11: a numeric entity past U+10FFFF, such as `&#99999999;`, is left as written instead of throwing and failing the whole board.
+  - F13: Lever and Ashby slugs are decoded inside a try and trimmed, so `xpansiv%20` becomes `xpansiv` and a broken `%` no longer throws. `--board lever-eu:<slug>` reads an EU board.
+- Real data: today's list has 4 Lever EU boards (cirrus, quantinuum, prima, coretechsecurity) and none shares a slug with a US board, so F10 changes no result now; their cache files move to `cache/lever-eu/`, so the next collect asks for those 4 again. One slug in data/companies.json, `xpansiv%20`, is decoded the next time the company list is built.
+- Tried for real with `collect --board lever:xpansiv --board lever-eu:cirrus` (2 requests, written to data/jobs.boards.jsonl only): cirrus read 127 jobs through the EU address and was cached under `lever-eu/`; `xpansiv` still answers 404, so that board is closed, not just misnamed.
+- Slice 12 is done. Still waiting for a decision: the lockfile entry, full text only for filtered jobs, Databricks and Coinbase, extra statuses, myworkdaysite.com links.
