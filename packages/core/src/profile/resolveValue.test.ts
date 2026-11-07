@@ -155,11 +155,11 @@ describe("resolveValue", () => {
 })
 
 describe("resolveValue: plansToWorkRemotely", () => {
-  test("is Yes or No once the profile says, and nothing before that", () => {
+  test("is Yes or No, and No (on-site) while the profile has not said, matching the form's default", () => {
     const withAnswer = (plansToWorkRemotely?: boolean): Profile => ({ ...minimalProfile, answers: { ...minimalProfile.answers, plansToWorkRemotely } })
 
     expect(resolveValue(withAnswer(true), "plansToWorkRemotely")).toBe("Yes")
     expect(resolveValue(withAnswer(false), "plansToWorkRemotely")).toBe("No")
-    expect(resolveValue(withAnswer(undefined), "plansToWorkRemotely")).toBeUndefined()
+    expect(resolveValue(withAnswer(undefined), "plansToWorkRemotely")).toBe("No")
   })
 })

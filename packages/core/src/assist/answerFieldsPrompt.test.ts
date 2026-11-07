@@ -118,22 +118,24 @@ describe("buildAnswerFieldsPrompt: rules for common yes/no questions", () => {
     expect(prompt).toMatch(/opt-in[^\n]*No[^\n]*notes/i)
   })
 
-  test("still tells the model to take work-style preferences from the notes only", () => {
+  test("tells the model that answers.plansToWorkRemotely being false or missing means on-site", () => {
     const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
 
+    expect(prompt).toMatch(/plansToWorkRemotely[^\n]*false or missing[^\n]*on-site/i)
+  })
+
+  test("tells the model to choose the in-office option for on-site, and lets the notes say otherwise", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+
+    expect(prompt).toMatch(/on-site[^\n]*(office|in person)[^\n]*not remote/i)
     expect(prompt).toMatch(/remote[^\n]*notes/i)
   })
 
-  test("tells the model that answers.plansToWorkRemotely being false means on-site", () => {
+  test("does not tell the model to leave remote-work questions blank", () => {
     const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+    const remoteRule = prompt.split("\n").find((line) => /plansToWorkRemotely/.test(line)) ?? ""
 
-    expect(prompt).toMatch(/plansToWorkRemotely[^\n]*false[^\n]*on-site/i)
-  })
-
-  test("tells the model which option to choose when the notes say the applicant wants to work on-site", () => {
-    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
-
-    expect(prompt).toMatch(/notes say[^\n]*on-site[^\n]*(office|in-person)[^\n]*not remote/i)
+    expect(remoteRule).not.toMatch(/leave the field out|only from/i)
   })
 
   test("tells the model to answer 'which countries will you work in' from the applicant's country, even for an abbreviation", () => {

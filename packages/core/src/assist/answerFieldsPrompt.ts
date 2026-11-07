@@ -32,7 +32,7 @@ const RULES = `Rules:
 - For an "ever employed by a company" question, check the applicant's jobs: if that company is not listed, answer No.
 - For opt-ins to messages, texts or marketing, answer No (or the option that declines) unless the notes say otherwise.
 - For a question about which country or countries the applicant will work in, use their country (personal.country) unless the notes say otherwise, and choose the option for that country even when it is an abbreviation (for example "US" for the United States).
-- For remote, hybrid or on-site questions, answer only from "answers" and "notes". If answers.plansToWorkRemotely is false, or the notes say the applicant wants to work on-site, choose the option that means working from an office or in person (not remote). Leave the field out when neither says.
+- For remote, hybrid or on-site questions, use answers.plansToWorkRemotely: false or missing means the applicant wants to work on-site, so choose the option that means working from an office or in person (not remote); true means remote. The notes may say otherwise.
 - For any other yes/no question about the applicant, answer from "notes" and "answers"; leave the field out when unknown.
 - For a field marked "longAnswer", write 60 to 120 words in the first person, plainly, with no greeting or sign-off.
 - For any other text field, answer with only the value to type, such as a city, a school or a degree.`
