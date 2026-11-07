@@ -10,8 +10,10 @@ import { jobEffect } from "../tags/effects"
 import { tagJob } from "../tags/tagJob"
 import type { Effect, JobRecord, Pay, Tag } from "../types"
 
+export type JobSummary = Omit<JobRecord, "description">
+
 export type RankedJob = {
-  job: JobRecord
+  job: JobSummary
   tags: Tag[]
   effect: Effect
   score: number
@@ -21,7 +23,7 @@ export type RankedJob = {
 }
 
 export type PreparedJob = {
-  job: JobRecord
+  job: JobSummary
   tags: Tag[]
   reads: JobReads
   pay?: Pay
@@ -34,13 +36,20 @@ export type HistoryInput = { data: H1bHistory; aliases: Readonly<Record<string, 
 const EFFECT_RANK: Record<Effect, number> = { positive: 0, ok: 0, "likely-blocked": 1, blocked: 2 }
 
 // Returns a job's posting date as a number for sorting, newest largest; a job with no date counts from when it was first seen.
-function postedTime(job: JobRecord): number {
+function postedTime(job: JobSummary): number {
   return Date.parse(job.postedAt ?? job.firstSeenAt) || 0
 }
 
-// Does the work that settings.json does not change: tags, skill, level, years and degree reads, pay from the board or else
-// from the text, and, when H-1B history is given, each company's filings, looked up once per company.
-export function prepareJobs(profile: Profile, jobs: readonly JobRecord[], history?: HistoryInput): PreparedJob[] {
+// Returns a copy of text cut from a description that does not point back into it, so the description can be freed. V8
+// can keep a whole string alive through a slice of it; parsing it back from JSON builds a separate string.
+function ownCopy(text: string): string {
+  return JSON.parse(JSON.stringify(text)) as string
+}
+
+// Returns a function that does the work settings.json does not change for one job: tags, skill, level, years and degree
+// reads, pay from the board or else from the text, and, when H-1B history is given, its company's filings, looked up once
+// per company. The description is dropped once read, since nothing after this needs it.
+export function jobPreparer(profile: Profile, history?: HistoryInput): (job: JobRecord) => PreparedJob {
   const byCompany = new Map<string, EmployerHistory>()
   const historyOf = (company: string): EmployerHistory | undefined => {
     if (!history) return undefined
@@ -49,11 +58,18 @@ export function prepareJobs(profile: Profile, jobs: readonly JobRecord[], histor
     return known
   }
 
-  return jobs.map((job): PreparedJob => {
-    const pay = job.pay ?? readPay(job.description)
+  return (job) => {
+    const { description, ...summary } = job
+    const pay = job.pay ?? readPay(description)
     const filings = historyOf(job.company)
-    return { job, tags: tagJob(job), reads: readMatch(job, profile.skills), ...(pay ? { pay } : {}), ...(filings ? { history: filings } : {}) }
-  })
+    const tags = tagJob(job).map((found) => ({ ...found, evidence: ownCopy(found.evidence), context: ownCopy(found.context) }))
+    return { job: summary, tags, reads: readMatch(job, profile.skills), ...(pay ? { pay } : {}), ...(filings ? { history: filings } : {}) }
+  }
+}
+
+// Prepares a list of jobs; see jobPreparer.
+export function prepareJobs(profile: Profile, jobs: readonly JobRecord[], history?: HistoryInput): PreparedJob[] {
+  return jobs.map(jobPreparer(profile, history))
 }
 
 // Ranks prepared jobs for these settings: best match first; among equal scores, fine before likely blocked, then newer first.

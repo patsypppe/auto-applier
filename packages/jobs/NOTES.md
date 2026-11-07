@@ -300,3 +300,22 @@
   - Building the role patterns once per re-rank instead of once per job made no difference I could measure.
 - In the browser: the panel showed the saved settings; unticking every role and saving showed the roles message and left the file alone; ticking "analytics engineer" and choosing citizen gave 168 shown (129 before), the same as the one-process run. The original settings.json was put back afterwards and is byte for byte the same.
 - Not tried by hand: the first-setup path with no settings.json (covered by a server test and a form test only).
+
+## 2026-11-06: Slice 12a, smaller feed server
+
+- Built test first:
+  - `jobPreparer` prepares one job and drops its description; `prepareJobs` maps it over a list. Ranked and prepared jobs are now `JobSummary` (a job record without the description). Nothing after preparing read the description, so `top`, `tags`, the filters and the cards are unchanged, and the typecheck needed no other edit.
+  - The tag sentences are cut out of the description, and V8 can keep a whole string alive through a slice of it, so they are copied (through JSON) before the description goes.
+  - `prepareJobsFile` reads data/jobs.jsonl one line at a time and prepares each job as it goes, so the 562 MB file is never held whole. The feed command uses it.
+- Measured with `/usr/bin/time -l` and `footprint` on the full list (89,784 jobs), same profile and settings, one run each:
+
+| | Before | After |
+|---|---|---|
+| Peak memory footprint | 1,480 MB | 547 MB |
+| Footprint while serving | 1,399 MB | 471 MB |
+| Time to first answer | 221 s | 136 s |
+| Settings save (3 tries) | 16 s to 100 s (slice 11e, while paging) | 0.8 s, 1.5 s, 2.4 s |
+| Swap in use at start | 7.9 GB | 6.0 GB |
+
+- Startup and save times depend on how much the machine is paging, and the swap use differed between runs, so treat them as rough. The memory numbers are the main result. The feed showed the same 129 of 89,784 jobs afterwards.
+- Side effect of the save test: it re-sent the current settings, so data/settings.json was rewritten with every default written out. The values are the same as before.

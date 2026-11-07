@@ -97,6 +97,15 @@ describe("getJobs", () => {
     expect(entry!.effect).toBe("blocked")
   })
 
+  test("keeps no description once a job is prepared, but keeps the sentences behind its tags", () => {
+    const [prepared] = prepareJobs(PROFILE, [job("1", { description: "Python and SQL. U.S. citizenship required." })])
+    const [ranked] = rankJobs(SETTINGS, [prepared!])
+
+    expect(prepared!.job).not.toHaveProperty("description")
+    expect(ranked!.job).not.toHaveProperty("description")
+    expect(ranked!.tags).toEqual([{ tag: "citizen-only", evidence: "U.S. citizenship required.", context: "Python and SQL. U.S. citizenship required." }])
+  })
+
   test("ranks jobs prepared once for new settings the same as ranking them from the start", () => {
     const jobs = [job("1", { description: "Python. U.S. citizenship required." }), job("2", { title: "Data Engineer" }), job("3", { description: "SQL." })]
     const prepared = prepareJobs(PROFILE, jobs)
