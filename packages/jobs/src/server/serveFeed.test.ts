@@ -227,6 +227,41 @@ function rawRequest(url: string, path: string, options: { method?: string; heade
   })
 }
 
+describe("serveFeed: saves that arrive together", () => {
+  test("keeps every status when 100 are sent at once", async () => {
+    const many = Array.from({ length: 100 }, (_, index) => job(`m${index}`))
+    const busy = await serveFeed({ prepared: prepareJobs(PROFILE, many), settings: SETTINGS, dataDir, pageDir: pageFiles, port: 0 })
+    try {
+      const headers = { "Content-Type": "application/json", "X-Feed-Token": busy.token }
+      const answers = await Promise.all(
+        many.map((entry) => fetch(`${busy.url}/api/applied`, { method: "POST", headers, body: JSON.stringify({ key: entry.key, status: "applied" }) })),
+      )
+      const saved = JSON.parse(await readFile(join(dataDir, "applied.json"), "utf8")) as { key: string }[]
+
+      expect(answers.map((answer) => answer.status)).toEqual(Array(100).fill(200))
+      expect(new Set(saved.map((entry) => entry.key))).toEqual(new Set(many.map((entry) => entry.key)))
+    } finally {
+      await busy.close()
+    }
+  })
+
+  test("saves settings sent together one after another, and keeps the file and the feed in step", async () => {
+    const headers = { "Content-Type": "application/json", "X-Feed-Token": server.token }
+    const roles = ["data analyst", "sales lead", "data engineer", "data scientist", "analyst"]
+    const answers = await Promise.all(
+      roles.map((role) =>
+        fetch(`${server.url}/api/settings`, { method: "POST", headers, body: JSON.stringify({ workAuth: { status: "f1-opt" }, filters: { roles: [role] } }) }),
+      ),
+    )
+    const onDisk = JSON.parse(await readFile(join(dataDir, "settings.json"), "utf8"))
+    const inUse = (await (await fetch(`${server.url}/api/settings`)).json()).settings
+
+    expect(answers.map((answer) => answer.status)).toEqual([200, 200, 200, 200, 200])
+    expect(inUse).toEqual(onDisk)
+    expect(onDisk.filters.roles).toEqual(["analyst"])
+  })
+})
+
 describe("serveFeed: requests from other sites", () => {
   const settingsBody = JSON.stringify({ workAuth: { status: "citizen" }, filters: { roles: ["chef"] } })
 

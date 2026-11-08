@@ -13,6 +13,7 @@ import { toCard } from "../feed/card"
 import { rankJobs, type PreparedJob, type RankedJob } from "../feed/getJobs"
 import { parseSettings, type FeedSettings } from "../settings"
 import { readJsonFile, writeJsonFile } from "../storage/files"
+import { createWriteQueue } from "../storage/writeQueue"
 import { canUseStemOpt } from "../tags/effects"
 import { filtersFromQuery } from "./queryFilters"
 
@@ -40,6 +41,9 @@ export type FeedServerOptions = {
 
 // What the server is ranking with right now; a settings save replaces both.
 type FeedState = { settings?: FeedSettings; ranked: readonly RankedJob[] }
+
+// Runs one save at a time, so saves that arrive together never read the same old file and overwrite each other.
+type Queue = <T>(task: () => Promise<T>) => Promise<T>
 
 const PAGE_FILES: Record<string, { file: string; type: string }> = {
   "/": { file: "index.html", type: "text/html; charset=utf-8" },
@@ -126,9 +130,10 @@ async function sendFeed(response: ServerResponse, url: URL, state: FeedState, ap
   })
 }
 
-// Answers POST /api/settings: checks the settings, writes them to data/settings.json, ranks the jobs again with them and
-// sends back the settings as saved, with defaults filled in. Nothing changes when they have a mistake.
-async function saveSettings(request: IncomingMessage, response: ServerResponse, options: FeedServerOptions, state: FeedState): Promise<void> {
+// Answers POST /api/settings: checks the settings, ranks the jobs with them, writes them to data/settings.json and only
+// then puts both in use, one save at a time. Sends back the settings as saved, with defaults filled in. Nothing changes
+// when they have a mistake.
+async function saveSettings(request: IncomingMessage, response: ServerResponse, options: FeedServerOptions, state: FeedState, queue: Queue): Promise<void> {
   const body = await readBody(request, MAX_SETTINGS_BYTES)
   if (body === undefined) return sendJson(response, 400, { error: "Send the settings as JSON." })
   let settings: FeedSettings
@@ -138,14 +143,18 @@ async function saveSettings(request: IncomingMessage, response: ServerResponse, 
     return sendJson(response, 400, { error: (error as Error).message })
   }
 
-  await writeJsonFile(join(options.dataDir, "settings.json"), settings)
-  state.ranked = rankJobs(settings, options.prepared)
-  state.settings = settings
+  await queue(async () => {
+    const ranked = rankJobs(settings, options.prepared)
+    await writeJsonFile(join(options.dataDir, "settings.json"), settings)
+    state.ranked = ranked
+    state.settings = settings
+  })
   sendJson(response, 200, { settings })
 }
 
-// Answers POST /api/applied: checks the change, applies it to the history and saves the history.
-async function saveStatus(request: IncomingMessage, response: ServerResponse, state: FeedState, appliedFile: string): Promise<void> {
+// Answers POST /api/applied: checks the change, then reads the history, applies the change and saves it, one save at a
+// time so that changes sent together are all kept.
+async function saveStatus(request: IncomingMessage, response: ServerResponse, state: FeedState, appliedFile: string, queue: Queue): Promise<void> {
   const body = (await readBody(request)) as { key?: unknown; status?: unknown; note?: unknown } | undefined
   const statuses = [...APPLICATION_STATUSES, "none"]
   if (!body || typeof body.key !== "string") return sendJson(response, 400, { error: "Send JSON with a key and a status." })
@@ -156,15 +165,18 @@ async function saveStatus(request: IncomingMessage, response: ServerResponse, st
     return sendJson(response, 400, { error: "note must be text of at most 1,000 characters." })
   }
 
-  const history = await readJsonFile<AppliedEntry[]>(appliedFile, [])
-  const listed = state.ranked.find((entry) => entry.job.key === body.key)?.job
-  const known = listed ?? history.find((entry) => entry.key === body.key)
-  if (!known) return sendJson(response, 404, { error: `No job with key ${body.key}.` })
-
-  const job = { key: known.key, company: known.company, title: known.title, url: known.url }
-  const next = setStatus(history, job, body.status as ApplicationStatus | "none", new Date(), body.note as string | undefined)
-  await writeJsonFile(appliedFile, next)
-  sendJson(response, 200, { applied: next })
+  const key = body.key
+  const saved = await queue(async () => {
+    const history = await readJsonFile<AppliedEntry[]>(appliedFile, [])
+    const known = state.ranked.find((entry) => entry.job.key === key)?.job ?? history.find((entry) => entry.key === key)
+    if (!known) return undefined
+    const job = { key: known.key, company: known.company, title: known.title, url: known.url }
+    const next = setStatus(history, job, body.status as ApplicationStatus | "none", new Date(), body.note as string | undefined)
+    await writeJsonFile(appliedFile, next)
+    return next
+  })
+  if (!saved) return sendJson(response, 404, { error: `No job with key ${key}.` })
+  sendJson(response, 200, { applied: saved })
 }
 
 // Turns a prepared job into a ranked one with no score, so a status can be saved before there are settings.
@@ -178,6 +190,7 @@ export async function serveFeed(options: FeedServerOptions): Promise<{ url: stri
   const appliedFile = join(options.dataDir, "applied.json")
   const state: FeedState = { settings: options.settings, ranked: options.settings ? rankJobs(options.settings, options.prepared) : options.prepared.map(unranked) }
   const token = randomBytes(16).toString("hex")
+  const queue = createWriteQueue()
   let port = options.port
 
   const server = createServer((request, response) => {
@@ -189,9 +202,9 @@ export async function serveFeed(options: FeedServerOptions): Promise<{ url: stri
       const page = PAGE_FILES[url.pathname]
       if (request.method === "GET" && page) return sendPage(response, options.pageDir, page, token)
       if (request.method === "GET" && url.pathname === "/api/feed") return sendFeed(response, url, state, appliedFile)
-      if (request.method === "POST" && url.pathname === "/api/applied") return saveStatus(request, response, state, appliedFile)
+      if (request.method === "POST" && url.pathname === "/api/applied") return saveStatus(request, response, state, appliedFile, queue)
       if (request.method === "GET" && url.pathname === "/api/settings") return sendJson(response, 200, { settings: state.settings ?? null })
-      if (request.method === "POST" && url.pathname === "/api/settings") return saveSettings(request, response, options, state)
+      if (request.method === "POST" && url.pathname === "/api/settings") return saveSettings(request, response, options, state, queue)
       sendJson(response, 404, { error: "Not found." })
     }
     answer().catch((error: unknown) => {

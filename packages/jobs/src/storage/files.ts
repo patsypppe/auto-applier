@@ -1,4 +1,5 @@
 // Reads and writes the job feed's files in data/: the collected jobs, one per line, and the company lists.
+import { randomUUID } from "node:crypto"
 import { createReadStream } from "node:fs"
 import { open, readFile, rename, rm, writeFile } from "node:fs/promises"
 import * as z from "zod/mini"
@@ -31,9 +32,16 @@ export async function readJsonFile<T>(file: string, fallback: T): Promise<T> {
 }
 
 // Writes a value as indented JSON, so the file is easy to read and edit by hand, replacing the old file only when done.
+// Each write uses its own temporary file, so two writes at once cannot mix their text or rename the other's file.
 export async function writeJsonFile(file: string, value: unknown): Promise<void> {
-  await writeFile(`${file}.tmp`, `${JSON.stringify(value, null, 2)}\n`)
-  await rename(`${file}.tmp`, file)
+  const temporary = `${file}.${randomUUID()}.tmp`
+  try {
+    await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`)
+    await rename(temporary, file)
+  } catch (error: unknown) {
+    await rm(temporary, { force: true })
+    throw error
+  }
 }
 
 // Writes the jobs one JSON object per line, so a large collection never has to fit in one string.

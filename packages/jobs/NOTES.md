@@ -348,3 +348,14 @@
 - Real feed, the review's own attacks again: text/plain POST 415 (was 200 and saved), foreign Host 403 (was 200), another site's Origin 403, JSON without the token 403, GET // 400 (was a crash) and the server kept answering. In the browser the page loaded under the new headers with all 129 cards and no new console errors, and a save from the settings panel went through.
 - Found while checking: the settings panel sends the roles in its own group order, so a save with nothing changed still rewrites settings.json with the roles reordered (same roles). data/settings.json was put back byte for byte afterwards.
 - 694 tests pass, the typecheck is clean.
+
+## 2026-11-07: Slice 13b, never lose a write
+
+- From the November review: 10 status changes sent at once saved 2 (7 answered 500), because each save read applied.json, changed it and wrote it back with no lock, and every write used the same applied.json.tmp. Settings saves shared settings.json.tmp the same way, and a save wrote the file before ranking.
+- Built test first:
+  - `writeJsonFile` writes through its own temporary file each time (a random name) and removes it if the write fails, so two writes at once both finish and leave no stray file.
+  - `createWriteQueue` (storage/writeQueue.ts) runs tasks one at a time in the order given; a failed task's error goes to its caller and the next task still runs.
+  - The feed server puts each status save (read, change, write) and each settings save in one queue. A settings save ranks first, then writes the file, then puts both in use, so the file and the feed never disagree. Checking the request still happens before the queue, so a bad request does not wait.
+- Measured with a throwaway server (temporary folders, 100 jobs), 3 runs: 100 status changes sent at once were all answered 200 and all 100 were saved, in 87 to 89 ms; 10 settings saves sent at once were all answered 200 and the file held the last one; no temporary files were left. Before: 2 of 10.
+- In the review's test the settings case also showed something worse than lost saves: two saves writing into one temporary file left settings.json as broken JSON. That can no longer happen.
+- 699 tests pass, the typecheck is clean.

@@ -83,6 +83,15 @@ describe("plain JSON files", () => {
   test("returns the fallback when the file does not exist yet", async () => {
     expect(await readJsonFile(join(dir, "nothing.json"), { empty: true })).toEqual({ empty: true })
   })
+
+  test("finishes two writes to the same file at once, each through its own temporary file", async () => {
+    const file = join(dir, "applied.json")
+
+    await Promise.all([writeJsonFile(file, ["first"]), writeJsonFile(file, ["second"])])
+
+    expect([["first"], ["second"]]).toContainEqual(await readJsonFile(file, []))
+    expect(await readdir(dir)).toEqual(["applied.json"])
+  })
 })
 
 describe("company file", () => {
