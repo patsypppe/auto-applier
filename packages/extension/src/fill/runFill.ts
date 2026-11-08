@@ -23,6 +23,7 @@ export async function fillOnce(
   loadResume: LoadResume = NO_RESUME,
   onProgress?: ProgressListener,
   rescan?: Partial<RescanOptions>,
+  guessRequired?: boolean,
 ): Promise<FillOnce> {
   const saved = await store.load()
   if (!saved) return { ok: false, error: "No saved profile yet. Fill in and save the form in this popup first." }
@@ -35,6 +36,7 @@ export async function fillOnce(
     jobContext: collectJobContext(document),
     page: collectPageInfo(document, window.location),
     rescan,
+    guessRequired,
     onProgress,
   })
   return { ok: true, reports, notes }

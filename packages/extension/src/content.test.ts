@@ -38,6 +38,15 @@ describe("content script", () => {
     expect(sendMessage).toHaveBeenCalledWith({ type: "flow-get" })
   })
 
+  test("asks the worker whether this tab was opened from an application link", async () => {
+    const sendMessage = vi.fn(async () => ({}))
+    vi.stubGlobal("chrome", { runtime: { sendMessage, onMessage: { addListener: vi.fn() } } })
+
+    await import("./content")
+
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: "autopilot-get" }), { timeout: 4000 })
+  })
+
   test("a stop request makes the worker forget the flow", async () => {
     const sendMessage = vi.fn(async () => ({}))
     const addListener = vi.fn()

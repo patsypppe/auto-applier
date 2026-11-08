@@ -2,6 +2,11 @@
 import { emptySummary } from "@auto-applier/core"
 import { describe, expect, test } from "vitest"
 import {
+  isApplyToLinkRequest,
+  isAutopilotClearMessage,
+  isAutopilotGetRequest,
+  isAutopilotResponse,
+  isAutopilotSaveMessage,
   isFillAndContinueRequest,
   isFillPageRequest,
   isFillProgressMessage,
@@ -204,5 +209,42 @@ describe("flow messages", () => {
     expect(isFlowStateResponse({ state: { step: 1, clickedAt: 5 } })).toBe(true)
     expect(isFlowStateResponse({ state: { step: -1, clickedAt: 5 } })).toBe(false)
     for (const value of NOT_OBJECTS) expect(isFlowStateResponse(value)).toBe(false)
+  })
+})
+
+describe("autopilot messages", () => {
+  const state = { startedAt: 1000, url: "https://jobs.acme.com/1", applyClicks: 0 }
+
+  test("accepts an apply-to-link request only with a web address", () => {
+    expect(isApplyToLinkRequest({ type: "apply-to-link", url: "https://jobs.acme.com/1" })).toBe(true)
+    expect(isApplyToLinkRequest({ type: "apply-to-link", url: "" })).toBe(false)
+    expect(isApplyToLinkRequest({ type: "apply-to-link", url: 5 })).toBe(false)
+    expect(isApplyToLinkRequest({ type: "apply-to-link", url: "x".repeat(3000) })).toBe(false)
+    for (const value of NOT_OBJECTS) expect(isApplyToLinkRequest(value)).toBe(false)
+  })
+
+  test("accepts a save message only with a well-formed state", () => {
+    expect(isAutopilotSaveMessage({ type: "autopilot-save", state })).toBe(true)
+    expect(isAutopilotSaveMessage({ type: "autopilot-save", state: { ...state, applyClicks: "0" } })).toBe(false)
+    expect(isAutopilotSaveMessage({ type: "autopilot-save", state: { ...state, urlTried: "yes" } })).toBe(false)
+    expect(isAutopilotSaveMessage({ type: "autopilot-save" })).toBe(false)
+  })
+
+  test("accepts the get and clear requests", () => {
+    expect(isAutopilotGetRequest({ type: "autopilot-get" })).toBe(true)
+    expect(isAutopilotClearMessage({ type: "autopilot-clear" })).toBe(true)
+    expect(isAutopilotGetRequest({ type: "autopilot-clear" })).toBe(false)
+  })
+
+  test("accepts a reply holding a state or nothing", () => {
+    expect(isAutopilotResponse({})).toBe(true)
+    expect(isAutopilotResponse({ state })).toBe(true)
+    expect(isAutopilotResponse({ state: { startedAt: "now" } })).toBe(false)
+    for (const value of NOT_OBJECTS) expect(isAutopilotResponse(value)).toBe(false)
+  })
+
+  test("a flow state may remember that guessing is on", () => {
+    expect(isFlowSaveMessage({ type: "flow-save", state: { step: 1, clickedAt: 5, guess: true } })).toBe(true)
+    expect(isFlowSaveMessage({ type: "flow-save", state: { step: 1, clickedAt: 5, guess: "yes" } })).toBe(false)
   })
 })

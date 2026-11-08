@@ -16,16 +16,19 @@ async function loadWorker(
   respond: (url: string) => Response = () => new Response(JSON.stringify(GEMINI_ANSWER)),
 ) {
   const addListener = vi.fn()
+  const createTab = vi.fn(async (properties: { url?: string }) => ({ id: 99, ...properties }))
+  const onTabCreated = vi.fn()
   const fetchStub = vi.fn(async (input: RequestInfo | URL) => respond(String(input)))
   const fake = createFakeSessionStorage()
   vi.stubGlobal("chrome", {
     runtime: { id: EXTENSION_ID, onMessage: { addListener } },
+    tabs: { create: createTab, onCreated: { addListener: onTabCreated } },
     storage: { ...fake.storage, local: { get: vi.fn(async (key: string) => ({ [key]: stored[key] })) } },
   })
   vi.stubGlobal("fetch", fetchStub)
 
   await import("./background")
-  return { listener: addListener.mock.calls[0]?.[0] as Listener, fetchStub, saved: fake.items }
+  return { listener: addListener.mock.calls[0]?.[0] as Listener, fetchStub, saved: fake.items, createTab, tabCreated: onTabCreated.mock.calls[0]?.[0] as (tab: { id?: number; openerTabId?: number }) => void }
 }
 
 beforeEach(() => {
@@ -299,5 +302,88 @@ describe("background worker: Next-button flow state", () => {
     listener({ type: "flow-save", state: { step: 2, clickedAt: 1000 } }, { id: EXTENSION_ID }, vi.fn())
 
     expect([...saved.keys()].some((key) => key.startsWith("flow:"))).toBe(false)
+  })
+})
+
+describe("background worker: apply by link", () => {
+  const FROM_POPUP = { id: EXTENSION_ID }
+  const LINK = "https://jobs.acme.com/openings/1"
+
+  test("opens the link in a new tab, starts an apply run for it, and says so", async () => {
+    const { listener, createTab, saved } = await loadWorker({})
+    const sendResponse = vi.fn()
+
+    const keepsChannelOpen = listener({ type: "apply-to-link", url: LINK }, FROM_POPUP, sendResponse)
+
+    expect(keepsChannelOpen).toBe(true)
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledWith({ ok: true }))
+    expect(createTab).toHaveBeenCalledWith({ url: LINK, active: true })
+    expect(saved.get("autopilot:99")).toMatchObject({ url: LINK, applyClicks: 0 })
+    expect(saved.has("fill-run:99")).toBe(true)
+  })
+
+  test.each(["javascript:alert(1)", "file:///etc/passwd", "chrome://settings", "ftp://x.com/a", "not a link"])("refuses %s", async (url) => {
+    const { listener, createTab } = await loadWorker({})
+    const sendResponse = vi.fn()
+
+    listener({ type: "apply-to-link", url }, FROM_POPUP, sendResponse)
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledWith({ ok: false, error: expect.stringMatching(/web address/i) }))
+    expect(createTab).not.toHaveBeenCalled()
+  })
+
+  test("ignores an apply-to-link request from a web page or another extension", async () => {
+    const { listener, createTab } = await loadWorker({})
+
+    expect(listener({ type: "apply-to-link", url: LINK }, { id: "someone-else" }, vi.fn())).toBe(false)
+    expect(listener({ type: "apply-to-link", url: LINK }, { id: EXTENSION_ID, tab: { id: 3 } }, vi.fn())).toBe(false)
+    expect(createTab).not.toHaveBeenCalled()
+  })
+
+  test("a tab opened by the run's tab (an Apply link that opens a new tab) carries on the run", async () => {
+    const { listener, tabCreated, saved } = await loadWorker({})
+    listener({ type: "apply-to-link", url: LINK }, FROM_POPUP, vi.fn())
+    await vi.waitFor(() => expect(saved.has("autopilot:99")).toBe(true))
+
+    tabCreated({ id: 120, openerTabId: 99 })
+
+    await vi.waitFor(() => expect(saved.get("autopilot:120")).toMatchObject({ url: LINK }))
+    expect(saved.has("fill-run:120")).toBe(true)
+  })
+
+  test("a tab opened by any other tab does not start a run", async () => {
+    const { tabCreated, saved } = await loadWorker({})
+
+    tabCreated({ id: 120, openerTabId: 5 })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(saved.has("autopilot:120")).toBe(false)
+  })
+
+  test("a content script can read, update and end its tab's run", async () => {
+    const { listener } = await loadWorker({})
+    const sender = { id: EXTENSION_ID, tab: { id: 7 }, frameId: 0 }
+    const state = { startedAt: Date.now(), url: LINK, applyClicks: 1 }
+    listener({ type: "autopilot-save", state }, sender, vi.fn())
+    const read = vi.fn()
+
+    listener({ type: "autopilot-get" }, sender, read)
+    await vi.waitFor(() => expect(read).toHaveBeenCalledWith({ state }))
+    listener({ type: "autopilot-clear" }, sender, vi.fn())
+    const readAgain = vi.fn()
+    listener({ type: "autopilot-get" }, sender, readAgain)
+
+    await vi.waitFor(() => expect(readAgain).toHaveBeenCalledWith({}))
+  })
+
+  test("keeps a run's progress marker when its tab's page loads, so the popup still shows it working", async () => {
+    const { listener, saved } = await loadWorker({})
+    listener({ type: "apply-to-link", url: LINK }, FROM_POPUP, vi.fn())
+    await vi.waitFor(() => expect(saved.has("fill-run:99")).toBe(true))
+
+    listener({ type: "page-loaded" }, { id: EXTENSION_ID, tab: { id: 99 }, frameId: 0 }, vi.fn())
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    expect(saved.has("fill-run:99")).toBe(true)
   })
 })

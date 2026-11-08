@@ -1,10 +1,13 @@
-// Content script: fills the page (or a whole multi-step form) when the popup asks, using the saved profile and the LLM through the background worker.
+// Content script: fills the page (or a whole multi-step form, or a form found from a link) when the popup asks, using the saved profile and the LLM through the background worker.
+import { BackgroundAutopilotState } from "./fill/BackgroundAutopilotState"
 import { BackgroundFlowState } from "./fill/BackgroundFlowState"
-import { pendingStep } from "./fill/resumeFlow"
+import { pendingFlow } from "./fill/resumeFlow"
 import { runFill } from "./fill/runFill"
+import { runAutopilot } from "./fill/runAutopilot"
 import { runFlow } from "./fill/runFlow"
 import { BackgroundLLMClient } from "./llm/BackgroundLLMClient"
 import { isFillAndContinueRequest, isFillPageRequest, isStopFlowRequest } from "./messaging"
+import { collectPageInfo } from "./page/collectPageInfo"
 import { loadResumeFromBackground } from "./resume/loadResumeFromBackground"
 import type { FillProgressMessage, FillResultMessage, PageLoadedMessage } from "./messaging"
 import { ChromeStorageProfileStore } from "./storage/ChromeStorageProfileStore"
@@ -28,10 +31,11 @@ if (window === window.top) {
 
 const flowState = new BackgroundFlowState()
 const RESUME_DELAY_MS = 1000
+const AUTOPILOT_DELAY_MS = 1500
 let stopRequested = false
 
 // Fills this step and carries on through the form's next steps, stopping before Submit, then reports the result.
-function startFlow(startAt: number): void {
+function startFlow(startAt: number, guessRequired = false): void {
   stopRequested = false
   void runFlow({
     store: new ChromeStorageProfileStore(),
@@ -41,13 +45,29 @@ function startFlow(startAt: number): void {
     onProgress: reportProgress,
     isStopped: () => stopRequested,
     startAt,
+    guessRequired,
   }).then(reportResult)
 }
 
 // After a page load, carries on a flow that pressed Next a moment ago, once the page has had time to draw.
-void pendingStep(flowState).then((step) => {
-  if (step !== undefined) setTimeout(() => startFlow(step), RESUME_DELAY_MS)
+void pendingFlow(flowState).then((state) => {
+  if (state) setTimeout(() => startFlow(state.step, state.guess === true), RESUME_DELAY_MS)
 })
+
+// After a page load in a tab opened from an application link, finds Apply and starts filling once the form is there.
+setTimeout(() => {
+  void runAutopilot({
+    root: document,
+    port: new BackgroundAutopilotState(),
+    llm: new BackgroundLLMClient(),
+    page: () => collectPageInfo(document, window.location),
+    address: () => window.location.href,
+    isTop: window === window.top,
+    startFlow: () => startFlow(0, true),
+    navigate: (url) => window.location.assign(url),
+    report: reportResult,
+  }).catch(() => undefined)
+}, AUTOPILOT_DELAY_MS)
 
 chrome.runtime.onMessage.addListener((message: unknown) => {
   if (isFillPageRequest(message)) {

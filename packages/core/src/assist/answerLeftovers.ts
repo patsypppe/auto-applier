@@ -10,7 +10,7 @@ import { readsOptions } from "../filling/OptionReader"
 import type { LLMClient } from "../ports/LLMClient"
 import { resolveValue } from "../profile/resolveValue"
 import type { Profile } from "../profile/types"
-import { buildAnswerFieldsPrompt, parseFieldAnswers } from "./answerFieldsPrompt"
+import { buildAnswerFieldsPrompt, parseFieldAnswers, parseGuesses } from "./answerFieldsPrompt"
 import type { EarlierAnswer, FieldToAnswer, PageInfo } from "./answerFieldsPrompt"
 import { isFreeTextQuestion } from "./isFreeTextQuestion"
 
@@ -21,6 +21,7 @@ export type AskSetup = {
   jobContext: string
   page?: PageInfo
   earlier: readonly EarlierAnswer[]
+  guess?: boolean
 }
 
 export type AskResult = { updates: Map<FieldReport, FieldReport>; answered: EarlierAnswer[] }
@@ -65,7 +66,7 @@ async function optionsFor(report: FieldReport, profile: Profile, setup: FillSetu
 }
 
 // Fills one field with the model's answer: a written draft is reported as a draft to review, any other answer as the AI's fill.
-async function fillAnswer(report: FieldReport, item: FieldToAnswer, answer: string, setup: FillSetup): Promise<FieldReport> {
+async function fillAnswer(report: FieldReport, item: FieldToAnswer, answer: string, setup: FillSetup, guessed: boolean): Promise<FieldReport> {
   const outcome = await fillWith(setup.fillers, report.field, answer)
   if (outcome.status !== "filled") return { field: report.field, profileKey: report.profileKey, outcome }
 
@@ -73,7 +74,7 @@ async function fillAnswer(report: FieldReport, item: FieldToAnswer, answer: stri
     field: report.field,
     profileKey: report.profileKey,
     outcome: item.longAnswer ? { status: "drafted" } : outcome,
-    source: "ai",
+    source: guessed ? "guess" : "ai",
   }
 }
 
@@ -107,8 +108,10 @@ export async function askAndFill(
   progress("reading", updates)
   const items = await describeTargets(targets, contexts, ask)
   progress("asking", updates)
-  const prompt = buildAnswerFieldsPrompt(items, ask.profile, ask.jobContext, { page: ask.page, earlier: ask.earlier })
-  const answers = parseFieldAnswers(await ask.llm.completeJson(prompt), items)
+  const prompt = buildAnswerFieldsPrompt(items, ask.profile, ask.jobContext, { page: ask.page, earlier: ask.earlier, guess: ask.guess })
+  const reply = await ask.llm.completeJson(prompt)
+  const answers = parseFieldAnswers(reply, items, ask.guess)
+  const guesses = ask.guess ? parseGuesses(reply, items, true) : new Set<number>()
 
   const answered: EarlierAnswer[] = []
   for (const [id, answer] of answers) {
@@ -116,7 +119,7 @@ export async function askAndFill(
     const item = items[id]
     if (!report || !item) continue
 
-    const result = await fillAnswer(report, item, answer, ask.setup)
+    const result = await fillAnswer(report, item, answer, ask.setup, guesses.has(id))
     updates.set(report, result)
     if (result.outcome.status === "filled" || result.outcome.status === "drafted") answered.push({ question: item.question, answer })
     progress("answering", updates)

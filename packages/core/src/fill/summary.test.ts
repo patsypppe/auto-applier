@@ -170,3 +170,19 @@ describe("a fill that fell back to Other", () => {
     expect(summarizeReports([fallback]).aiFilled).toBe(1)
   })
 })
+
+describe("a guess by the AI", () => {
+  const guessed = (outcome: FieldOutcome): FieldReport => report(outcome, "guess")
+
+  test("is counted with the AI's work and marked for the user to check", () => {
+    const report = guessed({ status: "filled" })
+
+    expect(summarizeReports([report]).aiFilled).toBe(1)
+    expect(needsReview(report)).toBe(true)
+  })
+
+  test("is explained as a guess that is not in the profile", () => {
+    expect(explainReport(guessed({ status: "filled" }))).toMatch(/guess/i)
+    expect(explainReport(guessed({ status: "drafted" }))).toMatch(/guess/i)
+  })
+})

@@ -25,6 +25,7 @@ export type AssistOptions = {
   setup?: FillSetup
   jobContext?: string
   page?: PageInfo
+  guessRequired?: boolean
   rescan?: Partial<RescanOptions>
   onProgress?: ProgressListener
 }
@@ -107,7 +108,7 @@ export async function fillPageWithAssistant(
 ): Promise<AssistedResult> {
   const setup = options.setup ?? DEFAULT_SETUP
   const rescan = { ...DEFAULT_RESCAN, ...options.rescan }
-  const base = { profile, llm, setup, jobContext: options.jobContext ?? "", page: options.page }
+  const base = { profile, llm, setup, jobContext: options.jobContext ?? "", page: options.page, guess: options.guessRequired }
   const startedAt = Date.now()
 
   let reports: FieldReport[] = []

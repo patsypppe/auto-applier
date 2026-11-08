@@ -8,7 +8,21 @@ export type FillAndContinueRequest = { type: "fill-and-continue" }
 
 export type StopFlowRequest = { type: "stop-flow" }
 
-export type FlowState = { step: number; clickedAt: number }
+export type FlowState = { step: number; clickedAt: number; guess?: boolean }
+
+export type ApplyToLinkRequest = { type: "apply-to-link"; url: string }
+
+export type AutopilotState = { startedAt: number; url: string; applyClicks: number; urlTried?: boolean; aiTried?: boolean }
+
+export type AutopilotSaveMessage = { type: "autopilot-save"; state: AutopilotState }
+
+export type AutopilotGetRequest = { type: "autopilot-get" }
+
+export type AutopilotClearMessage = { type: "autopilot-clear" }
+
+export type AutopilotResponse = { state?: AutopilotState }
+
+export type ApplyToLinkResponse = { ok: true } | { ok: false; error: string }
 
 export type FlowSaveMessage = { type: "flow-save"; state: FlowState }
 
@@ -128,8 +142,9 @@ export function isStopFlowRequest(message: unknown): message is StopFlowRequest 
 function isFlowState(value: unknown): value is FlowState {
   if (typeof value !== "object" || value === null) return false
 
-  const { step, clickedAt } = value as { step?: unknown; clickedAt?: unknown }
-  return typeof step === "number" && Number.isInteger(step) && step >= 0 && typeof clickedAt === "number" && Number.isFinite(clickedAt)
+  const { step, clickedAt, guess } = value as { step?: unknown; clickedAt?: unknown; guess?: unknown }
+  const guessOk = guess === undefined || typeof guess === "boolean"
+  return typeof step === "number" && Number.isInteger(step) && step >= 0 && typeof clickedAt === "number" && Number.isFinite(clickedAt) && guessOk
 }
 
 // Returns true when an unknown value is a content script's request to remember how far a flow has got.
@@ -153,4 +168,63 @@ export function isFlowStateResponse(value: unknown): value is FlowStateResponse 
 
   const { state } = value as { state?: unknown }
   return state === undefined || isFlowState(state)
+}
+
+const MAX_LINK_CHARS = 2048
+
+// Returns true when an unknown value is the popup's request to open a job link and apply.
+export function isApplyToLinkRequest(message: unknown): message is ApplyToLinkRequest {
+  if (!hasType(message, "apply-to-link")) return false
+
+  const { url } = message as { url?: unknown }
+  return typeof url === "string" && url !== "" && url.length <= MAX_LINK_CHARS
+}
+
+// Returns true when an unknown value describes how far an apply-by-link run has got.
+function isAutopilotState(value: unknown): value is AutopilotState {
+  if (typeof value !== "object" || value === null) return false
+
+  const { startedAt, url, applyClicks, urlTried, aiTried } = value as Record<string, unknown>
+  const flagOk = (flag: unknown) => flag === undefined || typeof flag === "boolean"
+  return (
+    typeof startedAt === "number" &&
+    Number.isFinite(startedAt) &&
+    typeof url === "string" &&
+    typeof applyClicks === "number" &&
+    Number.isInteger(applyClicks) &&
+    applyClicks >= 0 &&
+    flagOk(urlTried) &&
+    flagOk(aiTried)
+  )
+}
+
+// Returns true when an unknown value is a content script's request to remember how far an apply-by-link run has got.
+export function isAutopilotSaveMessage(message: unknown): message is AutopilotSaveMessage {
+  return hasType(message, "autopilot-save") && isAutopilotState((message as { state?: unknown }).state)
+}
+
+// Returns true when an unknown value is a content script's question about a run it may have to carry on.
+export function isAutopilotGetRequest(message: unknown): message is AutopilotGetRequest {
+  return hasType(message, "autopilot-get")
+}
+
+// Returns true when an unknown value is a content script's note that its run has ended.
+export function isAutopilotClearMessage(message: unknown): message is AutopilotClearMessage {
+  return hasType(message, "autopilot-clear")
+}
+
+// Returns true when an unknown value is a well-formed reply to an autopilot-get request.
+export function isAutopilotResponse(value: unknown): value is AutopilotResponse {
+  if (typeof value !== "object" || value === null) return false
+
+  const { state } = value as { state?: unknown }
+  return state === undefined || isAutopilotState(state)
+}
+
+// Returns true when an unknown value is a well-formed reply to an apply-to-link request.
+export function isApplyToLinkResponse(value: unknown): value is ApplyToLinkResponse {
+  if (typeof value !== "object" || value === null) return false
+
+  const { ok, error } = value as { ok?: unknown; error?: unknown }
+  return ok === true || (ok === false && typeof error === "string")
 }

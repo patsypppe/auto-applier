@@ -54,6 +54,10 @@ Load it into Chrome:
 5. Check the form (especially the work authorization answers) and press **Save profile** again if you changed anything.
 6. Fill in City, State and Country (a resume often gives no country), and the **Other facts the AI may use** box: for example "Male. Asian (South Asian). Not a veteran. No disability. Not previously employed at the companies I apply to." The AI uses this for equal-opportunity and yes/no questions. Leave it blank if you would rather answer those yourself.
 
+## Giving it a link
+
+Paste a job link into **Application link** in the popup and press **Open and apply**. The extension opens the link in a new tab, finds the button that opens the application (an Apply button, a known address for Lever and Ashby, and failing that it asks the AI which button to press), fills each page, presses Next, and **stops at the last page for you to review and submit**. If your profile has no answer for a required question, the AI first tries to work it out from your profile, and if it cannot, it makes a best guess. Every guess is outlined and listed in the result so you can check it. It never guesses names, contact details, consent boxes or equal-opportunity answers. It does not log in or solve CAPTCHAs; it stops and tells you.
+
 ## Using it on an application
 
 1. Open the job application page.
@@ -71,6 +75,8 @@ python3 -m http.server 8000 -d fixtures
 ```
 
 Then open `http://localhost:8000/simple-application.html`, save a profile in the popup and press **Fill this page**.
+
+To try the link feature, paste `http://localhost:8000/job-description.html` into Application link. It has an Apply button that leads to the two-step form.
 
 For Fill and continue, open `http://localhost:8000/multi-step-application.html` instead. It has two steps, a question that appears after an answer, and a Submit button that the extension must never press (the page title changes to "SUBMITTED" if it does).
 

@@ -640,3 +640,50 @@ describe("fillPageWithAssistant: checking the work afterwards", () => {
     expect(reports[0]?.outcome).toMatchObject({ status: "failed", code: "page-rejected" })
   })
 })
+
+describe("fillPageWithAssistant: guessing required answers", () => {
+  const REQUIRED = `<label for="r">Years of Rust experience</label><input id="r" required>`
+  const OPTIONAL = `<label for="o">Favourite colour</label><input id="o">`
+
+  test("fills a required question the model had to guess and marks it as a guess", async () => {
+    document.body.innerHTML = REQUIRED
+    const { llm, prompts } = sequencedLlmWithGuess([{ id: 0, answer: "2", guess: true }])
+
+    const { reports } = await fillPageWithAssistant(document, profile, llm, { rescan: { waitMs: 0 }, guessRequired: true })
+
+    expect(valueOf("r")).toBe("2")
+    expect(reports[0]?.source).toBe("guess")
+    expect(prompts[0]).toContain('"guess": true')
+  })
+
+  test("does not fill a guessed answer for an optional question", async () => {
+    document.body.innerHTML = OPTIONAL
+    const { llm } = sequencedLlmWithGuess([{ id: 0, answer: "blue", guess: true }])
+
+    await fillPageWithAssistant(document, profile, llm, { rescan: { waitMs: 0 }, guessRequired: true })
+
+    expect(valueOf("o")).toBe("")
+  })
+
+  test("does not accept guesses at all unless asked", async () => {
+    document.body.innerHTML = REQUIRED
+    const { llm, prompts } = sequencedLlmWithGuess([{ id: 0, answer: "2", guess: true }])
+
+    await fillPageWithAssistant(document, profile, llm, { rescan: { waitMs: 0 } })
+
+    expect(valueOf("r")).toBe("")
+    expect(prompts[0]).not.toContain('"guess": true')
+  })
+})
+
+// Builds a model stand-in that always gives the same answers, which may carry guess flags.
+function sequencedLlmWithGuess(answers: { id: number; answer: string; guess?: boolean }[]) {
+  const prompts: string[] = []
+  const llm: LLMClient = {
+    completeJson: vi.fn(async (prompt: string) => {
+      prompts.push(prompt)
+      return { answers }
+    }),
+  }
+  return { llm, prompts }
+}

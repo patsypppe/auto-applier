@@ -46,6 +46,8 @@ export function needsReview(report: FieldReport): boolean {
   return status === "drafted" || (status === "filled" && report.source !== undefined)
 }
 
+const GUESS_TEXT = "Guessed by the AI: your profile does not say. Please check it"
+
 // Returns the sentence that says what happened to a field and why, for the user or for a person checking the page.
 export function explainReport(report: FieldReport): string {
   const { outcome } = report
@@ -59,8 +61,9 @@ export function explainReport(report: FieldReport): string {
     case "skipped":
       return `Left alone: ${outcome.reason}`
     case "drafted":
-      return "Written by the AI"
+      return report.source === "guess" ? GUESS_TEXT : "Written by the AI"
     case "filled":
+      if (report.source === "guess") return GUESS_TEXT
       if (report.source === "fallback") return 'Picked "Other": nothing in the list matched'
       return report.source === "ai" ? "Chosen by the AI" : "Filled from your profile"
   }

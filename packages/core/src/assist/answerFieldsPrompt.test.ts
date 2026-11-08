@@ -1,7 +1,7 @@
 // Tests that the one prompt for everything the rules left carries the whole profile and the fields, sets the safety rules, and checks each answer.
 import { describe, expect, test } from "vitest"
 import type { Profile } from "../profile/types"
-import { buildAnswerFieldsPrompt, MAX_JOB_CONTEXT_CHARS, parseFieldAnswers, profileForPrompt } from "./answerFieldsPrompt"
+import { buildAnswerFieldsPrompt, MAX_JOB_CONTEXT_CHARS, parseFieldAnswers, parseGuesses, profileForPrompt } from "./answerFieldsPrompt"
 import type { FieldToAnswer } from "./answerFieldsPrompt"
 import { FORMAT_ERROR } from "./formatError"
 
@@ -289,5 +289,55 @@ describe("parseFieldAnswers: length limits", () => {
     const items = [text({ context: { maxLength: 10 } })]
 
     expect(parseFieldAnswers({ answers: [{ id: 0, answer: "Seattle" }] }, items).get(0)).toBe("Seattle")
+  })
+})
+
+describe("buildAnswerFieldsPrompt: deriving and guessing", () => {
+  test("always tells the model to try to derive an answer from the facts before leaving a field out", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+
+    expect(prompt).toMatch(/derive/i)
+    expect(prompt).toMatch(/years of experience/i)
+  })
+
+  test("does not allow guessing unless asked", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "")
+
+    expect(prompt).not.toMatch(/"guess": true/)
+  })
+
+  test("allows a flagged guess for required fields when asked, and never for identity facts or consent", () => {
+    const prompt = buildAnswerFieldsPrompt([item()], PROFILE, "", { guess: true })
+
+    expect(prompt).toMatch(/"guess": true/)
+    expect(prompt).toMatch(/required/i)
+    expect(prompt).toMatch(/never guess[^\n]*(name|email|phone)/i)
+    expect(prompt).toMatch(/never guess[^\n]*(consent|equal-opportunity)/i)
+  })
+})
+
+describe("parseFieldAnswers: guesses", () => {
+  const required = (overrides: Partial<FieldToAnswer> = {}) => item({ kind: "text", options: [], context: { required: true }, ...overrides })
+  const reply = { answers: [{ id: 0, answer: "5", guess: true }] }
+
+  test("keeps a flagged guess for a required field when guessing is allowed", () => {
+    expect(parseFieldAnswers(reply, [required()], true).get(0)).toBe("5")
+  })
+
+  test("drops a flagged guess when guessing is not allowed", () => {
+    expect(parseFieldAnswers(reply, [required()]).size).toBe(0)
+  })
+
+  test("drops a flagged guess for a field that is not required", () => {
+    expect(parseFieldAnswers(reply, [required({ context: {} })], true).size).toBe(0)
+  })
+
+  test("keeps an answer that is not flagged as a guess whatever the setting", () => {
+    expect(parseFieldAnswers({ answers: [{ id: 0, answer: "Seattle" }] }, [required({ context: {} })]).get(0)).toBe("Seattle")
+  })
+
+  test("lists which answers were guesses", () => {
+    expect([...parseGuesses(reply, [required()], true)]).toEqual([0])
+    expect([...parseGuesses({ answers: [{ id: 0, answer: "Seattle" }] }, [required()], true)]).toEqual([])
   })
 })

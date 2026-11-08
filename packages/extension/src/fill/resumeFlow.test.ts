@@ -2,7 +2,7 @@
 import { describe, expect, test, vi } from "vitest"
 import type { FlowState } from "../messaging"
 import type { FlowStatePort } from "./flowState"
-import { pendingStep, RESUME_WINDOW_MS } from "./resumeFlow"
+import { pendingFlow, pendingStep, RESUME_WINDOW_MS } from "./resumeFlow"
 
 // Builds a flow-state port holding the given state.
 function portHolding(state: FlowState | undefined): FlowStatePort {
@@ -31,5 +31,13 @@ describe("pendingStep", () => {
     const port: FlowStatePort = { save: vi.fn(), load: vi.fn(async () => { throw new Error("no worker") }), clear: vi.fn() }
 
     expect(await pendingStep(port, 10_000)).toBeUndefined()
+  })
+})
+
+describe("pendingFlow", () => {
+  test("returns the whole state, so a carried-on flow keeps its settings", async () => {
+    const port = portHolding({ step: 3, clickedAt: 10_000, guess: true })
+
+    expect(await pendingFlow(port, 10_500)).toEqual({ step: 3, clickedAt: 10_000, guess: true })
   })
 })

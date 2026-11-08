@@ -1,4 +1,4 @@
-// Popup script: mounts the fill button, LLM settings, resume upload and profile form when the icon is clicked.
+// Popup script: mounts the application-link box, the fill buttons, LLM settings, resume upload and profile form when the icon is clicked.
 import { BackgroundLLMClient } from "../llm/BackgroundLLMClient"
 import { readPdfInBrowser } from "../resume/browserPdfReader"
 import { importResumeFile } from "../resume/importResumeFile"
@@ -6,6 +6,7 @@ import { ChromeStorageProfileStore } from "../storage/ChromeStorageProfileStore"
 import { ChromeSessionFillStore } from "../storage/ChromeSessionFillStore"
 import { ChromeStorageSettingsStore } from "../storage/ChromeStorageSettingsStore"
 import { IndexedDbResumeStore } from "../storage/IndexedDbResumeStore"
+import { mountApplyPanel } from "./ApplyPanel"
 import { mountFillPanel } from "./FillPanel"
 import { mountProfileForm } from "./ProfileForm"
 import { mountResumePanel } from "./ResumePanel"
@@ -14,6 +15,9 @@ import { mountSettingsPanel } from "./SettingsPanel"
 // Mounts every panel; the resume panel needs the profile form's handle, so the form goes first.
 async function start(): Promise<void> {
   const profiles = new ChromeStorageProfileStore()
+
+  const applyPanel = document.getElementById("apply-panel")
+  if (applyPanel) mountApplyPanel(applyPanel)
 
   const fillPanel = document.getElementById("fill-panel")
   if (fillPanel) void mountFillPanel(fillPanel, new ChromeSessionFillStore())

@@ -83,6 +83,29 @@ describe("runFlow", () => {
     expect(message.result.summary.filled).toBe(1)
   })
 
+  test("remembers that guessing is on, so a flow carried on after a reload keeps it on", async () => {
+    await runFlow({ store: storeHolding(PROFILE), llm: silentLlm, flowState, rescan: { waitMs: 0 }, guessRequired: true })
+
+    expect(flowState.save).toHaveBeenCalledWith(expect.objectContaining({ step: 1, guess: true }))
+  })
+
+  test("does not turn guessing on by itself", async () => {
+    await runFlow({ store: storeHolding(PROFILE), llm: silentLlm, flowState, rescan: { waitMs: 0 } })
+
+    expect(flowState.save).toHaveBeenCalledWith({ step: 1, clickedAt: expect.any(Number) })
+  })
+
+  test("lists the required answers the AI had to guess, so the person can check them", async () => {
+    document.body.innerHTML = `<label for="r">Years of Rust experience</label><input id="r" required><label for="x">Hobby</label><input id="x">`
+    const guessing: LLMClient = { completeJson: vi.fn(async () => ({ answers: [{ id: 0, answer: "2", guess: true }, { id: 1, answer: "chess", guess: true }] })) }
+
+    const message = await runFlow({ store: storeHolding(PROFILE), llm: guessing, flowState, rescan: { waitMs: 0 }, guessRequired: true })
+
+    if (!message.result.ok) throw new Error("expected success")
+    expect(message.result.notes.join(" ")).toMatch(/guessed[^.]*Years of Rust experience/i)
+    expect(message.result.notes.join(" ")).not.toContain("Hobby")
+  })
+
   test("replies with the error when there is no saved profile", async () => {
     const message = await runFlow({ store: storeHolding(undefined), llm: silentLlm, flowState, rescan: { waitMs: 0 } })
 

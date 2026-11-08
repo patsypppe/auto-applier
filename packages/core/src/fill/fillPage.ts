@@ -28,7 +28,7 @@ export type FieldReport = {
   field: FormField
   profileKey?: ProfileKey
   outcome: FieldOutcome
-  source?: "ai" | "fallback"
+  source?: "ai" | "fallback" | "guess"
   askedAi?: true
 }
 
