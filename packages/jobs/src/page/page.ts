@@ -49,6 +49,13 @@ function store(key: string, value: unknown): void {
   }
 }
 
+// Sends JSON to the server with this session's token, which the server wrote into the page, so it knows the request
+// comes from this page and not from another site.
+function postJson(path: string, body: unknown): Promise<Response> {
+  const token = document.querySelector<HTMLMetaElement>('meta[name="feed-token"]')?.content ?? ""
+  return fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Feed-Token": token }, body: JSON.stringify(body) })
+}
+
 // Returns the element with the given id; the page's HTML always has it.
 function byId<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T
@@ -96,7 +103,7 @@ async function changeStatus(card: Card, status: ApplicationStatus | "none"): Pro
   const tracked = feed.applied.some((entry) => entry.key === card.key)
   if (status === "none" && tracked && !confirm(`Stop tracking "${card.title}"? Its dates will be removed.`)) return draw()
 
-  const answer = await fetch("/api/applied", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: card.key, status }) })
+  const answer = await postJson("/api/applied", { key: card.key, status })
   const body = (await answer.json()) as { applied?: AppliedEntry[]; error?: string }
   if (!answer.ok || !body.applied) {
     alert(body.error ?? "The status could not be saved.")
@@ -142,7 +149,7 @@ function drawHistory(): void {
 // Sends the settings to the server, which saves them and ranks the jobs again, then reloads the feed and the panel.
 // Returns the server's mistakes, one per line, when it refused them.
 async function saveSettings(draft: SettingsDraft): Promise<string | undefined> {
-  const answer = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(draft) })
+  const answer = await postJson("/api/settings", draft)
   const body = (await answer.json()) as { settings?: FeedSettings; error?: string }
   if (!answer.ok || !body.settings) return body.error ?? "The settings could not be saved."
   drawSettings(body.settings)

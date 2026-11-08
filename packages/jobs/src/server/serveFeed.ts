@@ -1,6 +1,8 @@
 // The local feed server: serves the page and its routes, on 127.0.0.1 only, so nothing on the network can reach it.
 // GET /api/feed sends the shown jobs and hidden counts; POST /api/applied saves a status change to data/applied.json;
-// GET and POST /api/settings read and save data/settings.json, and a save ranks the jobs again.
+// GET and POST /api/settings read and save data/settings.json, and a save ranks the jobs again. Only this computer's own
+// page may use it: other Hosts, other sites' pages and POSTs without JSON or the session token are refused.
+import { randomBytes } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
 import type { AddressInfo } from "node:net"
@@ -17,6 +19,16 @@ import { filtersFromQuery } from "./queryFilters"
 const MAX_BODY_BYTES = 10_000
 const MAX_SETTINGS_BYTES = 100_000
 const MAX_EXTRA = 300
+const TOKEN_HEADER = "x-feed-token"
+const TOKEN_SLOT = '<meta name="feed-token" content="">'
+
+// Sent with every answer: no framing by other sites, no guessing of content types, nothing kept in caches.
+const SAFE_HEADERS = {
+  "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "no-referrer",
+  "Cache-Control": "no-store",
+}
 
 export type FeedServerOptions = {
   prepared: readonly PreparedJob[]
@@ -36,8 +48,29 @@ const PAGE_FILES: Record<string, { file: string; type: string }> = {
 
 // Sends a JSON answer with the given status.
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
-  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8" })
+  response.writeHead(status, { ...SAFE_HEADERS, "Content-Type": "application/json; charset=utf-8" })
   response.end(JSON.stringify(body))
+}
+
+// Returns why a request must be refused, or undefined when it comes from this computer's own page. The Host check stops
+// DNS rebinding; a POST must also be JSON (a form on another site cannot send that without asking first), come from no
+// other site's page, and carry the token that only the page served here knows.
+function refusal(request: IncomingMessage, port: number, token: string): { status: number; error: string } | undefined {
+  const own = [`127.0.0.1:${port}`, `localhost:${port}`]
+  if (!own.includes(request.headers.host ?? "")) return { status: 403, error: "Only this computer's own feed page may use this server." }
+  if (request.method !== "POST") return undefined
+  if (!(request.headers["content-type"] ?? "").startsWith("application/json")) return { status: 415, error: "Send JSON." }
+  const origin = request.headers.origin
+  if (origin !== undefined && !own.some((host) => origin === `http://${host}`)) return { status: 403, error: "Requests from other sites are refused." }
+  if (request.headers[TOKEN_HEADER] !== token) return { status: 403, error: "The page's session token is missing or old. Reload the page." }
+  return undefined
+}
+
+// Reads a page file and sends it; the page itself gets this session's token written into it.
+async function sendPage(response: ServerResponse, pageDir: string, page: { file: string; type: string }, token: string): Promise<void> {
+  const content = await readFile(join(pageDir, page.file), "utf8")
+  response.writeHead(200, { ...SAFE_HEADERS, "Content-Type": page.type })
+  response.end(page.file === "index.html" ? content.replace(TOKEN_SLOT, `<meta name="feed-token" content="${token}">`) : content)
 }
 
 // Reads a small JSON request body, or returns undefined when it is too big or not JSON.
@@ -139,32 +172,42 @@ function unranked({ job, tags, reads, pay, history }: PreparedJob): RankedJob {
   return { job, tags, effect: "ok", score: 0, reasons: { ...reads, titleMatches: false }, ...(pay ? { pay } : {}), ...(history ? { history } : {}) }
 }
 
-// Starts the server on 127.0.0.1 and returns its address and a way to stop it.
-export async function serveFeed(options: FeedServerOptions): Promise<{ url: string; close: () => Promise<void> }> {
+// Starts the server on 127.0.0.1 and returns its address, this session's token and a way to stop it. A port that is
+// already taken is reported instead of waiting.
+export async function serveFeed(options: FeedServerOptions): Promise<{ url: string; token: string; close: () => Promise<void> }> {
   const appliedFile = join(options.dataDir, "applied.json")
   const state: FeedState = { settings: options.settings, ranked: options.settings ? rankJobs(options.settings, options.prepared) : options.prepared.map(unranked) }
+  const token = randomBytes(16).toString("hex")
+  let port = options.port
 
   const server = createServer((request, response) => {
-    const url = new URL(request.url ?? "/", "http://127.0.0.1")
-    const page = PAGE_FILES[url.pathname]
     const answer = async () => {
-      if (request.method === "GET" && page) {
-        response.writeHead(200, { "Content-Type": page.type })
-        return void response.end(await readFile(join(options.pageDir, page.file)))
-      }
+      const refused = refusal(request, port, token)
+      if (refused) return sendJson(response, refused.status, { error: refused.error })
+      const url = URL.canParse(request.url ?? "/", "http://127.0.0.1") ? new URL(request.url ?? "/", "http://127.0.0.1") : undefined
+      if (!url) return sendJson(response, 400, { error: "That address cannot be read." })
+      const page = PAGE_FILES[url.pathname]
+      if (request.method === "GET" && page) return sendPage(response, options.pageDir, page, token)
       if (request.method === "GET" && url.pathname === "/api/feed") return sendFeed(response, url, state, appliedFile)
       if (request.method === "POST" && url.pathname === "/api/applied") return saveStatus(request, response, state, appliedFile)
       if (request.method === "GET" && url.pathname === "/api/settings") return sendJson(response, 200, { settings: state.settings ?? null })
       if (request.method === "POST" && url.pathname === "/api/settings") return saveSettings(request, response, options, state)
       sendJson(response, 404, { error: "Not found." })
     }
-    answer().catch((error: unknown) => sendJson(response, 500, { error: error instanceof Error ? error.message : "Something went wrong." }))
+    answer().catch((error: unknown) => {
+      if (response.headersSent) return void response.destroy()
+      sendJson(response, 500, { error: error instanceof Error ? error.message : "Something went wrong." })
+    })
   })
 
-  await new Promise<void>((resolve) => server.listen(options.port, "127.0.0.1", resolve))
-  const { port } = server.address() as AddressInfo
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", (error: NodeJS.ErrnoException) => reject(error.code === "EADDRINUSE" ? new Error(`Port ${options.port} is already in use.`) : error))
+    server.listen(options.port, "127.0.0.1", () => resolve())
+  })
+  port = (server.address() as AddressInfo).port
   return {
     url: `http://127.0.0.1:${port}`,
+    token,
     close: () => new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve()))),
   }
 }

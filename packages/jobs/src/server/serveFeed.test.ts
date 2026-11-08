@@ -1,6 +1,8 @@
-// Tests the local feed server: the page, the feed with hidden counts, hidden jobs on request, and saving statuses.
+// Tests the local feed server: the page, the feed with hidden counts, hidden jobs on request, saving statuses and
+// settings, and refusing requests that come from other sites or would stop it.
 import type { Profile } from "@auto-applier/core"
 import { mkdtemp, readFile, writeFile } from "node:fs/promises"
+import { request as httpRequest } from "node:http"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, test } from "vitest"
@@ -42,12 +44,12 @@ const JOBS = [job("1"), job("2", { description: "U.S. citizenship required." }),
 
 let dataDir = ""
 let pageFiles = ""
-let server: { url: string; close: () => Promise<void> }
+let server: { url: string; token: string; close: () => Promise<void> }
 
 beforeEach(async () => {
   dataDir = await mkdtemp(join(tmpdir(), "serve-data-"))
   const pageDir = await mkdtemp(join(tmpdir(), "serve-page-"))
-  await writeFile(join(pageDir, "index.html"), "<!doctype html><title>Job feed</title>")
+  await writeFile(join(pageDir, "index.html"), '<!doctype html><meta name="feed-token" content=""><title>Job feed</title>')
   await writeFile(join(pageDir, "page.js"), "console.info('page')")
   pageFiles = pageDir
   server = await serveFeed({ prepared: prepareJobs(PROFILE, JOBS), settings: SETTINGS, dataDir, pageDir, port: 0 })
@@ -126,7 +128,7 @@ describe("serveFeed: the feed", () => {
 describe("serveFeed: statuses", () => {
   // Sends a status change and returns the answer.
   function post(body: unknown) {
-    return fetch(`${server.url}/api/applied`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+    return fetch(`${server.url}/api/applied`, { method: "POST", headers: { "Content-Type": "application/json", "X-Feed-Token": server.token }, body: JSON.stringify(body) })
   }
 
   test("saves a status to data/applied.json and sends it back with the feed", async () => {
@@ -165,8 +167,8 @@ describe("serveFeed: statuses", () => {
 
 describe("serveFeed: settings", () => {
   // Sends settings to the server and returns the answer.
-  function postSettings(url: string, body: unknown) {
-    return fetch(`${url}/api/settings`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+  function postSettings(url: string, body: unknown, token = server.token) {
+    return fetch(`${url}/api/settings`, { method: "POST", headers: { "Content-Type": "application/json", "X-Feed-Token": token }, body: JSON.stringify(body) })
   }
 
   test("sends the settings in use", async () => {
@@ -199,7 +201,7 @@ describe("serveFeed: settings", () => {
     try {
       const before = await (await fetch(`${fresh.url}/api/feed`)).json()
       const none = await (await fetch(`${fresh.url}/api/settings`)).json()
-      await postSettings(fresh.url, { workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"] } })
+      await postSettings(fresh.url, { workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"] } }, fresh.token)
       const after = await (await fetch(`${fresh.url}/api/feed`)).json()
 
       expect([before.needsSettings, before.total, before.shown]).toEqual([true, 3, []])
@@ -208,5 +210,84 @@ describe("serveFeed: settings", () => {
     } finally {
       await fresh.close()
     }
+  })
+})
+
+// Sends a raw request, so a test can set the Host and Origin a browser on another site would send.
+function rawRequest(url: string, path: string, options: { method?: string; headers?: Record<string, string>; body?: string } = {}) {
+  const { hostname, port } = new URL(url)
+  return new Promise<{ status: number; body: string }>((resolve, reject) => {
+    const sent = httpRequest({ hostname, port, path, method: options.method ?? "GET", headers: options.headers }, (answer) => {
+      let body = ""
+      answer.on("data", (chunk) => (body += String(chunk)))
+      answer.on("end", () => resolve({ status: answer.statusCode ?? 0, body }))
+    })
+    sent.on("error", reject)
+    sent.end(options.body)
+  })
+}
+
+describe("serveFeed: requests from other sites", () => {
+  const settingsBody = JSON.stringify({ workAuth: { status: "citizen" }, filters: { roles: ["chef"] } })
+
+  test("refuses a request whose Host is not this computer, so another site cannot read the feed by DNS rebinding", async () => {
+    const answer = await rawRequest(server.url, "/api/feed", { headers: { Host: "evil.example:4317" } })
+
+    expect(answer.status).toBe(403)
+  })
+
+  test("refuses a POST that is not JSON, as a form on another site would send, and changes nothing", async () => {
+    const headers = { "Content-Type": "text/plain", "X-Feed-Token": server.token }
+    const answer = await rawRequest(server.url, "/api/settings", { method: "POST", headers, body: settingsBody })
+
+    expect(answer.status).toBe(415)
+    await expect(readFile(join(dataDir, "settings.json"), "utf8")).rejects.toThrow()
+  })
+
+  test("refuses a POST sent from another site's page", async () => {
+    const headers = { "Content-Type": "application/json", Origin: "https://evil.example", "X-Feed-Token": server.token }
+    const answer = await rawRequest(server.url, "/api/settings", { method: "POST", headers, body: settingsBody })
+
+    expect(answer.status).toBe(403)
+  })
+
+  test("refuses a POST without this session's token, and puts the token only in the page it serves", async () => {
+    const answer = await rawRequest(server.url, "/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: settingsBody })
+    const page = await (await fetch(server.url)).text()
+
+    expect(answer.status).toBe(403)
+    expect(server.token).toMatch(/^[0-9a-f]{32,}$/)
+    expect(page).toContain(`<meta name="feed-token" content="${server.token}">`)
+    expect(await (await fetch(`${server.url}/api/settings`)).text()).not.toContain(server.token)
+  })
+
+  test("answers a broken address with 400 and keeps running", async () => {
+    const answer = await rawRequest(server.url, "//")
+
+    expect(answer.status).toBe(400)
+    expect((await fetch(`${server.url}/api/settings`)).status).toBe(200)
+  })
+
+  test("answers 500 when the page has not been built, and keeps running", async () => {
+    const bare = await serveFeed({ prepared: [], settings: SETTINGS, dataDir, pageDir: await mkdtemp(join(tmpdir(), "no-page-")), port: 0 })
+    try {
+      expect((await fetch(bare.url)).status).toBe(500)
+      expect((await fetch(`${bare.url}/api/settings`)).status).toBe(200)
+    } finally {
+      await bare.close()
+    }
+  })
+
+  test("says so when the port is already taken, instead of waiting forever", async () => {
+    const port = Number(new URL(server.url).port)
+
+    await expect(serveFeed({ prepared: [], settings: SETTINGS, dataDir, pageDir: pageFiles, port })).rejects.toThrow(`Port ${port} is already in use.`)
+  })
+
+  test("sends headers that stop other sites from framing the page or guessing types", async () => {
+    const page = await fetch(server.url)
+
+    expect(page.headers.get("content-security-policy")).toContain("frame-ancestors 'none'")
+    expect(page.headers.get("x-content-type-options")).toBe("nosniff")
   })
 })

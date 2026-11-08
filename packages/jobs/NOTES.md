@@ -336,3 +336,15 @@
 - Real data: today's list has 4 Lever EU boards (cirrus, quantinuum, prima, coretechsecurity) and none shares a slug with a US board, so F10 changes no result now; their cache files move to `cache/lever-eu/`, so the next collect asks for those 4 again. One slug in data/companies.json, `xpansiv%20`, is decoded the next time the company list is built.
 - Tried for real with `collect --board lever:xpansiv --board lever-eu:cirrus` (2 requests, written to data/jobs.boards.jsonl only): cirrus read 127 jobs through the EU address and was cached under `lever-eu/`; `xpansiv` still answers 404, so that board is closed, not just misnamed.
 - Slice 12 is done. Still waiting for a decision: the lockfile entry, full text only for filtered jobs, Databricks and Coinbase, extra statuses, myworkdaysite.com links.
+
+## 2026-11-07: Slice 13a, lock the local server
+
+- From the November review: any website could change settings and statuses with a plain form post (the body was read as JSON whatever its type), the server answered any Host (so DNS rebinding could read the feed and history), a request for "//" stopped the server, a missing page file stopped it too, and a busy port hung the start.
+- Built test first (8 new server tests, with a raw HTTP helper so a test can set Host and Origin):
+  - Every request must name 127.0.0.1 or localhost on the feed's port as its Host, or it gets 403.
+  - A POST must be application/json (415 otherwise), must not come from another site's Origin (403), and must carry the session token in X-Feed-Token (403). The server makes a random token at start and writes it only into the page it serves; the page sends it back on both POSTs.
+  - The address is read inside the error handler (a broken one gets 400), the page file is read before answering (a missing page gets 500 and the server keeps running), a taken port gives "Port N is already in use.", and an error after the answer started closes that one connection.
+  - Every answer carries Content-Security-Policy (default-src 'self', inline styles allowed for the page's style block, frame-ancestors 'none'), nosniff, no-referrer and no-store.
+- Real feed, the review's own attacks again: text/plain POST 415 (was 200 and saved), foreign Host 403 (was 200), another site's Origin 403, JSON without the token 403, GET // 400 (was a crash) and the server kept answering. In the browser the page loaded under the new headers with all 129 cards and no new console errors, and a save from the settings panel went through.
+- Found while checking: the settings panel sends the roles in its own group order, so a save with nothing changed still rewrites settings.json with the roles reordered (same roles). data/settings.json was put back byte for byte afterwards.
+- 694 tests pass, the typecheck is clean.
