@@ -401,6 +401,49 @@ Questions:
 2. 12a: is it fine that a job's description is no longer in memory? Only the server is affected; `top`, `tags` and
    `collect` keep reading the file as now. Default: yes.
 
+## Slice 13: trust what the feed shows and hides
+
+Status: approved with the defaults, 2026-11-07. Comes from the November review (docs/REVIEW-2026-11.md, kept out of
+git), which found that any website can change the local server's data or stop it, that overlapping status saves are
+lost, that "Remote only" hides 4,347 of the 7,612 jobs boards mark remote, and that some common restrictions are
+missed.
+
+Each part is tests first, then code, then the tests, the typecheck and a check on the real data, then a stop.
+
+**13a. Lock the local server.**
+- Answer only when Host is 127.0.0.1 or localhost on the feed's port. A POST needs Content-Type application/json,
+  an Origin from the same address when it has one, and the session token the server puts in the page it sends.
+- The address is parsed inside the error handler, the page file is read before answering, a busy port is reported,
+  and every answer carries Content-Security-Policy (with frame-ancestors 'none') and nosniff.
+- Measured: the cross-site post, the foreign Host and GET // from the review all fail, and the server keeps running.
+
+**13b. Never lose a write.**
+- One write queue for applied.json and settings.json, each write to its own temporary file, ranking before the
+  settings file is written.
+- Measured: 100 status changes at once, all saved.
+
+**13c. Fix "Remote only".**
+- Keep a job when its board marks it remote, or a place says remote.
+- Measured: jobs hidden for remote among board-remote jobs, before (4,347) and after.
+
+**13d. A labelled set.**
+- About 200 jobs, picked at random with a fixed seed across shown and hidden, each marked by hand for tags, years,
+  degree, pay and hide reason, saved under test/fixtures so rule changes are scored against it.
+- Measured: today's accuracy for each field, written in NOTES.md before 13e.
+
+**13e. Close the rule gaps.**
+- "Be either a US citizen or Permanent Resident", "sponsorship ... is not available", years offered with "or a
+  master's degree", one shared wish-word list checked within the clause, "Ideally ... clearance", London alone as
+  abroad, hourly pay with no unit, "Postgraduate degree".
+- Measured: errors on the 13d set before and after, and every job whose tags or reads changed on the full list, read
+  by hand.
+
+Decided: the session token is shown only in the page the server sends; the labelled set has about 200 jobs.
+
+Next, not in 13: one order for settings and chips with a "why hidden" line; a page that does not break, with tests
+for page.ts; the phone layout; accessibility; a repeatable measuring script. After 13, two weeks of real use with
+every miss logged before slice 14.
+
 ## Changes to the spec
 
 - **H-1B history from USCIS first, DOL later.** The USCIS Data Hub gives actual petition decisions per employer as CSV. The DOL file is a 252 MB Excel file, and reading it without a new dependency means writing a zip and XML reader. The DOL data adds wage levels and job titles, which are useful but not needed for the first version. F6 changes accordingly: the card says "USCIS approved N H-1B petitions for this employer in FY2026".
