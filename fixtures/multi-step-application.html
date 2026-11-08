@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Software Engineer at Example Co. (two-step test form)</title>
+</head>
+<body>
+  <main><p>Example Co. builds billing tools. This is a fake form for testing Fill and continue.</p></main>
+  <form id="app" onsubmit="return false">
+    <section id="step1">
+      <h2>Your information</h2>
+      <label for="first">First name</label> <input id="first" name="first" required><br>
+      <label for="last">Last name</label> <input id="last" name="last" required><br>
+      <label for="email">Email</label> <input id="email" name="email" type="email" required><br>
+      <label for="sponsor">Will you now or in the future need visa sponsorship?</label>
+      <select id="sponsor" name="sponsor">
+        <option value="">Select…</option><option>Yes</option><option>No</option>
+      </select>
+      <div id="visa-box" hidden>
+        <label for="visa">Which visa type?</label> <input id="visa" name="visa">
+      </div>
+      <br><button type="button" id="next">Next</button>
+    </section>
+    <section id="step2" hidden>
+      <h2>A little more</h2>
+      <label for="city">City</label> <input id="city" name="city"><br>
+      <label for="why">Why do you want to work here?</label><br>
+      <textarea id="why" name="why" maxlength="400"></textarea><br>
+      <button type="button" id="back">Back</button>
+      <button type="submit" id="submit">Submit application</button>
+    </section>
+  </form>
+  <script>
+    document.getElementById("sponsor").addEventListener("change", (event) => {
+      document.getElementById("visa-box").hidden = event.target.value !== "Yes"
+    })
+    document.getElementById("next").addEventListener("click", () => {
+      document.getElementById("step1").hidden = true
+      document.getElementById("step2").hidden = false
+    })
+    document.getElementById("back").addEventListener("click", () => {
+      document.getElementById("step2").hidden = true
+      document.getElementById("step1").hidden = false
+    })
+    document.getElementById("submit").addEventListener("click", () => {
+      document.title = "SUBMITTED (this should never happen from the extension)"
+    })
+  </script>
+</body>
+</html>

@@ -57,10 +57,12 @@ Load it into Chrome:
 ## Using it on an application
 
 1. Open the job application page.
-2. Click the icon and press **Fill this page**.
+2. Click the icon and press **Fill this page**, or **Fill and continue** for a form with several steps.
 3. The popup shows how many fields were filled, left alone and need you. Fix the outlined fields yourself, check the blue ones, and press the site's own Submit button.
 
-It never overwrites something that is already in a field. For forms with several steps, press **Fill this page** on each step. It does not click Next for you and does not log in.
+It never overwrites something that is already in a field. It does not log in.
+
+**Fill and continue** fills a step, presses a button that says Next or Continue, waits for the page to change, and fills the next step. It never presses Submit, Apply, Send, Finish or Confirm: if any button on the page could submit, it stops and tells you. It also stops when a required field is left, when it finds a CAPTCHA or a password field, when a Next press changes nothing, when the page moves to another website, after 15 steps, or when you press **Stop**. It carries on across page reloads only within about 20 seconds of pressing Next. A site may save your progress or create a draft when Next is pressed.
 
 ### Try it without a real site
 
@@ -69,6 +71,8 @@ python3 -m http.server 8000 -d fixtures
 ```
 
 Then open `http://localhost:8000/simple-application.html`, save a profile in the popup and press **Fill this page**.
+
+For Fill and continue, open `http://localhost:8000/multi-step-application.html` instead. It has two steps, a question that appears after an answer, and a Submit button that the extension must never press (the page title changes to "SUBMITTED" if it does).
 
 ## What leaves your browser
 
@@ -113,7 +117,7 @@ plan.md               The roadmap.
 ## Known limits
 
 - Not tried on real job sites yet.
-- Does not click Next or Submit and does not log in.
+- Never presses Submit and does not log in. Fill and continue works from the page's button text (English only) and has only been tested on test pages, not on real job sites.
 - Resume file upload into file inputs is built but has not been tried in real Chrome.
 - Fields hidden off-screen (not with `display: none`) are not skipped, so some honeypot fields could be filled.
 - Every field it cannot fill is outlined amber, which can be noisy.

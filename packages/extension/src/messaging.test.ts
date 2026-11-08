@@ -2,14 +2,20 @@
 import { emptySummary } from "@auto-applier/core"
 import { describe, expect, test } from "vitest"
 import {
+  isFillAndContinueRequest,
   isFillPageRequest,
   isFillProgressMessage,
   isFillResultMessage,
+  isFlowClearMessage,
+  isFlowGetRequest,
+  isFlowSaveMessage,
+  isFlowStateResponse,
   isGetResumeRequest,
   isLlmRequest,
   isLlmResponse,
   isPageLoadedMessage,
   isResumeResponse,
+  isStopFlowRequest,
 } from "./messaging"
 
 const NOT_OBJECTS = [null, undefined, "text", 42]
@@ -164,5 +170,39 @@ describe("isFillProgressMessage", () => {
     expect(isFillProgressMessage({ type: "fill-progress" })).toBe(false)
     expect(isFillProgressMessage({ type: "fill-progress", progress: { total: "x", filled: 1, phase: "rules" } })).toBe(false)
     for (const value of NOT_OBJECTS) expect(isFillProgressMessage(value)).toBe(false)
+  })
+})
+
+describe("flow messages", () => {
+  test("accepts the popup's fill-and-continue and stop requests, and nothing else", () => {
+    expect(isFillAndContinueRequest({ type: "fill-and-continue" })).toBe(true)
+    expect(isStopFlowRequest({ type: "stop-flow" })).toBe(true)
+    expect(isFillAndContinueRequest({ type: "fill-page" })).toBe(false)
+    expect(isStopFlowRequest({ type: "fill-and-continue" })).toBe(false)
+    for (const value of NOT_OBJECTS) {
+      expect(isFillAndContinueRequest(value)).toBe(false)
+      expect(isStopFlowRequest(value)).toBe(false)
+    }
+  })
+
+  test("accepts a flow-save message only with a well-formed state", () => {
+    expect(isFlowSaveMessage({ type: "flow-save", state: { step: 2, clickedAt: 1000 } })).toBe(true)
+    expect(isFlowSaveMessage({ type: "flow-save", state: { step: "2", clickedAt: 1000 } })).toBe(false)
+    expect(isFlowSaveMessage({ type: "flow-save", state: { step: 2.5, clickedAt: 1000 } })).toBe(false)
+    expect(isFlowSaveMessage({ type: "flow-save" })).toBe(false)
+  })
+
+  test("accepts flow-get and flow-clear requests", () => {
+    expect(isFlowGetRequest({ type: "flow-get" })).toBe(true)
+    expect(isFlowClearMessage({ type: "flow-clear" })).toBe(true)
+    expect(isFlowGetRequest({ type: "flow-clear" })).toBe(false)
+    expect(isFlowClearMessage(null)).toBe(false)
+  })
+
+  test("accepts a reply that holds a state or nothing, and rejects a malformed one", () => {
+    expect(isFlowStateResponse({})).toBe(true)
+    expect(isFlowStateResponse({ state: { step: 1, clickedAt: 5 } })).toBe(true)
+    expect(isFlowStateResponse({ state: { step: -1, clickedAt: 5 } })).toBe(false)
+    for (const value of NOT_OBJECTS) expect(isFlowStateResponse(value)).toBe(false)
   })
 })

@@ -240,3 +240,37 @@ describe("FillPanel: progress bar", () => {
     expect(bar()?.hidden ?? true).toBe(true)
   })
 })
+
+describe("FillPanel: fill and continue", () => {
+  const buttonLabelled = (label: string) => Array.from(document.querySelectorAll("button")).find((button) => button.textContent === label)
+
+  test("has a Fill and continue button and a Stop button besides Fill this page", () => {
+    expect(buttonLabelled("Fill and continue")).toBeDefined()
+    expect(buttonLabelled("Stop")).toBeDefined()
+  })
+
+  test("says in plain words that it presses Next but never Submit", () => {
+    expect(document.body.textContent).toMatch(/Next[^.]*never[^.]*Submit/i)
+  })
+
+  test("asks the active tab to fill and continue, and says it is working", async () => {
+    buttonLabelled("Fill and continue")!.click()
+
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledWith(7, { type: "fill-and-continue" }))
+    expect(status()).toBe("Filling…")
+  })
+
+  test("asks the active tab to stop when Stop is pressed", async () => {
+    buttonLabelled("Stop")!.click()
+
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledWith(7, { type: "stop-flow" }))
+  })
+
+  test("says it could not reach the page when sending fails", async () => {
+    sendMessage.mockRejectedValueOnce(new Error("Receiving end does not exist."))
+
+    buttonLabelled("Fill and continue")!.click()
+
+    await vi.waitFor(() => expect(status()).toBe("Could not reach this page. Reload the tab and try again."))
+  })
+})

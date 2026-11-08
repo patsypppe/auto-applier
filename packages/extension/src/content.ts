@@ -1,7 +1,10 @@
-// Content script: fills the page when the popup asks, using the saved profile and the LLM through the background worker.
+// Content script: fills the page (or a whole multi-step form) when the popup asks, using the saved profile and the LLM through the background worker.
+import { BackgroundFlowState } from "./fill/BackgroundFlowState"
+import { pendingStep } from "./fill/resumeFlow"
 import { runFill } from "./fill/runFill"
+import { runFlow } from "./fill/runFlow"
 import { BackgroundLLMClient } from "./llm/BackgroundLLMClient"
-import { isFillPageRequest } from "./messaging"
+import { isFillAndContinueRequest, isFillPageRequest, isStopFlowRequest } from "./messaging"
 import { loadResumeFromBackground } from "./resume/loadResumeFromBackground"
 import type { FillProgressMessage, FillResultMessage, PageLoadedMessage } from "./messaging"
 import { ChromeStorageProfileStore } from "./storage/ChromeStorageProfileStore"
@@ -23,7 +26,36 @@ if (window === window.top) {
   chrome.runtime.sendMessage(loaded).catch(() => undefined)
 }
 
+const flowState = new BackgroundFlowState()
+const RESUME_DELAY_MS = 1000
+let stopRequested = false
+
+// Fills this step and carries on through the form's next steps, stopping before Submit, then reports the result.
+function startFlow(startAt: number): void {
+  stopRequested = false
+  void runFlow({
+    store: new ChromeStorageProfileStore(),
+    llm: new BackgroundLLMClient(),
+    flowState,
+    loadResume: loadResumeFromBackground,
+    onProgress: reportProgress,
+    isStopped: () => stopRequested,
+    startAt,
+  }).then(reportResult)
+}
+
+// After a page load, carries on a flow that pressed Next a moment ago, once the page has had time to draw.
+void pendingStep(flowState).then((step) => {
+  if (step !== undefined) setTimeout(() => startFlow(step), RESUME_DELAY_MS)
+})
+
 chrome.runtime.onMessage.addListener((message: unknown) => {
-  if (!isFillPageRequest(message)) return
-  void runFill(new ChromeStorageProfileStore(), new BackgroundLLMClient(), loadResumeFromBackground, reportProgress).then(reportResult)
+  if (isFillPageRequest(message)) {
+    void runFill(new ChromeStorageProfileStore(), new BackgroundLLMClient(), loadResumeFromBackground, reportProgress).then(reportResult)
+  } else if (isFillAndContinueRequest(message)) {
+    startFlow(0)
+  } else if (isStopFlowRequest(message)) {
+    stopRequested = true
+    void flowState.clear().catch(() => undefined)
+  }
 })

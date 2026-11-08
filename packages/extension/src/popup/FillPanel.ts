@@ -1,9 +1,9 @@
-// Renders the "Fill this page" button and shows the progress, saved results and notes of the page's frames, also after the popup is reopened.
+// Renders the "Fill this page", "Fill and continue" and "Stop" buttons and shows the progress, saved results and notes of the page's frames, also after the popup is reopened.
 import { formatSummary } from "@auto-applier/core"
 import type { FillPhase, ReportSummary } from "@auto-applier/core"
 import { combineProgress } from "../fill/combineProgress"
 import { combineResults } from "../fill/combineResults"
-import type { FillPageRequest } from "../messaging"
+import type { FillAndContinueRequest, FillPageRequest, StopFlowRequest } from "../messaging"
 import type { ChromeSessionFillStore, FillRun } from "../storage/ChromeSessionFillStore"
 
 const UNREACHABLE_MESSAGE = "Could not reach this page. Reload the tab and try again."
@@ -14,9 +14,10 @@ async function activeTabId(): Promise<number | undefined> {
   return tab?.id
 }
 
-// Sends the fill request to every frame of the tab.
-async function requestFill(tabId: number): Promise<void> {
-  const request: FillPageRequest = { type: "fill-page" }
+type TabRequest = FillPageRequest | FillAndContinueRequest | StopFlowRequest
+
+// Sends the request to every frame of the tab.
+async function sendToTab(tabId: number, request: TabRequest): Promise<void> {
   await chrome.tabs.sendMessage(tabId, request)
 }
 
@@ -58,11 +59,23 @@ function showNotes(list: HTMLElement, notes: string[]): void {
   list.replaceChildren(...items)
 }
 
-// Adds the button, a progress bar, a status line and a notes list to the container, shows what is saved for the tab, and updates as frames report in.
+// Adds the buttons, a progress bar, a status line and a notes list to the container, shows what is saved for the tab, and updates as frames report in.
 export async function mountFillPanel(container: HTMLElement, store: ChromeSessionFillStore): Promise<void> {
   const button = document.createElement("button")
   button.type = "button"
   button.textContent = "Fill this page"
+
+  const continueButton = document.createElement("button")
+  continueButton.type = "button"
+  continueButton.textContent = "Fill and continue"
+
+  const stopButton = document.createElement("button")
+  stopButton.type = "button"
+  stopButton.textContent = "Stop"
+
+  const hint = document.createElement("p")
+  hint.className = "hint"
+  hint.textContent = "Fill and continue presses Next for you between steps but never presses Submit, and stops when it needs you."
 
   const bar = document.createElement("progress")
   bar.hidden = true
@@ -77,7 +90,7 @@ export async function mountFillPanel(container: HTMLElement, store: ChromeSessio
   const notesList = document.createElement("ul")
   notesList.className = "notes"
 
-  container.append(button, bar, caption, status, notesList)
+  container.append(button, continueButton, stopButton, hint, bar, caption, status, notesList)
 
   const tabId = await activeTabId()
   let failure: string | undefined
@@ -101,17 +114,24 @@ export async function mountFillPanel(container: HTMLElement, store: ChromeSessio
     if (tabId !== undefined) render(await store.load(tabId))
   }
 
-  button.addEventListener("click", async () => {
+  // Marks a run as started and sends the request to the tab; shows a clear message when the page cannot be reached.
+  async function startRun(request: FillPageRequest | FillAndContinueRequest): Promise<void> {
     failure = undefined
     try {
       if (tabId === undefined) throw new Error("No active tab")
       await store.start(tabId)
-      await requestFill(tabId)
+      await sendToTab(tabId, request)
     } catch {
       failure = UNREACHABLE_MESSAGE
       if (tabId !== undefined) await store.clear(tabId).catch(() => undefined)
       render({ running: false, results: [], progress: [] })
     }
+  }
+
+  button.addEventListener("click", () => void startRun({ type: "fill-page" }))
+  continueButton.addEventListener("click", () => void startRun({ type: "fill-and-continue" }))
+  stopButton.addEventListener("click", () => {
+    if (tabId !== undefined) void sendToTab(tabId, { type: "stop-flow" }).catch(() => undefined)
   })
 
   if (tabId === undefined) return

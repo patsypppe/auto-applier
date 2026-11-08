@@ -259,3 +259,45 @@ describe("background worker: progress", () => {
     expect([...saved.keys()].some((key) => key.startsWith("fill-progress:"))).toBe(false)
   })
 })
+
+describe("background worker: Next-button flow state", () => {
+  const FROM_TAB = { id: EXTENSION_ID, tab: { id: 7 }, frameId: 0 }
+
+  test("saves a flow state for the sending tab and frame, and hands it back", async () => {
+    const { listener } = await loadWorker({})
+    listener({ type: "flow-save", state: { step: 2, clickedAt: 1000 } }, FROM_TAB, vi.fn())
+    const sendResponse = vi.fn()
+
+    const keepsChannelOpen = listener({ type: "flow-get" }, FROM_TAB, sendResponse)
+
+    expect(keepsChannelOpen).toBe(true)
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledWith({ state: { step: 2, clickedAt: 1000 } }))
+  })
+
+  test("forgets the state when the flow ends", async () => {
+    const { listener } = await loadWorker({})
+    listener({ type: "flow-save", state: { step: 2, clickedAt: 1000 } }, FROM_TAB, vi.fn())
+    listener({ type: "flow-clear" }, FROM_TAB, vi.fn())
+    const sendResponse = vi.fn()
+
+    listener({ type: "flow-get" }, FROM_TAB, sendResponse)
+
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledWith({}))
+  })
+
+  test("ignores flow messages from other extensions", async () => {
+    const { listener, saved } = await loadWorker({})
+
+    listener({ type: "flow-save", state: { step: 2, clickedAt: 1000 } }, { id: "someone-else", tab: { id: 7 } }, vi.fn())
+
+    expect([...saved.keys()].some((key) => key.startsWith("flow:"))).toBe(false)
+  })
+
+  test("does not keep a flow state for a sender that is not in a tab", async () => {
+    const { listener, saved } = await loadWorker({})
+
+    listener({ type: "flow-save", state: { step: 2, clickedAt: 1000 } }, { id: EXTENSION_ID }, vi.fn())
+
+    expect([...saved.keys()].some((key) => key.startsWith("flow:"))).toBe(false)
+  })
+})

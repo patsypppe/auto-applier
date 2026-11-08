@@ -4,6 +4,20 @@ import type { FillProgress, ProviderId, ReportSummary } from "@auto-applier/core
 
 export type FillPageRequest = { type: "fill-page" }
 
+export type FillAndContinueRequest = { type: "fill-and-continue" }
+
+export type StopFlowRequest = { type: "stop-flow" }
+
+export type FlowState = { step: number; clickedAt: number }
+
+export type FlowSaveMessage = { type: "flow-save"; state: FlowState }
+
+export type FlowGetRequest = { type: "flow-get" }
+
+export type FlowClearMessage = { type: "flow-clear" }
+
+export type FlowStateResponse = { state?: FlowState }
+
 export type PageLoadedMessage = { type: "page-loaded" }
 
 export type GetResumeRequest = { type: "get-resume" }
@@ -93,4 +107,50 @@ export function isLlmResponse(value: unknown): value is LlmResponse {
   const { ok, error } = value as { ok?: unknown; error?: unknown }
   if (ok === true) return true
   return ok === false && typeof error === "string"
+}
+
+// Returns true when an unknown value is a message of the given type.
+function hasType(message: unknown, type: string): boolean {
+  return typeof message === "object" && message !== null && (message as { type?: unknown }).type === type
+}
+
+// Returns true when an unknown value is the popup's request to fill this step and carry on to the next.
+export function isFillAndContinueRequest(message: unknown): message is FillAndContinueRequest {
+  return hasType(message, "fill-and-continue")
+}
+
+// Returns true when an unknown value is the popup's request to stop a running flow.
+export function isStopFlowRequest(message: unknown): message is StopFlowRequest {
+  return hasType(message, "stop-flow")
+}
+
+// Returns true when an unknown value is a step count and the time Next was pressed.
+function isFlowState(value: unknown): value is FlowState {
+  if (typeof value !== "object" || value === null) return false
+
+  const { step, clickedAt } = value as { step?: unknown; clickedAt?: unknown }
+  return typeof step === "number" && Number.isInteger(step) && step >= 0 && typeof clickedAt === "number" && Number.isFinite(clickedAt)
+}
+
+// Returns true when an unknown value is a content script's request to remember how far a flow has got.
+export function isFlowSaveMessage(message: unknown): message is FlowSaveMessage {
+  return hasType(message, "flow-save") && isFlowState((message as { state?: unknown }).state)
+}
+
+// Returns true when an unknown value is a content script's question about the flow it may have to carry on.
+export function isFlowGetRequest(message: unknown): message is FlowGetRequest {
+  return hasType(message, "flow-get")
+}
+
+// Returns true when an unknown value is a content script's note that its flow has ended.
+export function isFlowClearMessage(message: unknown): message is FlowClearMessage {
+  return hasType(message, "flow-clear")
+}
+
+// Returns true when an unknown value is a well-formed reply to a flow-get request.
+export function isFlowStateResponse(value: unknown): value is FlowStateResponse {
+  if (typeof value !== "object" || value === null) return false
+
+  const { state } = value as { state?: unknown }
+  return state === undefined || isFlowState(state)
 }
