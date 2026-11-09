@@ -92,7 +92,7 @@ describe("scoreLabels", () => {
   })
 
   test("reads a job as abroad only when its country is other", () => {
-    const report = scoreLabels([labelled("Great job.", { abroad: true }, { country: undefined, locations: ["London"] })], ME)
+    const report = scoreLabels([labelled("Great job.", { abroad: true }, { country: undefined, locations: ["Dublin"] })], ME)
 
     expect(report.fields.abroad.misses).toEqual(["Acme | Data Analyst: read false, label true"])
   })

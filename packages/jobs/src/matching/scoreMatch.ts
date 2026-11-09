@@ -2,7 +2,7 @@
 // three), and 30 for a wanted title.
 import type { Degree, Level } from "../types"
 import { degreeRequired } from "./degree"
-import { yearsRequired } from "./experience"
+import { yearsRequired, yearsWithMaster } from "./experience"
 import { levelFromTitle } from "./level"
 import { findSkills } from "./skills"
 
@@ -14,6 +14,7 @@ export type MatchReasons = {
   titleMatches: boolean
   level?: Level
   yearsRequired?: number
+  yearsWithMaster?: number
   degreeRequired?: Degree
 }
 
@@ -47,6 +48,7 @@ export function readMatch(job: { title: string; description: string }, skills: r
     missingSkills: named.filter((skill) => !mine.has(skill.toLowerCase())),
     level: levelFromTitle(job.title),
     yearsRequired: yearsRequired(text),
+    yearsWithMaster: yearsWithMaster(text),
     degreeRequired: degreeRequired(job.description, job.title),
   }
 }

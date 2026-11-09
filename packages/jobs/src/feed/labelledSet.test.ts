@@ -15,16 +15,16 @@ describe("the labelled set", () => {
   })
 
   test.each([
-    ["tags", 183],
-    ["years", 189],
-    ["degree", 169],
-    ["pay", 182],
-    ["abroad", 196],
+    ["tags", 197],
+    ["years", 199],
+    ["degree", 172],
+    ["pay", 190],
+    ["abroad", 198],
   ] as const)("reads %s right at least %i times", (field, floor) => {
     expect(REPORT.fields[field].right).toBeGreaterThanOrEqual(floor)
   })
 
-  test("decides hide or show right at least 177 times", () => {
-    expect(REPORT.hide.right).toBeGreaterThanOrEqual(177)
+  test("decides hide or show right at least 187 times", () => {
+    expect(REPORT.hide.right).toBeGreaterThanOrEqual(187)
   })
 })

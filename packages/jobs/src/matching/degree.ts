@@ -2,6 +2,7 @@
 // Statistics", leaving out degrees that are only preferred.
 import { splitSentences } from "../tags/sentences"
 import type { Degree } from "../types"
+import { WISH_WORDS } from "./wishWords"
 
 export const DEGREES: readonly Degree[] = ["associate", "bachelor", "master", "phd"]
 
@@ -13,7 +14,7 @@ const PHD_CONTEXT = String.raw`(?=\s*($|[.;:,)\/+(]|in\b|or\b|degree|with\b|prog
 const PATTERNS: readonly [Degree, RegExp][] = [
   ["phd", new RegExp(String.raw`\bPh\.?\s?D\b\.?${PHD_CONTEXT}`, "g")],
   ["phd", /\b(doctorate|doctoral degree)(?![a-z])/gi],
-  ["master", /\b(master('|’)?s|master degree|M\.S\.|M\.Sc|MSc|MBA|M\.Eng|MEng|advanced degree|graduate degree)(?![a-z])/gi],
+  ["master", /\b(master('|’)?s|master degree|M\.S\.|M\.Sc|MSc|MBA|M\.Eng|MEng|advanced degree|graduate degree|post-?graduate degree)(?![a-z])/gi],
   // "Master of Science", "Master/PhD", "Master or PhD", but not "a master of Python" or "master/reference data".
   ["master", /\bmaster(?= of (science|arts|engineering|business|public|fine|education|social)\b|\s*\/\s*(Ph|doctor)|\s+(or|in)\b)/gi],
   // "MS" in a list of state codes ("LA, MS, MT") is Mississippi.
@@ -23,14 +24,14 @@ const PATTERNS: readonly [Degree, RegExp][] = [
   ["associate", /\bassociate('|’)?s? degree\b/gi],
 ]
 
-const PREFERRED_BEFORE = /\b(preferred|preferably|nice to have|bonus|a plus|ideally|desired|preference|recommended)\b/i
+const PREFERRED_BEFORE = new RegExp(String.raw`\b(${WISH_WORDS})\b`, "i")
 // "Master's preferred" or "PhD (preferred)": the wish comes right after the degree, before the next comma or bracket.
 const PREFERRED_AFTER = /^\s*\(?\s*(preferred|a plus|nice to have|bonus|desired)\b|^[^.;,()]{0,40}\b(preferred|a plus|nice to have|bonus|desired)\b/i
 // A degree that experience can stand in for is not a requirement.
 const EXPERIENCE_INSTEAD = /\b(or (an? )?equivalent|in lieu of|comparable experience)\b|\bequivalent\b[^.;]{0,30}\bexperience\b/i
 // Sentences that name a degree without asking for it: "You don't need: a PhD", "typical but not required", or a line
 // about the founders or the company ("CTO & Co-founder: PhD in Computer Science", "We spun out of a PhD program").
-const NOT_ASKED = /\b(don't need|do not need|not required|not necessary|not a requirement|typical|typically|often|usually|encourage|co-?founder|founded|spun out|spinout|backed by)\b/i
+const NOT_ASKED = /\b(don't need|do not need|not required|not necessary|not a requirement|typical|typically|often|usually|encourage|co-?founder|founded|spun out|spinout|backed by|holding advanced degrees)\b/i
 // A bracketed alternative or example, "(or 6+ years with a PhD)" or "(e.g. a PhD in a relevant area)". Its degrees
 // count only next to a degree outside it, as in "PhD (or BS/MS degree with equivalent level of experience)".
 const ASIDE = /\(\s*((or|eg|for example|such as)\b|e\.g\.|i\.e\.)[^)]*\)/gi

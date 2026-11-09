@@ -1,6 +1,6 @@
 // Tests that yearsRequired reads how many years of experience a posting asks for, and ignores other mentions of years.
 import { describe, expect, test } from "vitest"
-import { yearsRequired } from "./experience"
+import { yearsRequired, yearsWithMaster } from "./experience"
 
 describe("yearsRequired", () => {
   test.each([
@@ -49,4 +49,52 @@ describe("yearsRequired", () => {
       expect(yearsRequired(text)).toBeUndefined()
     },
   )
+
+  test("reads every wish word as a wish, but only in the clause of the years", () => {
+    expect(yearsRequired("5+ years of experience desired.")).toBeUndefined()
+    expect(yearsRequired("Bachelor's preferred, and 3+ years of experience required.")).toBe(3)
+    expect(yearsRequired("Nice to have: Python, 3+ years of experience with Spark.")).toBeUndefined()
+  })
+
+  test.each([
+    ["Required Experience: 8 years", 8],
+    ["6+ years applied ML with explicit search and/or recommendation systems", 6],
+  ])("reads the real requirement %s", (text, years) => {
+    expect(yearsRequired(text)).toBe(years)
+  })
+})
+
+describe("yearsWithMaster", () => {
+  test.each([
+    ["3 to 5 years of experience in analytics, or a master's degree in statistics.", undefined],
+    ["Bachelor's degree with 8+ years of experience, master's degree with 5+ years of experience, or Ph.D. with 2+ years of experience.", 5],
+    ["Masters with 3 years of experience or Bachelors with 5 years of relevant experience.", 3],
+    ["Typically requires a minimum of 7 years of related experience with a Bachelor's degree; or 5 years and a Master's degree; or 4 years with a PhD.", 5],
+    ["Strong frontend engineering experience (typically 4+ years, or equivalent: 2+ years with a Master's degree)", 2],
+    ["Bachelor's degree or 3+ years' experience in related field", undefined],
+    ["Bachelor's degree; OR High school diploma or equivalency certificate, with 4+ years of experience implementing programs", undefined],
+    ["2 years working in an electrical or mechanical test/integration environment; OR a bachelor's in a STEM field", undefined],
+  ])("reads what a master's holder needs from %s", (text, years) => {
+    expect(yearsWithMaster(text)).toBe(years)
+  })
+
+  test("is the same as the plain requirement when no degree is offered instead", () => {
+    expect(yearsWithMaster("5+ years of experience in data science.")).toBe(5)
+  })
+
+  test("keeps the years when the wish is about the kind of experience, or the degree line has no years in it", () => {
+    expect(yearsRequired("2+ years of software development experience (preferably with Ruby on Rails)")).toBe(2)
+    expect(yearsRequired("12+ years of construction supervision experience required preferably via a General Contractor")).toBe(12)
+    expect(yearsWithMaster("10 years' experience (with degree or 15 without) in a large and complex IT environment")).toBe(10)
+    expect(yearsWithMaster("equivalent to high school diploma, plus 4 years experience in the mortgage lending industry")).toBe(4)
+  })
+
+  test("reads the years stated for a master's among other routes", () => {
+    expect(yearsWithMaster("9+ years of experience and Bachelors in related field; or 7 years relevant experience with Masters in related field; or High School Diploma or equivalent and 13 years")).toBe(7)
+  })
+
+  test("does not take master data management or MS SQL for a master's degree", () => {
+    expect(yearsWithMaster("2-4 years of hands-on experience in Master Data Management (MDM), with Informatica")).toBe(2)
+    expect(yearsWithMaster("3+ years of experience with MS SQL Server")).toBe(3)
+  })
 })

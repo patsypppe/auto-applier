@@ -1,7 +1,8 @@
 // Scores the readers against a hand-labelled set of real postings, so a rule change can be shown to help or hurt.
 import { degreeRequired, DEGREES } from "../matching/degree"
-import { yearsRequired } from "../matching/experience"
+import { yearsWithMaster } from "../matching/experience"
 import { readPay } from "../matching/pay"
+import { countryOf } from "../sources/country"
 import { jobEffect } from "../tags/effects"
 import { tagJob } from "../tags/tagJob"
 import type { AuthTag, Degree, JobRecord, WorkAuth } from "../types"
@@ -71,9 +72,9 @@ export function scoreLabels(jobs: readonly LabelledJob[], me: Me): LabelReport {
     const name = `${job.company} | ${job.title}`
     const pay = job.pay ?? readPay(job.description)
     const read: Facts = {
-      abroad: job.country === "other",
+      abroad: job.country === "other" || countryOf(job.locations) === "other",
       tags: comparableTags(tagJob(job).map(({ tag }) => tag)),
-      years: yearsRequired(`${job.title}\n${job.description}`) ?? null,
+      years: yearsWithMaster(`${job.title}\n${job.description}`) ?? null,
       degree: degreeRequired(job.description, job.title) ?? null,
     }
 

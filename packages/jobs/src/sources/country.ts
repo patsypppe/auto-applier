@@ -30,9 +30,9 @@ const OTHER_COUNTRIES = new RegExp(
     "Norway|Pakistan|Peru|Philippines|Poland|Portugal|Romania|Saudi Arabia|Serbia|Singapore|Slovakia|South Africa|" +
     "Spain|Sweden|Switzerland|Taiwan|Thailand|Turkey|Ukraine|United Arab Emirates|UAE|United Kingdom|UK|England|" +
     "Scotland|Uruguay|Vietnam|" +
-    // Big cities and regions outside the US that boards often write alone. London and Dublin stay undecided,
-    // because there is a London, Ontario and a Dublin, California.
-    "Amsterdam|Bengaluru|Bangalore|Hyderabad|Pune|Mumbai|Delhi|Gurugram|Gurgaon|Noida|Chennai|Tokyo|Seoul|Taipei|" +
+    // Big cities and regions outside the US that boards often write alone. Dublin stays undecided, because there is a
+    // Dublin, California; a London in the US comes with its state.
+    "London|Amsterdam|Bengaluru|Bangalore|Hyderabad|Pune|Mumbai|Delhi|Gurugram|Gurgaon|Noida|Chennai|Tokyo|Seoul|Taipei|" +
     "Sydney|Melbourne|Berlin|Munich|Paris|Madrid|Barcelona|Lisbon|Zurich|Stockholm|Copenhagen|Oslo|Helsinki|" +
     "Warsaw|Prague|Bucharest|Sofia|Tel Aviv|Toronto|Vancouver|Montreal|Mexico City|S\u00e3o Paulo|Sao Paulo|Bogota|" +
     "EMEA|APAC|LATAM|Europe" +

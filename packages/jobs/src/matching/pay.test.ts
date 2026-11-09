@@ -44,4 +44,21 @@ describe("readPay", () => {
   ])("finds no pay range in %s", (text) => {
     expect(readPay(text)).toBeUndefined()
   })
+
+  test.each([
+    ["$54&mdash;$56 USD", { min: 54, max: 56, per: "hour" }],
+    ["$46&mdash;$46 USD", { min: 46, max: 46, per: "hour" }],
+    ["Level 1: $34 - $40\nLevel 2: $38 - $45", { min: 34, max: 45, per: "hour" }],
+    ["hourly compensation ($15-30/h) for technical processing", { min: 15, max: 30, per: "hour" }],
+  ])("reads the hourly range %s", (text, pay) => {
+    expect(readPay(text)).toMatchObject(pay)
+  })
+
+  test("does not read small amounts with nothing saying they are pay as hourly", () => {
+    expect(readPay("Referral rewards of $50 - $100 for each friend")).toBeUndefined()
+  })
+
+  test("reads a range followed by /hourly", () => {
+    expect(readPay("is expected to be between $19.61 - $25/hourly.")).toMatchObject({ min: 19.61, max: 25, per: "hour" })
+  })
 })

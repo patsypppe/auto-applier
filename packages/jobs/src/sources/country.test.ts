@@ -65,11 +65,16 @@ describe("countryOf: other countries", () => {
 })
 
 describe("countryOf: not enough to tell", () => {
-  test.each([["Dublin"], ["London"], ["Remote"], ["Hybrid"]])("leaves %s undecided", (location) => {
+  test.each([["Dublin"], ["Remote"], ["Hybrid"]])("leaves %s undecided", (location) => {
     expect(countryOf([location])).toBeUndefined()
   })
 
   test("leaves a job with no locations undecided", () => {
     expect(countryOf([])).toBeUndefined()
+  })
+
+  test("reads London alone as abroad, and still reads a London with a US state as US", () => {
+    expect(countryOf(["London"])).toBe("other")
+    expect(countryOf(["London, KY"])).toBe("US")
   })
 })

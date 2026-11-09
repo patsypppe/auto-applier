@@ -122,4 +122,13 @@ describe("degreeRequired", () => {
       expect(degreeOf(text)).toBeUndefined()
     },
   )
+
+  test("reads a postgraduate degree as a master's", () => {
+    expect(degreeRequired("Postgraduate degree in Mathematics, Physics or Computer Science", "Data Scientist")).toBe("master")
+  })
+
+  test("does not read a company blurb or a stated preference as a requirement", () => {
+    expect(degreeRequired("more than 70% of our technology team holding advanced degrees at the Master's or PhD level.", "Technician")).toBeUndefined()
+    expect(degreeRequired("We prefer candidates to hold at minimum a Masters degree.", "Data Scientist")).toBeUndefined()
+  })
 })

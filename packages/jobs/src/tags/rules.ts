@@ -1,4 +1,5 @@
 // The phrase rules for work-authorization tags, as data: what each tag needs to see in a sentence and what rules it out.
+import { WISH_WORDS } from "../matching/wishWords"
 import type { AuthTag } from "../types"
 
 export type Rule = { tag: AuthTag; matches: (sentence: string) => boolean }
@@ -11,8 +12,9 @@ const VISA_CONTEXT = /\b(visas?|immigration|H-?1B|green card|authori[sz]ed to wo
 const REFUSES_SPONSORSHIP = [
   /\b(unable to|not able to|cannot|can ?not|can't|will not|won't|do not|does not|don't|doesn't|aren't|isn't|not)\b[^.;]{0,40}?\bsponsor(s|ship|ing)?\b/i,
   /\bwithout\b[^.;]{0,40}?\bsponsorship\b/i,
-  /\bno\s+(visa\s+|employer\s+|H-?1B\s+)?sponsorship\b/i,
+  /\bno\s+(visa\s+|employer\s+|immigration\s+|H-?1B\s+)?sponsorship\b/i,
   /\bsponsorship\s+(is\s+|will\s+)?(not|un)\s*(available|offered|provided|possible)\b/i,
+  /\bsponsorship\b[^.;]{0,100}\bis not (available|offered|provided)\b/i,
   /\b(unable to|not able to|cannot|can't)\s+(offer employment|hire|employ|consider)\b[^.;]{0,120}?\brequire[sd]?\s+(visa\s+)?sponsorship\b/i,
 ]
 // "Without sponsorship for an export license" is about export licenses, not visas.
@@ -31,10 +33,13 @@ const OFFERS_SPONSORSHIP = [
   /\b(we|they)\s+(do|does)\s+sponsor\b/i,
   /\bvisa sponsorship\b[^.;]{0,40}\bfor (qualified|eligible|selected)\b/i,
   /\bvisa sponsorship\s*:\s*(H-?1B\s+)?(available|offered|yes)\b/i,
+  /\boptional\b[^.;]{0,30}\bvisa sponsorship\b/i,
+  /\b(relocation|support|benefits?)\b[^.;]{0,60}\bincluding visa sponsorship\b/i,
 ]
 
 const CITIZENS_ONLY = [
-  new RegExp(String.raw`\b${US}\s+citizenship\b[^.;]{0,30}\brequired\b`, "i"),
+  new RegExp(String.raw`\b${US}\s+citizenship\b[^.;]{0,60}\brequire(d|ment)\b`, "i"),
+  new RegExp(String.raw`\b${US}\s+citizenship is needed\b`, "i"),
   new RegExp(String.raw`\bmust be (a\s+)?${US}\s+citizen(s|ship)?\b`, "i"),
   new RegExp(String.raw`\brequires?\s+${US}\s+citizenship\b`, "i"),
   new RegExp(String.raw`\brequires?\b[^.;]{0,40}\bto be\s+${US}\s+citizens\b`, "i"),
@@ -55,19 +60,19 @@ const US_PERSONS = [
   /\bcitizens?\b[^;]{0,200}\b(permanent resident|green card)/i,
   /\bcitizenship\b[^;]{0,120}\b(permanent residen\w*|refugee|asylee)/i,
 ]
-const A_REQUIREMENT = /\b(must|only|required|requires|requirement|eligible|conform|policy)\b/i
+const A_REQUIREMENT = /\b(must|only|required|requires|requirement|eligible|conform|policy|be either)\b/i
 
 const CLEARANCE =
-  /\b(security clearances?|(government|federal|national security|DoD|DoW) clearances?|TS\/SCI|top secret|secret (level )?clearance|secret security|TS clearance|DOE\s+(level\s+)?Q|clearance level|active clearance|polygraph)\b/i
+  /\b(security clearances?|(government|federal|national security|DoD|DoW) clearances?|TS[\/ ]SCI|top secret|secret (level )?clearance|secret security|TS clearance|DOE\s+(level\s+)?Q|clearance level|active clearance|polygraph|required clearance:\s*(?:secret|top secret|ts))\b/i
 const PUBLIC_TRUST = /\bpublic trust\b/i
 const REAL_CLEARANCE = /\b(secret|TS\/SCI|SCI|DOE|polygraph)\b/i
 // A clearance that is only preferred, or a clearance pay differential, is not a rule, unless the sentence also requires one.
-const CLEARANCE_OPTIONAL = /\b(preferred|preference|a plus|nice to have|bonus|desired|not required|differential)\b/i
+const CLEARANCE_OPTIONAL = new RegExp(String.raw`\b(${WISH_WORDS}|not required|differential)\b`, "i")
 const CLEARANCE_REQUIRED = /\b(required|requires|must|mandatory)\b/i
 
 // Temporary visas named as not eligible, as in "individuals with temporary visas such as E, F-1, H-1 ... are not eligible".
 const VISA_HOLDERS_EXCLUDED =
-  /\b(F-1|temporary (work )?visas?|student visas?|nonimmigrant visas?)\b[^.;]{0,160}?\b(not eligible|ineligible|will not be considered|cannot be considered)\b/i
+  /\b(F-1|temporary (work )?visas?|student visas?|nonimmigrant visas?)\b[^.;]{0,160}?\b(not eligible|ineligible|will not be considered|cannot be considered)\b|\bmust not\b[^.;]{0,80}\bbased on (?:OPT|CPT)\b/i
 
 // A line that lists something as a skill ("experience with E-Verify filings") is not the employer's own rule.
 const SKILL = /\b(experience|familiarity|knowledge|understanding|background in)\b/i
@@ -109,7 +114,7 @@ function onlyASkill(sentence: string): boolean {
 // names a clearance is read on its own, and a bracketed wish such as "(active clearance preferred)" is left out, so only
 // a preference about the clearance itself makes it optional.
 function requiresClearance(sentence: string): boolean {
-  const withoutAsides = sentence.replace(/\([^)]*\)/g, (aside) => (CLEARANCE_OPTIONAL.test(aside) ? "" : aside))
+  const withoutAsides = sentence.replace(/\([^)]*\)/g, (aside) => (CLEARANCE_OPTIONAL.test(aside) && !/\bnot required\b/i.test(aside) ? "" : aside))
   return withoutAsides
     .split(",")
     .filter((clause) => CLEARANCE.test(clause))
@@ -126,7 +131,7 @@ function refusesSponsorship(sentence: string): boolean {
 export const RULES: readonly Rule[] = [
   {
     tag: "citizen-only",
-    matches: (s) => any(CITIZENS_ONLY, s) && !NAMES_OTHER_PERSONS.test(s) && !NOT_A_RULE.test(s) && !HEDGED.test(s),
+    matches: (s) => any(CITIZENS_ONLY, s) && !NAMES_OTHER_PERSONS.test(s) && !NOT_A_RULE.test(s) && !HEDGED.test(s) && !/\bnot required\b/i.test(s),
   },
   {
     tag: "us-person",

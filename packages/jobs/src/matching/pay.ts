@@ -6,7 +6,9 @@ const AMOUNT = String.raw`(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s?([kK])?(?:\
 // Dashes may come through as "&mdash;" or "&ndash;", which some boards leave escaped in their pay boxes.
 const DASH = String.raw`(?:-|–|—|to|and|&mdash;|&ndash;|&#821[12];)`
 const RANGE = new RegExp(String.raw`\$\s?${AMOUNT}\s*${DASH}\s*\$?\s?${AMOUNT}`, "g")
-const HOURLY = /^\s*(\/\s*h(ou)?r\b|per hour|an hour|hourly|\/hour)/i
+const HOURLY = /^\s*(\/\s*h(ou)?r?\b|\/hour|per hour|an hour|hourly)/i
+// Words just before a range that say it is pay, which makes a small range with no unit an hourly one.
+const PAY_WORDS_BEFORE = /\b(pay|salary|wage|compensation|level \d+)\b[^.\n$]{0,30}$/i
 const NOT_PAY = /^\s*(million|billion|mm\b|m\b|b\b)/i
 // Pay by the month, week or day, which the feed does not compare: "$10,000 - $12,000 per month".
 const OTHER_PERIOD = /^\s*(USD\s*)?(\/\s*|per\s+|a\s+|an\s+|each\s+|every\s+)?(month|week|day|mo\b|wk\b)/i
@@ -35,7 +37,8 @@ function rangeOf(match: RegExpMatchArray, before: string, after: string): Omit<P
   if (NOT_PAY.test(after) || OTHER_PERIOD.test(after) || OTHER_MONEY_BEFORE.test(before)) return undefined
   const min = amountOf(match[1], match[2], match[3])
   const max = amountOf(match[4], match[5], match[6])
-  const per = HOURLY.test(after) ? "hour" : min >= LIMITS.year[0] ? "year" : undefined
+  const hourlyByContext = /USD$/i.test(match[0]) || PAY_WORDS_BEFORE.test(before)
+  const per = HOURLY.test(after) ? "hour" : min >= LIMITS.year[0] ? "year" : hourlyByContext ? "hour" : undefined
   return per && isSensiblePay({ min, max, per, currency: "USD" }) ? { min, max, per } : undefined
 }
 

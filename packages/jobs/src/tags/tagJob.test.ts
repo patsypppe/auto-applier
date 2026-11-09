@@ -269,4 +269,34 @@ describe("tagJob: wordings found in the real-data check", () => {
   test("reads 'Visa Sponsorship: H1B Available' as sponsors", () => {
     expect(tagsOf("Visa Sponsorship: H1B Available")).toEqual(["sponsors"])
   })
+
+  test.each([
+    ["Be either a US citizen or Permanent Resident due to the work we do", ["us-person"]],
+    ["United States Citizenship is a strict minimum requirement", ["citizen-only"]],
+    ["Due to federal contract requirements, United States Citizenship and position appropriate security clearance is required", ["citizen-only", "clearance"]],
+    ["Please note that sponsorship of new applicants for employment authorization, or any other immigration-related support, is not available for this position at this time", ["no-sponsorship"]],
+    ["No immigration sponsorship or transfer available for this role", ["no-sponsorship"]],
+    ["Active TS SCI Clearance", ["clearance"]],
+    ["Required Clearance: Secret", ["clearance"]],
+    ["Optional full visa sponsorship and relocation support to either Australia or the US", ["sponsors"]],
+    ["Must not require visa sponsorship or have work authorization based on OPT or CPT", ["no-sponsorship", "no-visa-holders"]],
+  ])("reads the real sentence %s", (text, tags) => {
+    expect(tagsOf(text).sort()).toEqual([...tags].sort())
+  })
+
+  test("does not read a wished-for or optional clearance as a rule, or a public trust line as a clearance", () => {
+    expect(tagsOf("Ideally you hold an active TS/SCI clearance.")).toEqual(["not-stated"])
+    expect(tagsOf("Active or previously held TS/SCI clearance (preferred but not required)")).toEqual(["not-stated"])
+    expect(tagsOf("Required Clearance: Public Trust")).not.toContain("clearance")
+  })
+
+  test("does not read citizenship that is not required as a citizens-only rule", () => {
+    expect(tagsOf("U.S. citizenship is not required for this role")).not.toContain("citizen-only")
+  })
+
+  test("does not read visa sponsorship named as a duty or a skill as an offer", () => {
+    expect(tagsOf("Manage immigration programs, including visa sponsorship and related processes")).not.toContain("sponsors")
+    expect(tagsOf("Working knowledge of US employment law and work authorization, including visa sponsorship and renewals.")).not.toContain("sponsors")
+    expect(tagsOf("Relocation assistance is provided for those willing to relocate including visa sponsorship where applicable.")).toContain("sponsors")
+  })
 })

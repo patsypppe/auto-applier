@@ -387,3 +387,29 @@
 
 - Misses seen, for 13e: bare clearance lines ("Active TS SCI Clearance", "Required Clearance: Secret"), "United States Citizenship is a strict minimum requirement", "No immigration sponsorship or transfer available", "Be either a US citizen or Permanent Resident", "Required Experience: 8 years", degree requirements read from company blurbs ("70% of our team holding advanced degrees at the Master's or PhD level"), single hourly rates and hourly ranges with no unit, a pay range mixing USD and CAD (Quora), and places abroad read as US (Darmstadt, DE; Victoria, British Columbia; London; King Abdullah Economic City).
 - 200 jobs is still a small set: 92% on 198 tags has an error range of about 4 points either way.
+
+## 2026-11-09: Slice 13e, close the rule gaps
+
+- Built test first, 35 new tests from the real sentences the labelled set caught:
+  - **Tags:** "Be either a US citizen or Permanent Resident", "United States Citizenship is a strict minimum requirement", "for which U.S. citizenship is needed", "sponsorship ... is not available", "No immigration sponsorship or transfer available", bare clearance lines ("Active TS SCI Clearance", "Required Clearance: Secret"), "based on OPT or CPT", and two wordings of an offer. "Ideally ..." and "(preferred but not required)" no longer count as a clearance rule, and "citizenship is not required" is no longer a citizens-only rule.
+  - **Wish words:** one list in matching/wishWords.ts, used by years, degree and clearance. For years a wish now counts only in the clause of the years, or as a heading over a list.
+  - **Years for a master's:** `yearsWithMaster` reads what someone with a master's needs: the years stated for a master's when a posting lists them by degree, none when a degree stands in for the years. The filter uses it when myDegree is master or PhD.
+  - **Degree:** postgraduate degree counts as a master's; "prefer" is a wish; a company blurb about staff degrees is not a requirement.
+  - **Pay:** small ranges with no unit are hourly when they end in USD or follow a pay word, and "/h" counts.
+  - **London alone** is abroad. A job's country is stored when it is collected, so this reaches the feed after the next collect.
+- Score on the labelled set, before and after (a test now holds the after numbers):
+
+| Field | Before | After |
+|---|---|---|
+| Work-authorization tags | 183 of 198 | 197 of 198 |
+| Years | 189 of 200 | 199 of 200 |
+| Degree | 169 of 191 | 172 of 191 |
+| Pay | 182 of 195 | 190 of 195 |
+| Abroad | 196 of 200 | 198 of 200 |
+| Hide or show | 177 of 189 (1 wrongly hidden, 11 wrongly shown) | 187 of 189 (0 wrongly hidden, 2 wrongly shown) |
+
+- These after numbers flatter the rules: they were written from this same set's misses. Read them as "the known misses are fixed", not as accuracy on new jobs. A fresh sample is needed for that.
+- Full list, old readers against new on all 89,784 jobs, changes read by kind: 365 more citizen-only (nearly all STR's "for which U.S. citizenship is needed"), 109 more no-sponsorship, 46 more clearance, 19 more sponsors, 6 no-visa-holders, 6 us-person, 3 fewer clearance (all "preferred but not required"), 135 fewer unclear, 2,839 jobs gained hourly pay (technicians and machinists at SpaceX and others), 111 jobs lost a years number, 102 gained one, and 1,026 jobs ask a master's holder for different years.
+- Reading those changes caught regressions before they shipped, all fixed with tests: "preferably" after the years ("2+ years ... (preferably with Ruby)") dropped real years, "/hourly" stopped being read, "with degree or 15 without" and any "high school" dropped years for a master's holder, "Master Data Management" read as a master's degree, and "including visa sponsorship" as a job duty read as an offer.
+- The feed with the example profile: 129 shown became 125; 6 left and 2 joined. Shown plus hidden is still 89,784.
+- Left for later: pay stated as one number, a range mixing USD and CAD (Quora), degree misses where "or equivalent" means a field and not experience (19 degree misses remain), and years written "1-year".
