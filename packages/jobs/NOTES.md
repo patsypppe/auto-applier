@@ -359,3 +359,11 @@
 - Measured with a throwaway server (temporary folders, 100 jobs), 3 runs: 100 status changes sent at once were all answered 200 and all 100 were saved, in 87 to 89 ms; 10 settings saves sent at once were all answered 200 and the file held the last one; no temporary files were left. Before: 2 of 10.
 - In the review's test the settings case also showed something worse than lost saves: two saves writing into one temporary file left settings.json as broken JSON. That can no longer happen.
 - 699 tests pass, the typecheck is clean.
+
+## 2026-11-09: Slice 13c, "Remote only" trusts the board
+
+- From the November review: "Remote only" looked for the word remote in a job's places and ignored the board's own workplace field, so 4,347 of the 7,612 jobs that Ashby and Lever mark remote would have been hidden.
+- Built test first: with remoteOnly, a job is kept when its workplace is remote or a place says remote; a job marked onsite, or one whose board says nothing and whose places name only a city, is still hidden for "remote". Before this, no test set remoteOnly to true.
+- Real data, one run over all 89,784 jobs with the example settings plus remoteOnly (scratch script, nothing saved): board-remote jobs hidden for "remote" went from 4,347 to 0. With these settings the feed shows 21 jobs instead of 15, and 174 are still hidden for "remote". Shown plus hidden is still 89,784.
+- The 6 jobs gained include Jerry's two data scientist roles, Eastern Research Group's entry-level data analyst, Solace Health's data scientist and a Stand Together policy intern. Read 4 postings: Jerry ("We support remote work for most roles") and Eastern Research Group ("work independently in a remote environment") say so in the text; Solace Health and Stand Together say nothing in the text, so for those the board's field is the only evidence (unverified).
+- 700 tests pass, the typecheck is clean.

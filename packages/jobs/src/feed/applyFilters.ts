@@ -60,7 +60,7 @@ function reasonToHide(entry: RankedJob, settings: FeedSettings, now: Date): Hide
   if (reasons.yearsRequired !== undefined && reasons.yearsRequired > filters.maxYearsRequired) return "experience"
   if (needsMoreDegree(reasons.degreeRequired, filters.myDegree)) return "degree"
   if (filters.locations.length > 0 && !job.locations.some((place) => filters.locations.some((wanted) => hasWords(place, wanted)))) return "location"
-  if (filters.remoteOnly && !job.locations.some((place) => hasWords(place, "remote"))) return "remote"
+  if (filters.remoteOnly && job.workplace !== "remote" && !job.locations.some((place) => hasWords(place, "remote"))) return "remote"
   if (job.workplace && filters.workplaces.length > 0 && !filters.workplaces.includes(job.workplace)) return "workplace"
   if (job.jobType && filters.jobTypes.length > 0 && !filters.jobTypes.includes(job.jobType)) return "job-type"
   if (paysLess(entry.pay, filters.minYearlyPay)) return "pay"

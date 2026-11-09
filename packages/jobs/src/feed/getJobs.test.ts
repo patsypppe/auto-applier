@@ -221,6 +221,21 @@ describe("applyFilters", () => {
     ])
   })
 
+  test("keeps a job under 'remote only' when its board marks it remote, even if its place names a city", () => {
+    const settings = parseSettings({ workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"], remoteOnly: true } })
+    const jobs = [
+      job("board", { workplace: "remote", locations: ["Austin, TX"] }),
+      job("place", { locations: ["Remote - US"] }),
+      job("onsite", { workplace: "onsite", locations: ["Austin, TX"] }),
+      job("unsaid", { locations: ["Austin, TX"] }),
+    ]
+
+    expect(hiddenReasons(jobs, settings)).toEqual([
+      ["onsite", "remote"],
+      ["unsaid", "remote"],
+    ])
+  })
+
   test("never loses a job: shown and hidden add up to everything", () => {
     const jobs = Array.from({ length: 30 }, (_, i) => job(String(i), { title: i % 3 === 0 ? "Senior Data Analyst" : "Data Analyst", country: i % 4 === 0 ? "other" : "US" }))
 
