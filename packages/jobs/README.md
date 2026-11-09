@@ -44,6 +44,10 @@ npm run tags -w @auto-applier/jobs -- --status f1-opt
 
 It tags every collected job in the US (or with no country), prints how often each tag appears and how many jobs are blocked, likely blocked, fine or a plus for that status, and writes `data/tag-check.json`, a fixed sample of 50 tagged and 50 random jobs with each tag's evidence sentence, for checking by hand. Statuses: citizen, permanent-resident, f1-cpt, f1-opt, f1-stem-opt, h1b, other-needs-sponsorship.
 
+### How good the readers are
+
+`node dist/cli.js labelled` scores the readers against 200 real postings marked by hand in `test/fixtures/labelled-jobs.json`: work-authorization tags, years, degree, pay, abroad, and whether a job is rightly hidden. Add `--misses` to list each miss. A test fails if a rule change makes any of these scores worse.
+
 ### Your best matches
 
 Copy the examples and edit them (both stay in the git-ignored `data/` folder):

@@ -367,3 +367,23 @@
 - Real data, one run over all 89,784 jobs with the example settings plus remoteOnly (scratch script, nothing saved): board-remote jobs hidden for "remote" went from 4,347 to 0. With these settings the feed shows 21 jobs instead of 15, and 174 are still hidden for "remote". Shown plus hidden is still 89,784.
 - The 6 jobs gained include Jerry's two data scientist roles, Eastern Research Group's entry-level data analyst, Solace Health's data scientist and a Stand Together policy intern. Read 4 postings: Jerry ("We support remote work for most roles") and Eastern Research Group ("work independently in a remote environment") say so in the text; Solace Health and Stand Together say nothing in the text, so for those the board's field is the only evidence (unverified).
 - 700 tests pass, the typecheck is clean.
+
+## 2026-11-09: Slice 13d, the labelled set
+
+- 200 real postings in `test/fixtures/labelled-jobs.json` (1.3 MB; the only email addresses are company ones), picked with fixed seeds: 100 of the 129 shown for the example profile, and 100 hidden across reasons (blocked 30, experience 20, role 15, abroad 10, title word 10, level 7, old 5, degree 3).
+- Each job was read and marked one at a time from its title, places and the sentences about work authorization, years, degree and pay, without looking at what the readers found. Marked: the restrictions stated, years for someone with a master's, lowest degree required, pay, and whether the job is abroad. A fact the text could not settle is "?" and is not scored (2 restrictions, 9 degrees, 5 pay).
+- After the first score the disagreements were read in full, and 20 labels were corrected: 15 degrees, 1 pay and 1 tag that were my errors (the snippets had left the sentence out), and 3 pay ranges that vary by location, now "?". Labels that disagree because the reader is wrong were left alone. So the labels are blind except where they were checked against the full text.
+- `scoreLabels` (feed/scoreLabels.ts) compares the readers with the labels field by field and counts jobs wrongly hidden or wrongly shown for an F-1 OPT student with a STEM degree and a master's. `no-sponsorship` counts as covered by `no-future-sponsorship`, and `us-person` by `citizen-only`. `node dist/cli.js labelled --misses` lists every miss, and a test holds the scores at today's numbers or better.
+- Today's score, before any rule change:
+
+| Field | Right |
+|---|---|
+| Work-authorization tags | 183 of 198 (92%) |
+| Years | 189 of 200 (95%) |
+| Degree | 169 of 191 (88%) |
+| Pay | 182 of 195 (93%) |
+| Abroad | 196 of 200 (98%) |
+| Hide or show | 177 of 189 (94%): 1 wrongly hidden, 11 wrongly shown |
+
+- Misses seen, for 13e: bare clearance lines ("Active TS SCI Clearance", "Required Clearance: Secret"), "United States Citizenship is a strict minimum requirement", "No immigration sponsorship or transfer available", "Be either a US citizen or Permanent Resident", "Required Experience: 8 years", degree requirements read from company blurbs ("70% of our team holding advanced degrees at the Master's or PhD level"), single hourly rates and hourly ranges with no unit, a pay range mixing USD and CAD (Quora), and places abroad read as US (Darmstadt, DE; Victoria, British Columbia; London; King Abdullah Economic City).
+- 200 jobs is still a small set: 92% on 198 tags has an error range of about 4 points either way.
