@@ -413,3 +413,18 @@
 - Reading those changes caught regressions before they shipped, all fixed with tests: "preferably" after the years ("2+ years ... (preferably with Ruby)") dropped real years, "/hourly" stopped being read, "with degree or 15 without" and any "high school" dropped years for a master's holder, "Master Data Management" read as a master's degree, and "including visa sponsorship" as a job duty read as an offer.
 - The feed with the example profile: 129 shown became 125; 6 left and 2 joined. Shown plus hidden is still 89,784.
 - Left for later: pay stated as one number, a range mixing USD and CAD (Quora), degree misses where "or equivalent" means a field and not experience (19 degree misses remain), and years written "1-year".
+
+## 2026-11-10: Slice 14a, a page that does not break
+
+- New page.test.ts runs the real page script (page.ts) in jsdom with the page's own HTML, against a fake server that answers late, out of order, with a 500, or not at all. 11 tests, all failing on the old page first; 1 more test for the settings form.
+- What changed on the page:
+  - Only the latest feed load is drawn. A status saved while a load was on its way stays, instead of the older history in the answer.
+  - A failed load (an error answer or no answer) keeps the feed on screen and shows a red line saying what went wrong. Before, a 500 answer replaced the feed and every control threw until a reload.
+  - A status save that fails puts the menu back and says so on the page, instead of an alert (and instead of a menu showing a status that was never saved when the server did not answer).
+  - A settings save that fails, or throws, enables Save again with the reason. If the settings cannot be loaded, the panel stays empty so blank settings cannot be saved over the real ones.
+  - Chips, menus and visit times stored in the browser are checked. A broken or old value falls back to the default instead of breaking every load or hiding every card.
+  - An empty list says why: nothing collected, all hidden by settings and chips, or nothing left after the search and menus.
+- New files: page/requests.ts (`readAnswer`: every outcome becomes a body or a sentence) and page/feedState.ts (the feed type, shape checks, stored-value checks, the empty-list sentence).
+- Checked on the real feed (89,784 jobs, 124 shown): with the server stopped, a status change went back to "Not tracked" with the message, a hidden-reason load kept the 124 cards with its message, and search still worked.
+- Measured: 0 blank or stuck pages across the injected failures. Tests: 766, typecheck and build clean.
+- Not covered: a problem from a failed settings load is cleared by the next successful feed load, so if only the settings request failed, the message can disappear while the panel stays empty.

@@ -1,24 +1,16 @@
 // The feed page's script: loads the feed from the local server with the chosen filter chips, draws the chips, cards and
 // filters, marks what is new since the last visit and where STEM OPT can work, and saves status changes and settings.
-import type { AppliedEntry, ApplicationStatus } from "../feed/applied"
+// A load or save that fails leaves the page as it was and says what went wrong.
+import type { ApplicationStatus } from "../feed/applied"
 import type { Card } from "../feed/card"
-import { choicesFrom, PAGE_ONLY, renderChips, type ChipChoices, type ChipFilters } from "./chips"
+import type { FeedSettings } from "../settings"
+import { choicesFrom, PAGE_ONLY, renderChips, type ChipChoices } from "./chips"
+import { cleanChips, cleanFilters, cleanVisits, emptyMessage, hasApplied, hasSettings, isFeed, type Feed } from "./feedState"
 import { filterCards, isNewSince, type PageFilters } from "./filterCards"
 import { localDate, renderCard } from "./renderCard"
+import { readAnswer } from "./requests"
 import { renderSettingsForm, type SettingsDraft } from "./settingsForm"
-import { nextVisits, type Visits } from "./visits"
-import type { FeedSettings } from "../settings"
-
-type Feed = {
-  needsSettings?: boolean
-  total: number
-  shown: Card[]
-  hidden: { reason: string; count: number }[]
-  extra: Card[]
-  applied: AppliedEntry[]
-  filters?: ChipFilters
-  stemOpt?: boolean
-}
+import { nextVisits } from "./visits"
 
 const SAVED_FILTERS = "job-feed-filters"
 const SAVED_CHIPS = "job-feed-chips"
@@ -26,17 +18,20 @@ const SAVED_VISITS = "job-feed-visits"
 const DEFAULT_FILTERS: Omit<PageFilters, "newOnly" | "eVerifyOnly"> = { search: "", effect: "any", status: "any", sort: "score" }
 
 let feed: Feed = { total: 0, shown: [], hidden: [], extra: [], applied: [] }
+let loaded = false
 let showing = ""
-let chips: Partial<ChipChoices> = readStored<Partial<ChipChoices>>(SAVED_CHIPS, {})
+let chips: Partial<ChipChoices> = cleanChips(readStored(SAVED_CHIPS))
 let lastVisit: string | undefined
+let latestLoad = 0
+let statusSaves = 0
 
-// Reads a value saved in this browser, or the fallback when there is none or storage is blocked.
-function readStored<T>(key: string, fallback: T): T {
+// Reads a value saved in this browser, or undefined when there is none, it is not JSON, or storage is blocked.
+function readStored(key: string): unknown {
   try {
     const text = localStorage.getItem(key)
-    return text === null ? fallback : (JSON.parse(text) as T)
+    return text === null ? undefined : JSON.parse(text)
   } catch {
-    return fallback
+    return undefined
   }
 }
 
@@ -59,6 +54,19 @@ function postJson(path: string, body: unknown): Promise<Response> {
 // Returns the element with the given id; the page's HTML always has it.
 function byId<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T
+}
+
+// Shows a sentence about what went wrong over the summary, or hides the line when given none.
+function showProblem(text: string | undefined): void {
+  const line = byId("problem")
+  line.textContent = text ?? ""
+  line.hidden = text === undefined
+}
+
+// Sets a menu to a stored value when the menu still has it, and to the fallback otherwise.
+function chooseOption(select: HTMLSelectElement, value: string | undefined, fallback: string): void {
+  select.value = value ?? fallback
+  if (select.value !== value) select.value = fallback
 }
 
 // Returns the page's own chips: "new only", "E-Verify only" (which counts only when the STEM OPT rule applies) and that rule.
@@ -98,25 +106,33 @@ function drawChips(): void {
   byId("chips").replaceChildren(renderChips(feed.filters, pageChips(), changeChips))
 }
 
-// Sends a status change to the server and redraws with the saved history. Clearing a status asks first.
+// Sends a status change to the server and redraws with the saved history. Clearing a status asks first. When the save
+// fails, the menu goes back to the saved status and the page says why.
 async function changeStatus(card: Card, status: ApplicationStatus | "none"): Promise<void> {
   const tracked = feed.applied.some((entry) => entry.key === card.key)
   if (status === "none" && tracked && !confirm(`Stop tracking "${card.title}"? Its dates will be removed.`)) return draw()
 
-  const answer = await postJson("/api/applied", { key: card.key, status })
-  const body = (await answer.json()) as { applied?: AppliedEntry[]; error?: string }
-  if (!answer.ok || !body.applied) {
-    alert(body.error ?? "The status could not be saved.")
+  const answer = await readAnswer(postJson("/api/applied", { key: card.key, status }), hasApplied, "The status could not be saved")
+  if (!answer.ok) {
+    showProblem(answer.error)
     return draw()
   }
-  feed.applied = body.applied
+  statusSaves += 1
+  feed = { ...feed, applied: answer.body.applied }
+  showProblem(undefined)
   draw()
 }
 
 // Draws a list of cards into a container, marking the ones first seen since the last visit and, for a user the STEM OPT
-// rule applies to, the E-Verify employers.
-function drawCards(container: HTMLElement, cards: readonly Card[]): void {
+// rule applies to, the E-Verify employers. An empty list shows the sentence given for it, if any.
+function drawCards(container: HTMLElement, cards: readonly Card[], whenEmpty?: string): void {
   const applied = new Map(feed.applied.map((entry) => [entry.key, entry]))
+  if (cards.length === 0 && whenEmpty) {
+    const line = document.createElement("p")
+    line.className = "empty"
+    line.textContent = whenEmpty
+    return container.replaceChildren(line)
+  }
   container.replaceChildren(
     ...cards.map((card) => renderCard(card, applied.get(card.key), (status) => void changeStatus(card, status), { isNew: isNewSince(card, lastVisit), stemOpt: feed.stemOpt })),
   )
@@ -149,10 +165,9 @@ function drawHistory(): void {
 // Sends the settings to the server, which saves them and ranks the jobs again, then reloads the feed and the panel.
 // Returns the server's mistakes, one per line, when it refused them.
 async function saveSettings(draft: SettingsDraft): Promise<string | undefined> {
-  const answer = await postJson("/api/settings", draft)
-  const body = (await answer.json()) as { settings?: FeedSettings; error?: string }
-  if (!answer.ok || !body.settings) return body.error ?? "The settings could not be saved."
-  drawSettings(body.settings)
+  const answer = await readAnswer(postJson("/api/settings", draft), hasSettings, "The settings could not be saved")
+  if (!answer.ok) return answer.error
+  drawSettings(answer.body.settings ?? undefined)
   await load(showing)
   return undefined
 }
@@ -163,7 +178,12 @@ function drawSettings(saved: FeedSettings | undefined): void {
 }
 
 // Redraws everything from the loaded feed and the current filters. With no settings yet, it opens the settings panel.
+// Before any feed has loaded, it only says so.
 function draw(): void {
+  if (!loaded) {
+    byId("summary").textContent = "The feed has not loaded."
+    return
+  }
   if (feed.needsSettings) {
     byId<HTMLDetailsElement>("settings-panel").open = true
     byId("summary").textContent = `${feed.total.toLocaleString()} jobs are ready. Fill in the settings above to see the ones for you.`
@@ -172,40 +192,56 @@ function draw(): void {
   const cards = filterCards(feed.shown, currentFilters(), feed.applied, lastVisit)
   drawChips()
   drawSummary(cards.length)
-  drawCards(byId("cards"), cards)
+  drawCards(byId("cards"), cards, emptyMessage(feed))
   byId("extra-title").textContent = showing ? `Hidden as ${showing} (at most 300 shown)` : ""
   drawCards(byId("extra"), feed.extra)
   drawHistory()
 }
 
 // Loads the feed from the server with the chosen chips, and the hidden jobs for one reason when asked, and draws it.
-// Chips the server refuses, saved by an older page, are dropped and the feed is loaded without them.
+// Only the latest load is drawn; an older answer that arrives later is dropped. A status saved while the load was on its
+// way is kept over the history in the answer. Chips the server refuses, saved by an older page, are dropped and the feed
+// is loaded without them. When the load fails, the feed on screen stays and the page says why.
 async function load(show: string): Promise<void> {
-  showing = show
+  const ticket = ++latestLoad
+  const savesBefore = statusSaves
   const params = new URLSearchParams(Object.entries(chips).filter(([name, value]) => !PAGE_ONLY.includes(name as keyof ChipChoices) && value !== undefined) as [string, string][])
   if (show) params.set("show", show)
-  const answer = await fetch(`/api/feed?${params}`)
-  const body = (await answer.json()) as Feed & { error?: string }
-  if (answer.status === 400 && Object.keys(chips).length > 0) {
+  const answer = await readAnswer(fetch(`/api/feed?${params}`), isFeed, "The feed could not be loaded")
+  if (ticket !== latestLoad) return
+  if (!answer.ok && answer.status === 400 && Object.keys(chips).length > 0) {
     chips = {}
     store(SAVED_CHIPS, chips)
     return load(show)
   }
-  feed = body
+  if (!answer.ok) {
+    showProblem(answer.error)
+    return draw()
+  }
+  feed = statusSaves === savesBefore ? answer.body : { ...answer.body, applied: feed.applied }
+  loaded = true
+  showing = show
+  showProblem(undefined)
   draw()
 }
 
-const visits = nextVisits(readStored<Visits | undefined>(SAVED_VISITS, undefined), new Date().toISOString())
+// Fills the settings panel from the server; when that fails, the panel stays empty so blank settings cannot be saved
+// over the real ones, and the page says why.
+async function loadSettings(): Promise<void> {
+  const answer = await readAnswer(fetch("/api/settings"), hasSettings, "The settings could not be loaded")
+  if (answer.ok) drawSettings(answer.body.settings ?? undefined)
+  else showProblem(answer.error)
+}
+
+const visits = nextVisits(cleanVisits(readStored(SAVED_VISITS)), new Date().toISOString())
 store(SAVED_VISITS, visits)
 lastVisit = visits.previous
 
-const filters = { ...DEFAULT_FILTERS, ...readStored<Partial<PageFilters>>(SAVED_FILTERS, {}) }
-byId<HTMLInputElement>("search").value = filters.search
-byId<HTMLSelectElement>("effect").value = filters.effect
-byId<HTMLSelectElement>("status").value = filters.status
-byId<HTMLSelectElement>("sort").value = filters.sort
+const filters = cleanFilters(readStored(SAVED_FILTERS))
+byId<HTMLInputElement>("search").value = filters.search ?? DEFAULT_FILTERS.search
+chooseOption(byId("effect"), filters.effect, DEFAULT_FILTERS.effect)
+chooseOption(byId("status"), filters.status, DEFAULT_FILTERS.status)
+chooseOption(byId("sort"), filters.sort, DEFAULT_FILTERS.sort)
 for (const id of ["search", "effect", "status", "sort"]) byId(id).addEventListener("input", draw)
-void fetch("/api/settings")
-  .then((answer) => answer.json() as Promise<{ settings: FeedSettings | null }>)
-  .then(({ settings }) => drawSettings(settings ?? undefined))
+void loadSettings()
 void load("")

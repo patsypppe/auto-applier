@@ -444,6 +444,45 @@ Next, not in 13: one order for settings and chips with a "why hidden" line; a pa
 for page.ts; the phone layout; accessibility; a repeatable measuring script. After 13, two weeks of real use with
 every miss logged before slice 14.
 
+## Slice 14: a page you can trust while you use it
+
+Status: approved with the defaults, 2026-11-10. The two weeks of real use move to after this slice, so they test a
+page that does not break, hide jobs without saying why, or fail on a phone.
+
+Each part is tests first, then code, then the tests, the typecheck, the build and a check on the real feed, then a stop.
+
+**14a. A page that does not break (F6, F14, F20).**
+- An older feed answer that arrives after a newer one is dropped, and a status saved during a load stays on screen.
+- A failed feed load (an error answer or no answer) keeps the feed on screen and shows what went wrong.
+- A status or settings save that fails says so, puts the menu back and enables Save again.
+- Values stored in the browser are checked and fall back to the defaults.
+- An empty list says why it is empty.
+- Measured: no blank or stuck page in tests that run page.ts against a fake server that fails in each of these ways.
+
+**14b. One order for settings and chips, with a "why hidden" line (F7, F8, F21).**
+- "Sponsorship later" and "clearance" start from the chosen status in the settings panel.
+- Saving settings clears the chips for the same fields, so the save wins.
+- "E-Verify only" keeps exactly the jobs that show the E-Verify badge.
+- Each hidden card says which setting or chip hid it.
+- Measured: every hide reason has its sentence, and a settings save after a chip change takes effect.
+
+**14c. Phone layout.**
+- Below 600 px the filters fold behind one "Filters" button.
+- Measured: at 375 px the first job shows with no scrolling.
+
+**14d. Accessibility (F19).**
+- Labels for search, the menus and each card's status menu, focus kept on a pressed chip, a live region for results
+  and errors, a border instead of opacity for hidden cards, and borders dark enough to read.
+- Measured: a check in the page tests that every control has a name and the colours meet contrast, with no new
+  dependency.
+
+**14e. A repeatable measuring script.**
+- `node dist/cli.js measure` starts the feed and saves settings five times and prints the median peak memory, start
+  time and save time.
+
+Left for later: F16, F17, F18, F23, F24, F26 and F27 (collecting and server details), unless the two weeks of use
+bring one up first. The weekly look at a sample of hidden jobs belongs to the two weeks of use.
+
 ## Changes to the spec
 
 - **H-1B history from USCIS first, DOL later.** The USCIS Data Hub gives actual petition decisions per employer as CSV. The DOL file is a 252 MB Excel file, and reading it without a new dependency means writing a zip and XML reader. The DOL data adds wage levels and job titles, which are useful but not needed for the first version. F6 changes accordingly: the card says "USCIS approved N H-1B petitions for this employer in FY2026".

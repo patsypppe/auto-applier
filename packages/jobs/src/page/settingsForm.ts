@@ -164,10 +164,12 @@ export function renderSettingsForm(saved: FeedSettings | undefined, onSave: (dra
   form.addEventListener("submit", (event) => {
     event.preventDefault()
     button.disabled = true
-    void onSave(readForm(form, saved)).then((problems) => {
-      errors.textContent = problems ?? ""
-      button.disabled = false
-    })
+    void onSave(readForm(form, saved))
+      .catch(() => "The settings could not be saved.")
+      .then((problems) => {
+        errors.textContent = problems ?? ""
+        button.disabled = false
+      })
   })
   return form
 }

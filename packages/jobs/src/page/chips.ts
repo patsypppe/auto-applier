@@ -14,7 +14,9 @@ export type ChipFilters = {
   readonly myDegree?: Degree
 }
 
-export type ChipChoices = Record<"within" | "workplace" | "jobType" | "level" | "maxYears" | "minPay" | "degree" | "newOnly" | "eVerifyOnly", string>
+export const CHIP_NAMES = ["within", "workplace", "jobType", "level", "maxYears", "minPay", "degree", "newOnly", "eVerifyOnly"] as const
+
+export type ChipChoices = Record<(typeof CHIP_NAMES)[number], string>
 
 export type PageChips = { readonly newOnly: boolean; readonly eVerifyOnly: boolean; readonly stemOpt: boolean }
 

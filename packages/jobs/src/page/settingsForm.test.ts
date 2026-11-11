@@ -83,4 +83,13 @@ describe("renderSettingsForm", () => {
     await submit(form)
     expect(form.querySelector(".errors")!.textContent).toBe("")
   })
+
+  test("enables Save again and says so when the save itself throws", async () => {
+    const form = renderSettingsForm(SAVED, () => Promise.reject(new Error("lost")))
+
+    await submit(form)
+
+    expect(form.querySelector("button")!.disabled).toBe(false)
+    expect(form.querySelector(".errors")!.textContent).toBe("The settings could not be saved.")
+  })
 })

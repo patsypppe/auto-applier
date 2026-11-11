@@ -41,6 +41,7 @@
       .settings input[type="text"] { min-width: 260px; }
       .settings input[type="number"] { width: 5em; }
       .errors { color: var(--blocked); white-space: pre-line; }
+      .empty { color: var(--muted); }
     </style>
   </head>
   <body>
@@ -71,6 +72,7 @@
       </select>
     </header>
     <div id="chips"></div>
+    <p id="problem" class="errors" role="alert" hidden></p>
     <p id="summary">Loading the feed...</p>
     <main id="cards"></main>
     <h2 id="extra-title"></h2>
