@@ -460,3 +460,21 @@
 - Tests, no new dependency: colors.test.ts works out WCAG contrast from the colours in index.html for both themes (text at least 4.5 to 1, control borders at least 3 to 1) and checks there is no opacity; page tests check every control has a name, focus after a chip and a hidden-reason button, and the status region. 785 tests, typecheck and build clean.
 - Checked on the real feed: all 191 controls (with the settings panel open) have a name; Enter on the "hybrid" chip kept the focus on it, pressed, with "Showing 81 of 89,784 jobs." announced; opening "old" kept the focus on its button, pressed, and the hidden cards showed dashed at full opacity.
 - Not checked: no screen reader was run, so what is read out is from the page's names and roles, not heard. One focus attempt in the browser pane did not land on the chip before pressing; the cause was not found, and the repeat worked.
+
+## 2026-11-10: Slice 14e, a repeatable measuring command
+
+- `node dist/cli.js measure [--runs 5]` starts the feed in its own process for each run (port 4318, so it does not clash with an open feed). Start time runs until the feed prints where it is. Save time is one POST /api/settings sending back the saved settings unchanged, with the page's token. Peak memory is the process's maximum resident set size, which a small preload passed with `--import` prints when the run stops it, so the feed code is unchanged. It prints each run as it finishes and then the medians, and it writes settings.json back exactly as it was, even when a run fails.
+- Tests (measure.test.ts, fake runs only, nothing started): the median, `--runs`, reading the token, run order and the failed run's number, the printed lines, and settings.json put back after a good and a failed measurement. 793 tests, typecheck and build clean.
+- First real measurement, full list of 89,784 jobs, swap at 8.0 GB of 9.2 GB used before the start:
+
+| Run | Start | Settings save | Peak memory |
+|---|---|---|---|
+| 1 | 140.6 s | 0.49 s | 295 MB |
+| 2 | 133.4 s | 0.47 s | 303 MB |
+| 3 | 132.6 s | 0.49 s | 315 MB |
+| 4 | 132.5 s | 0.47 s | 294 MB |
+| 5 | 132.8 s | 0.47 s | 303 MB |
+| Median | 132.8 s | 0.47 s | 303 MB |
+
+- The five starts are within 8 s of each other, unlike the 135 s and 231 s in the review. settings.json had the same hash before and after.
+- Not comparable one to one with older numbers: the 547 MB of 2026-11-06 was macOS's peak memory footprint, and this is the maximum resident set size, which leaves out memory paged to swap. Use this command's medians as the baseline from now on.
