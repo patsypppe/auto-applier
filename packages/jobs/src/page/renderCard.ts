@@ -87,10 +87,13 @@ function stemOptBadge(card: Card): HTMLElement | undefined {
   return stemOptCanWork(card) ? element("p", "stem-opt", "E-Verify employer: STEM OPT can work here") : undefined
 }
 
-// Makes the status menu, showing since when the current status holds, and reports each change.
-function statusBlock(applied: AppliedEntry | undefined, onStatus: (status: ApplicationStatus | "none") => void): HTMLElement {
+// Makes the status menu, named after the job and marked with its key so the page can find it again after a redraw,
+// showing since when the current status holds, and reports each change.
+function statusBlock(card: Card, applied: AppliedEntry | undefined, onStatus: (status: ApplicationStatus | "none") => void): HTMLElement {
   const block = element("div", "status")
   const select = element("select")
+  select.setAttribute("aria-label", `Status of ${card.title} at ${card.company}`)
+  select.dataset.card = card.key
   select.append(element("option", undefined, "Not tracked"))
   select.options[0]!.value = "none"
   for (const status of APPLICATION_STATUSES) {
@@ -126,7 +129,9 @@ export function renderCard(
 
   const posted = card.postedAt ? `posted ${card.postedAt.slice(0, 10)}` : `first seen ${card.firstSeenAt.slice(0, 10)}`
   article.append(element("p", "meta", `${card.company} · ${card.locations.join("; ")} · ${posted}`))
-  article.append(element("span", "score", String(card.score)))
+  const score = element("span", "score")
+  score.append(element("span", "visually-hidden", "Match score "), String(card.score))
+  article.append(score)
   const kind = kindText(card)
   const facts = [kind, card.pay ? payText(card.pay) : undefined].filter((part) => part !== undefined)
   if (facts.length > 0) article.append(element("p", "facts", facts.join(" · ")))
@@ -145,6 +150,6 @@ export function renderCard(
     article.append(also)
   }
 
-  article.append(statusBlock(applied, onStatus))
+  article.append(statusBlock(card, applied, onStatus))
   return article
 }

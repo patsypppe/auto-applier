@@ -77,6 +77,14 @@ describe("renderCard", () => {
     expect(kept).toEqual(withBadge)
   })
 
+  test("names the status menu after the job and reads the score out as a match score", () => {
+    const card = renderCard(CARD, undefined, vi.fn())
+
+    expect(card.querySelector(".status select")!.getAttribute("aria-label")).toBe("Status of Data Analyst at Acme")
+    expect(card.querySelector(".score")!.textContent).toBe("Match score 77")
+    expect(card.querySelector(".score .visually-hidden")!.textContent).toBe("Match score ")
+  })
+
   test("says why a hidden card was hidden, when given a reason", () => {
     const why = "Hidden because it was posted more than 30 days ago. Set by the Posted chip."
 

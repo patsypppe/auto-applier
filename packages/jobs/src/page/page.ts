@@ -147,6 +147,8 @@ function drawSummary(count: number): void {
   for (const { reason, count: hidden } of feed.hidden) {
     const button = document.createElement("button")
     button.textContent = `${reason} ${hidden.toLocaleString()}`
+    button.dataset.reason = reason
+    button.setAttribute("aria-pressed", String(reason === showing))
     button.addEventListener("click", () => void load(reason === showing ? "" : reason))
     summary.append(button, " ")
   }
@@ -195,12 +197,45 @@ function draw(): void {
     return
   }
   const cards = filterCards(feed.shown, currentFilters(), feed.applied, lastVisit)
-  drawChips()
-  drawSummary(cards.length)
-  drawCards(byId("cards"), cards, emptyMessage(feed))
-  byId("extra-title").textContent = showing ? `Hidden as ${showing} (at most 300 shown)` : ""
-  drawCards(byId("extra"), feed.extra, undefined, showing && feed.filters ? whyHidden(showing, feed.filters, chips) : undefined)
+  redrawKeepingFocus(["chips", "summary", "cards", "extra"], () => {
+    drawChips()
+    drawSummary(cards.length)
+    drawCards(byId("cards"), cards, emptyMessage(feed))
+    drawCards(byId("extra"), feed.extra, undefined, showing && feed.filters ? whyHidden(showing, feed.filters, chips) : undefined)
+  })
+  announce(`Showing ${cards.length.toLocaleString()} of ${feed.total.toLocaleString()} jobs.`)
+  const extraTitle = byId("extra-title")
+  extraTitle.textContent = showing ? `Hidden as ${showing} (at most 300 shown)` : ""
+  extraTitle.hidden = !showing
   drawHistory()
+}
+
+// Returns a name for a control that stays the same when it is drawn again: a chip's group and value, a menu's name, a
+// hidden reason, or the job a status menu belongs to.
+function controlKey(control: Element): string | undefined {
+  if (!(control instanceof HTMLElement)) return undefined
+  if (control.dataset.group) return `chip ${control.dataset.group} ${control.dataset.value}`
+  if (control.dataset.reason) return `reason ${control.dataset.reason}`
+  if (control.dataset.card) return `status ${control.dataset.card}`
+  return control instanceof HTMLSelectElement && control.name ? `menu ${control.name}` : undefined
+}
+
+// Redraws parts of the page and puts the focus back on the same control when it was in one of them, since replacing
+// the elements would drop it to the page.
+function redrawKeepingFocus(ids: readonly string[], redraw: () => void): void {
+  const active = document.activeElement
+  const parts = ids.map((id) => byId(id))
+  const key = active && parts.some((part) => part.contains(active)) ? controlKey(active) : undefined
+  redraw()
+  if (!key) return
+  const controls = parts.flatMap((part) => [...part.querySelectorAll<HTMLElement>("button, select")])
+  controls.find((control) => controlKey(control) === key)?.focus()
+}
+
+// Puts a sentence in the hidden status line, which screen readers read out when it changes.
+function announce(text: string): void {
+  const line = byId("announce")
+  if (line.textContent !== text) line.textContent = text
 }
 
 // Loads the feed from the server with the chosen chips, and the hidden jobs for one reason when asked, and draws it.

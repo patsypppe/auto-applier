@@ -94,6 +94,16 @@ function pickStatus(value: string): HTMLSelectElement {
   return select
 }
 
+// Returns the name a screen reader gives a control: its aria-label, else the text of its label without the control's own
+// text, else a button's text.
+function nameOf(control: HTMLElement): string {
+  const aria = control.getAttribute("aria-label")
+  if (aria) return aria.trim()
+  const label = control.closest("label")
+  if (label) return (label.textContent ?? "").replace(control.textContent ?? "", "").trim()
+  return control instanceof HTMLButtonElement ? (control.textContent ?? "").trim() : ""
+}
+
 beforeEach(() => {
   localStorage.clear()
   vi.stubGlobal("fetch", fakeFetch)
@@ -278,6 +288,58 @@ describe("the feed page", () => {
     toggle.click()
     expect(toggle.getAttribute("aria-expanded")).toBe("false")
     expect(filters.classList.contains("open")).toBe(false)
+  })
+
+  test("gives every control on the page a name, including each card's status menu", async () => {
+    routes["GET /api/feed"] = (url) => ({
+      status: 200,
+      body: feed([card("1", "Data Analyst")], { hidden: [{ reason: "old", count: 1 }], extra: url.searchParams.has("show") ? [card("2", "Old Job")] : [], total: 2 }),
+    })
+    await openPage()
+    showHidden("old")
+    await settle()
+
+    const unnamed = [...document.querySelectorAll<HTMLElement>("input, select, button")].filter((control) => nameOf(control) === "").map((control) => control.outerHTML.slice(0, 80))
+    expect(unnamed).toEqual([])
+    expect(nameOf(document.querySelector("#cards .status select")!)).toBe("Status of Data Analyst at Acme")
+  })
+
+  test("keeps the focus on a chip after pressing it, and on a hidden-reason button, which shows it is pressed", async () => {
+    routes["GET /api/feed"] = (url) => {
+      const body = feed([card("1", "Data Analyst")], { hidden: [{ reason: "old", count: 1 }], extra: url.searchParams.has("show") ? [card("2", "Old Job")] : [], total: 2 })
+      const workplaces = url.searchParams.get("workplace")?.split(",") ?? []
+      return { status: 200, body: { ...body, filters: { ...body.filters, workplaces } } }
+    }
+    await openPage()
+
+    const remote = document.querySelector<HTMLButtonElement>("#chips button[data-value='remote']")!
+    remote.focus()
+    remote.click()
+    await settle()
+    expect((document.activeElement as HTMLElement).dataset.value).toBe("remote")
+    expect(document.activeElement!.getAttribute("aria-pressed")).toBe("true")
+
+    const old = document.querySelector<HTMLButtonElement>("#summary button")!
+    old.focus()
+    old.click()
+    await settle()
+    expect(document.activeElement!.textContent).toBe("old 1")
+    expect(document.activeElement!.getAttribute("aria-pressed")).toBe("true")
+  })
+
+  test("announces the number of jobs shown in a status region, and gives the page a heading", async () => {
+    routes["GET /api/feed"] = () => ({ status: 200, body: feed([card("1", "Data Analyst"), card("2", "Data Engineer")]) })
+    await openPage()
+
+    const region = document.querySelector("[role='status']")!
+    expect(region.textContent).toBe("Showing 2 of 2 jobs.")
+    const search = document.getElementById("search") as HTMLInputElement
+    search.value = "engineer"
+    search.dispatchEvent(new Event("input"))
+    expect(region.textContent).toBe("Showing 1 of 2 jobs.")
+
+    expect(document.querySelector("h1")?.textContent).toBe("Job feed")
+    expect(document.getElementById("extra-title")!.hidden).toBe(true)
   })
 
   test("says why the list is empty when the search and menus leave nothing", async () => {

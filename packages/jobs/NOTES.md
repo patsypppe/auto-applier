@@ -450,3 +450,13 @@
 - Checked at 1024 and 600 px: button hidden, filters shown.
 - Test: page.test.ts checks the button opens and closes the block, and that the block holds the search, menus and chips but not the cards. jsdom cannot run media queries, so the 600 px rule itself was only checked in the browser.
 - Left as is: the summary's hidden-reason buttons still take 165 px at 375 px. The folded state is not remembered between visits.
+
+## 2026-11-10: Slice 14d, accessibility (F19)
+
+- Labels: the search box, the work-authorization, status and sort menus, and each card's status menu ("Status of <title> at <company>") now have names. The score reads "Match score 100" to a screen reader; the page has a heading (visually hidden, so the phone layout keeps its space), and the empty "Hidden as" heading is hidden until a reason is open.
+- Focus: chips, menus, hidden-reason buttons and card status menus keep the focus when the page redraws them. Hidden-reason buttons say whether they are pressed.
+- Announcements: a hidden status region reads out "Showing N of M jobs." when the count changes. Errors already use the alert line from 14a.
+- Hidden cards have a dashed border instead of 60% opacity. Controls (inputs, menus, buttons, tag chips) use a new border colour: 3.68 to 1 in light mode and 3.51 to 1 in dark, from 1.37 and 1.54. Card frames keep the lighter line, since they are decoration.
+- Tests, no new dependency: colors.test.ts works out WCAG contrast from the colours in index.html for both themes (text at least 4.5 to 1, control borders at least 3 to 1) and checks there is no opacity; page tests check every control has a name, focus after a chip and a hidden-reason button, and the status region. 785 tests, typecheck and build clean.
+- Checked on the real feed: all 191 controls (with the settings panel open) have a name; Enter on the "hybrid" chip kept the focus on it, pressed, with "Showing 81 of 89,784 jobs." announced; opening "old" kept the focus on its button, pressed, and the hidden cards showed dashed at full opacity.
+- Not checked: no screen reader was run, so what is read out is from the page's names and roles, not heard. One focus attempt in the browser pane did not land on the chip before pressing; the cause was not found, and the repeat worked.
