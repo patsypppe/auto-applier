@@ -1,6 +1,6 @@
 // Tests that fetchJson sends one polite request, retries temporary failures with growing waits, and explains failures.
 import { describe, expect, test, vi } from "vitest"
-import { fetchJson, RequestError, USER_AGENT } from "./fetchJson"
+import { fetchJson, fetchText, RequestError, USER_AGENT } from "./fetchJson"
 
 const URL = "https://boards-api.greenhouse.io/v1/boards/acme/jobs"
 const LABEL = "Greenhouse board 'acme'"
@@ -47,6 +47,26 @@ describe("fetchJson: a good answer", () => {
     expect(init?.method).toBe("POST")
     expect(init?.body).toBe('{"limit":20}')
     expect((init?.headers as Record<string, string>)["Content-Type"]).toBe("application/json")
+  })
+})
+
+describe("fetchText", () => {
+  test("returns the body as text, such as a CSV file, and asks for any type", async () => {
+    const fetchFn = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => new Response("a,b\n1,2\n", { status: 200 }))
+
+    const result = await fetchText(URL, { label: LABEL, fetchFn, sleep: fakeSleep() })
+
+    expect(result).toBe("a,b\n1,2\n")
+    expect((fetchFn.mock.calls[0]![1]?.headers as Record<string, string>).Accept).toBe("*/*")
+  })
+
+  test("retries a busy server the same way", async () => {
+    const answers = [new Response("", { status: 503 }), new Response("done", { status: 200 })]
+    const fetchFn = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => answers.shift()!)
+    const sleep = fakeSleep()
+
+    expect(await fetchText(URL, { label: LABEL, fetchFn, sleep })).toBe("done")
+    expect(sleep).toHaveBeenCalledWith(1000)
   })
 })
 

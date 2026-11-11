@@ -478,3 +478,12 @@
 
 - The five starts are within 8 s of each other, unlike the 135 s and 231 s in the review. settings.json had the same hash before and after.
 - Not comparable one to one with older numbers: the 547 MB of 2026-11-06 was macOS's peak memory footprint, and this is the maximum resident set size, which leaves out memory paged to swap. Use this command's medians as the baseline from now on.
+
+## 2026-11-11: More boards, step 1: LastRound AI's ATS directory
+
+- `companies --with-lastround` downloads LastRound AI's ATS company directory (CC BY 4.0, credited in the README) from datahub.io and adds its Greenhouse, Lever and Ashby boards, marked `lastround` in `sources`. The CSV had 9,936 rows (4,966 Greenhouse, 2,856 Ashby, 2,113 Lever), last crawled in July and August 2026. `fetchText` reads a body as text with the same retries as `fetchJson`; the CSV cells are split by the splitter the H-1B reader already had.
+- Real run: the list went from 3,562 boards to 12,108 (greenhouse 5,170, ashby 3,147, lever 2,162, workday 1,629). 8,546 came only from LastRound, and 1,389 LastRound boards were already in Simplify's files.
+- A sample of 60 LastRound-only boards, collected with `--board` in 44.5 s: 3 returned 404, 49 had jobs, 1,085 jobs in all. 18 titles held one of the four roles, 8 of them in the US, 5 of those 8 from one company (Epic Games). Scaled to all 8,546 boards, a rough guess is 150,000 more jobs, about 1,100 more role titles in the US, and about 105 minutes more for a full `collect`. The sample is small and lumpy, so treat these as order of magnitude only.
+- The labelled set is unchanged by this step: it scores the tag readers on saved postings, and adding boards does not touch them.
+- The Common Crawl source is not built: index.commoncrawl.org answered 504 to every query on 2026-11-11 (crawls 2026-43 and 2026-39), so the slug counts for it are unverified.
+- The longer list was written to `data/companies.with-lastround.json`, and `data/companies.json` was put back, so the next `collect` stays the size it was until the longer list is chosen.

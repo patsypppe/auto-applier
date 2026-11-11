@@ -8,7 +8,7 @@ export type H1bHistory = { fiscalYear: number; employers: Record<string, Employe
 const COLUMNS = { name: "Employer (Petitioner) Name", year: "Fiscal Year", measure: "Measure Names", value: "Measure Values" } as const
 
 // Splits one CSV line into cells, handling quoted cells such as "1,234" and doubled quotes inside them.
-function cells(line: string): string[] {
+export function cells(line: string): string[] {
   const found: string[] = []
   let current = ""
   let quoted = false

@@ -2,7 +2,7 @@
 
 Collects job postings from companies' own public job boards (Greenhouse, Lever, Ashby and Workday) onto your computer, and tags what each one says about work authorization, with the sentence as evidence. It ranks them against your own profile and settings, showing the skills you have and lack, on a local page where you can also track your applications. It also shows each employer's H-1B approvals from USCIS. See `docs/PLAN.md` for how it is built.
 
-Nothing is sent anywhere except the requests to the job boards and to GitHub for the company lists. Everything it saves goes in `packages/jobs/data/`, which git ignores.
+Nothing is sent anywhere except the requests to the job boards, and to GitHub and datahub.io for the company lists. Everything it saves goes in `packages/jobs/data/`, which git ignores.
 
 ## How to run it
 
@@ -14,6 +14,8 @@ npm run collect -w @auto-applier/jobs
 ```
 
 `companies` downloads Simplify's public new-grad and internship listing files and writes `data/companies.json`, one entry per job board. Add `-- --with-aggregator` to also include the much longer, mostly non-tech lists from job-board-aggregator (MIT).
+
+Add `-- --with-lastround` to also include LastRound AI's ATS company directory, about 9,900 Greenhouse, Lever and Ashby boards, of which about 8,500 were not in Simplify's files on 2026-11-11. The directory is "LastRound AI Hiring Data" by LastRound AI, https://datahub.io/lastroundai-hiring-data/lastroundai-hiring-data, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). It is read as published; boards it adds are marked `lastround` in `sources`. The file is monthly and the address names the month (2026-08 now), so a newer month means changing `LASTROUND_URL` in `src/commands/companies.ts`. In a sample of 30 of its new boards, 28 answered with 670 jobs between them, so all of them would add roughly 200,000 jobs to `collect` and make `collect` and the feed's start several times slower.
 
 To add or rename companies, create `data/companies.extra.json`:
 
@@ -101,7 +103,7 @@ It adds the file up per employer into `data/h1b.json`, matches the collected com
 - The country is read from location text. About 7% of jobs say only "Remote" or name a place it does not know, and are left undecided.
 - Copies of a posting are joined into one job only when they are listed at different places and their text is the same apart from the place and any dates. Copies with different pay or experience stay separate. A joined job lists every copy's own link in `copies`.
 - A posting reposted under a new id is linked to its earlier copy if that copy was seen in the last 60 days (`data/seen.json`) and is no longer listed.
-- The commands keep everything in memory during a run (about 1.4 GB at most for the full list), so the much longer aggregator lists may not fit.
+- The commands keep everything in memory during a run (about 1.4 GB at most for the full list), so the much longer aggregator and LastRound lists may not fit.
 - `npm ci` fails on this branch until the root lockfile lists this package; `npm install` works.
 - Tags are rules over sentences, not a model. A hand check of 100 jobs (before the last fixes) found 2 wrong restriction tags out of 47 and no missed restriction. Each tag shows its sentence so you can judge it. Tags describe what a posting says; they are not advice about anyone's status.
 - Years of experience are read only from phrases with a number, so "several years" or a requirement written another way is missed. Most titles state no level.

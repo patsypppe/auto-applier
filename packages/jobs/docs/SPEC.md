@@ -34,7 +34,7 @@ Both are made up.
 Each item lists checks you can run by hand or that tests cover. "Saved sample" means a real response saved to `test/fixtures`, with personal names removed.
 
 ### F1. Company list
-`npm run companies` builds `data/companies.json` from the Simplify new-grad and internship listing files (downloaded at run time, not committed), plus `data/companies.extra.json` if present. The much longer MIT aggregator lists are added only with `--with-aggregator`.
+`npm run companies` builds `data/companies.json` from the Simplify new-grad and internship listing files (downloaded at run time, not committed), plus `data/companies.extra.json` if present. The much longer MIT aggregator lists are added only with `--with-aggregator`, and LastRound AI's ATS directory (CC BY 4.0, CSV from datahub.io) only with `--with-lastround`.
 - Each entry has `name`, `ats` (`greenhouse`, `lever`, `ashby`, later `workday`), `slug` (Workday: tenant, host number, site), and `sources`.
 - The same board found in several lists appears once.
 - Entries from `companies.extra.json` win over downloaded ones.

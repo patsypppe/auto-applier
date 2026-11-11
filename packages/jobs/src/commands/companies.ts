@@ -1,8 +1,9 @@
 // The "companies" command: downloads the public listing files and writes data/companies.json, one entry per board.
 import { join } from "node:path"
 import { mergeCompanies, readAggregatorList } from "../companies/buildCompanyList"
+import { readLastRound } from "../companies/readLastRound"
 import { readListings } from "../companies/readListings"
-import { fetchJson } from "../fetching/fetchJson"
+import { fetchJson, fetchText } from "../fetching/fetchJson"
 import { readCompanyFile, writeJsonFile } from "../storage/files"
 import type { Ats, Company } from "../types"
 
@@ -19,6 +20,10 @@ const SIMPLIFY_LISTS = [
 
 const AGGREGATOR_URL = "https://raw.githubusercontent.com/Riley-Dorrington/job-board-aggregator/main/data"
 const AGGREGATOR_SITES: readonly Ats[] = ["greenhouse", "lever", "ashby", "workday"]
+
+// The monthly file's name carries its month, so a newer month means changing this address.
+const LASTROUND_URL =
+  "https://datahub.io/lastroundai-hiring-data/lastroundai-hiring-data/_r/-/ats-directory/lastroundai-ats-company-directory-2026-08.csv"
 
 // Downloads both Simplify listing files and reads the boards out of them.
 async function simplifyCompanies(print: (line: string) => void): Promise<Company[][]> {
@@ -44,10 +49,18 @@ async function aggregatorCompanies(print: (line: string) => void): Promise<Compa
   return lists
 }
 
-// Builds the company list from Simplify's files, the aggregator's lists when asked, and data/companies.extra.json.
+// Downloads LastRound AI's ATS directory (CC BY 4.0), which names about 9,900 Greenhouse, Lever and Ashby boards.
+async function lastroundCompanies(print: (line: string) => void): Promise<Company[]> {
+  const { companies, skipped } = readLastRound(await fetchText(LASTROUND_URL, { label: "The LastRound directory" }))
+  print(`lastround: ${companies.length} boards, ${skipped} rows on other job sites or with no slug`)
+  return companies
+}
+
+// Builds the company list from Simplify's files, the aggregator's and LastRound's lists when asked, and data/companies.extra.json.
 export async function runCompanies(args: readonly string[], dataDir: string, print: (line: string) => void): Promise<void> {
   const lists = await simplifyCompanies(print)
   if (args.includes("--with-aggregator")) lists.push(...(await aggregatorCompanies(print)))
+  if (args.includes("--with-lastround")) lists.push(await lastroundCompanies(print))
   const extra = await readCompanyFile(join(dataDir, "companies.extra.json"), { optional: true, source: "extra" })
 
   const companies = mergeCompanies(lists, extra)

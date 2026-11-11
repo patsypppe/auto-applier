@@ -1,4 +1,4 @@
-// Fetches JSON from a job board politely: one fixed user agent, a timeout, and retries only for temporary failures.
+// Fetches JSON or text from a job board politely: one fixed user agent, a timeout, and retries only for temporary failures.
 import { isRetryableStatus } from "@auto-applier/core"
 
 export const USER_AGENT = "Mozilla/5.0 (compatible; job-feed/0.1)"
@@ -17,8 +17,11 @@ export type FetchOptions = {
 
 const MAX_RETRY_AFTER_MS = 60_000
 
-// One try: the board answered with a status (and, when it was OK, the JSON it sent), or the connection dropped.
-type Attempt = { status: number; retryAfter: string | null; json?: unknown } | { dropped: string }
+// What the body is read as: parsed JSON, or plain text such as a CSV file.
+type BodyKind = "json" | "text"
+
+// One try: the board answered with a status (and, when it was OK, the body it sent), or the connection dropped.
+type Attempt = { status: number; retryAfter: string | null; body?: unknown } | { dropped: string }
 
 // A failed request that also carries the HTTP status, when there was one, so a 404 can be told apart from a busy server.
 export class RequestError extends Error {
@@ -37,8 +40,8 @@ function wait(ms: number): Promise<void> {
 }
 
 // Builds the request: a GET, or a POST with a JSON body when one is given.
-function requestInit(body: unknown, signal: AbortSignal): RequestInit {
-  const headers: Record<string, string> = { "User-Agent": USER_AGENT, Accept: "application/json" }
+function requestInit(body: unknown, signal: AbortSignal, kind: BodyKind): RequestInit {
+  const headers: Record<string, string> = { "User-Agent": USER_AGENT, Accept: kind === "json" ? "application/json" : "*/*" }
   if (body === undefined) return { method: "GET", headers, signal }
 
   return { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(body), signal }
@@ -51,24 +54,24 @@ function abortedAfter(signal: AbortSignal): Promise<never> {
   })
 }
 
-// Reads the body as JSON, or says the board answered with something else, such as a sign-in page.
-async function readJson(response: Response, signal: AbortSignal, label: string): Promise<unknown> {
+// Reads the body as JSON or text, or says the board answered with something else, such as a sign-in page.
+async function readBody(response: Response, signal: AbortSignal, label: string, kind: BodyKind): Promise<unknown> {
   try {
-    return await Promise.race([response.json(), abortedAfter(signal)])
+    return await Promise.race([kind === "json" ? response.json() : response.text(), abortedAfter(signal)])
   } catch {
     throw new Error(signal.aborted ? `${label} did not answer in time.` : `${label} did not answer with JSON.`)
   }
 }
 
 // Sends one request and, when it worked, reads its body, all within the timeout. A dropped connection becomes a value.
-async function attempt(url: string, options: FetchOptions, fetchFn: typeof fetch): Promise<Attempt> {
+async function attempt(url: string, options: FetchOptions, fetchFn: typeof fetch, kind: BodyKind): Promise<Attempt> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS)
 
   try {
     let response: Response
     try {
-      response = await fetchFn(url, requestInit(options.body, controller.signal))
+      response = await fetchFn(url, requestInit(options.body, controller.signal, kind))
     } catch (error: unknown) {
       if (controller.signal.aborted) throw new Error(`${options.label} did not answer in time.`)
       return { dropped: error instanceof Error ? error.message : "unknown error" }
@@ -76,7 +79,7 @@ async function attempt(url: string, options: FetchOptions, fetchFn: typeof fetch
 
     const retryAfter = response.headers.get("Retry-After")
     if (!response.ok) return { status: response.status, retryAfter }
-    return { status: response.status, retryAfter, json: await readJson(response, controller.signal, options.label) }
+    return { status: response.status, retryAfter, body: await readBody(response, controller.signal, options.label, kind) }
   } finally {
     clearTimeout(timer)
   }
@@ -99,15 +102,25 @@ function statusError(label: string, status: number): RequestError {
 }
 
 // Fetches the URL and returns its JSON, waiting and retrying after temporary failures, once per delay.
-export async function fetchJson(url: string, options: FetchOptions): Promise<unknown> {
+export function fetchJson(url: string, options: FetchOptions): Promise<unknown> {
+  return fetchBody(url, options, "json")
+}
+
+// Fetches the URL and returns its body as text, such as a CSV file, with the same waits and retries.
+export async function fetchText(url: string, options: FetchOptions): Promise<string> {
+  return String(await fetchBody(url, options, "text"))
+}
+
+// Sends the request, retrying after temporary failures, and returns the body read as the given kind.
+async function fetchBody(url: string, options: FetchOptions, kind: BodyKind): Promise<unknown> {
   // Wrapped in an arrow so the global fetch is not called as a method of the options object.
   const fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init))
   const sleep = options.sleep ?? wait
   const delays = options.delaysMs ?? DEFAULT_RETRY_DELAYS_MS
 
   for (let tries = 1; ; tries += 1) {
-    const result = await attempt(url, options, fetchFn)
-    if ("json" in result) return result.json
+    const result = await attempt(url, options, fetchFn, kind)
+    if ("body" in result) return result.body
     if ("status" in result && !isRetryableStatus(result.status)) throw statusError(options.label, result.status)
 
     const delay = delays[tries - 1]
