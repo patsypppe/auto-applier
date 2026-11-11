@@ -43,6 +43,11 @@
       .errors { color: var(--blocked); white-space: pre-line; }
       .empty { color: var(--muted); }
       .why { margin: 0 0 6px; color: var(--muted); font-style: italic; }
+      #filters-toggle { display: none; }
+      @media (max-width: 599px) {
+        #filters-toggle { display: block; width: 100%; margin-bottom: 10px; text-align: left; font-weight: 600; cursor: pointer; }
+        #filters:not(.open) { display: none; }
+      }
     </style>
   </head>
   <body>
@@ -50,29 +55,32 @@
       <summary>Settings</summary>
       <div id="settings"></div>
     </details>
-    <header>
-      <input id="search" type="search" placeholder="Search title, company or skill" />
-      <select id="effect">
-        <option value="any">Any work authorization</option>
-        <option value="positive">A plus for you</option>
-        <option value="ok">Fine for you</option>
-        <option value="likely-blocked">Likely blocked</option>
-      </select>
-      <select id="status">
-        <option value="any">Any status</option>
-        <option value="not-tracked">Not tracked</option>
-        <option value="saved">Saved</option>
-        <option value="applied">Applied</option>
-        <option value="interviewing">Interviewing</option>
-        <option value="offer">Offer</option>
-        <option value="rejected">Rejected</option>
-      </select>
-      <select id="sort">
-        <option value="score">Best match</option>
-        <option value="date">Newest</option>
-      </select>
-    </header>
-    <div id="chips"></div>
+    <button id="filters-toggle" type="button" aria-expanded="false" aria-controls="filters">Filters</button>
+    <div id="filters">
+      <header>
+        <input id="search" type="search" placeholder="Search title, company or skill" />
+        <select id="effect">
+          <option value="any">Any work authorization</option>
+          <option value="positive">A plus for you</option>
+          <option value="ok">Fine for you</option>
+          <option value="likely-blocked">Likely blocked</option>
+        </select>
+        <select id="status">
+          <option value="any">Any status</option>
+          <option value="not-tracked">Not tracked</option>
+          <option value="saved">Saved</option>
+          <option value="applied">Applied</option>
+          <option value="interviewing">Interviewing</option>
+          <option value="offer">Offer</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <select id="sort">
+          <option value="score">Best match</option>
+          <option value="date">Newest</option>
+        </select>
+      </header>
+      <div id="chips"></div>
+    </div>
     <p id="problem" class="errors" role="alert" hidden></p>
     <p id="summary">Loading the feed...</p>
     <main id="cards"></main>

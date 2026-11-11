@@ -261,6 +261,25 @@ describe("the feed page", () => {
     expect(document.querySelector("#extra .why")?.textContent).toBe("Hidden because it was posted more than 90 days ago. Set by Posted within in the settings panel.")
   })
 
+  test("folds the search, menus and chips behind one Filters button that opens and closes them", async () => {
+    routes["GET /api/feed"] = () => ({ status: 200, body: feed([card("1", "Data Analyst")]) })
+    await openPage()
+
+    const toggle = document.getElementById("filters-toggle") as HTMLButtonElement
+    const filters = document.getElementById(toggle.getAttribute("aria-controls")!)!
+    for (const id of ["search", "effect", "status", "sort", "chips"]) expect(filters.contains(document.getElementById(id))).toBe(true)
+    expect(filters.contains(document.getElementById("cards"))).toBe(false)
+    expect(toggle.getAttribute("aria-expanded")).toBe("false")
+
+    toggle.click()
+    expect(toggle.getAttribute("aria-expanded")).toBe("true")
+    expect(filters.classList.contains("open")).toBe(true)
+
+    toggle.click()
+    expect(toggle.getAttribute("aria-expanded")).toBe("false")
+    expect(filters.classList.contains("open")).toBe(false)
+  })
+
   test("says why the list is empty when the search and menus leave nothing", async () => {
     routes["GET /api/feed"] = () => ({ status: 200, body: feed([card("1", "Data Analyst")]) })
     await openPage()

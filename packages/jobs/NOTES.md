@@ -442,3 +442,11 @@
   - Hidden as experience: 138 cards, each with "Hidden because it asks for more than 2 years of experience. Set by Most years of experience asked in the settings panel." Hidden as blocked: 300 cards, each naming hideBlocked in data/settings.json. With the Posted chip at 7: "old 206", each line naming the Posted chip.
 - Measured: every hide reason has its own sentence (test), and a settings save after a chip change takes effect (page test and the real check above). Tests: 777, typecheck and build clean.
 - Noticed: saving from the panel rewrites the roles in the panel's group order. Harmless, but the file's order changes.
+
+## 2026-11-10: Slice 14c, phone layout
+
+- Below 600 px the search box, the three menus and the chips fold behind one "Filters" button (`aria-expanded` and `aria-controls` on it). At 600 px and wider the button is hidden and the filters show as before.
+- Measured on the real feed at 375 by 812 px: before, the first card started at 716 px, so only its top 96 px were on the first screen (the menus took 107 px, the chips 335 px, the summary 165 px). Now the whole first card shows, from 294 to 597 px, with no sideways scroll. With the filters opened it starts at 758 px, as before.
+- Checked at 1024 and 600 px: button hidden, filters shown.
+- Test: page.test.ts checks the button opens and closes the block, and that the block holds the search, menus and chips but not the cards. jsdom cannot run media queries, so the 600 px rule itself was only checked in the browser.
+- Left as is: the summary's hidden-reason buttons still take 165 px at 375 px. The folded state is not remembered between visits.

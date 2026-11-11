@@ -230,6 +230,15 @@ async function load(show: string): Promise<void> {
   draw()
 }
 
+// Opens or closes the search, menus and chips. On a narrow screen they start folded, so the first job shows without
+// scrolling; on a wide one the button is hidden and they always show.
+function toggleFilters(): void {
+  const toggle = byId("filters-toggle")
+  const open = toggle.getAttribute("aria-expanded") !== "true"
+  toggle.setAttribute("aria-expanded", String(open))
+  byId("filters").classList.toggle("open", open)
+}
+
 // Fills the settings panel from the server; when that fails, the panel stays empty so blank settings cannot be saved
 // over the real ones, and the page says why.
 async function loadSettings(): Promise<void> {
@@ -248,5 +257,6 @@ chooseOption(byId("effect"), filters.effect, DEFAULT_FILTERS.effect)
 chooseOption(byId("status"), filters.status, DEFAULT_FILTERS.status)
 chooseOption(byId("sort"), filters.sort, DEFAULT_FILTERS.sort)
 for (const id of ["search", "effect", "status", "sort"]) byId(id).addEventListener("input", draw)
+byId("filters-toggle").addEventListener("click", toggleFilters)
 void loadSettings()
 void load("")
