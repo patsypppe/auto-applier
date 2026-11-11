@@ -17,7 +17,7 @@ import { runTop } from "./commands/top"
 // The data folder sits next to dist/, inside the package, wherever the command is run from, so git always ignores it.
 const DATA_DIR = fileURLToPath(new URL("../data", import.meta.url))
 const LABELLED_FILE = fileURLToPath(new URL("../test/fixtures/labelled-jobs.json", import.meta.url))
-const USAGE = "Commands: companies [--with-aggregator] [--with-lastround], collect [--board site:slug ...] [--fresh], tags [--status f1-opt], top [--limit 20], feed [--port 4317], export-applied, h1b [--file path], labelled [--misses], measure [--runs 5]"
+const USAGE = "Commands: companies [--with-aggregator] [--with-lastround] [--with-commoncrawl [--crawls 1]], collect [--board site:slug ...] [--fresh], tags [--status f1-opt], top [--limit 20], feed [--port 4317], export-applied, h1b [--file path], labelled [--misses], measure [--runs 5]"
 
 // Writes one line to the terminal.
 function print(line: string): void {

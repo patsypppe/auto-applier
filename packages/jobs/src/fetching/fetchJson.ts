@@ -1,4 +1,4 @@
-// Fetches JSON or text from a job board politely: one fixed user agent, a timeout, and retries only for temporary failures.
+// Fetches JSON, text or bytes from a job board politely: one fixed user agent, a timeout, and retries only for temporary failures.
 import { isRetryableStatus } from "@auto-applier/core"
 
 export const USER_AGENT = "Mozilla/5.0 (compatible; job-feed/0.1)"
@@ -8,6 +8,7 @@ const DEFAULT_TIMEOUT_MS = 30_000
 export type FetchOptions = {
   label: string
   body?: unknown
+  headers?: Record<string, string>
   fetchFn?: typeof fetch
   sleep?: (ms: number) => Promise<void>
   delaysMs?: readonly number[]
@@ -17,8 +18,8 @@ export type FetchOptions = {
 
 const MAX_RETRY_AFTER_MS = 60_000
 
-// What the body is read as: parsed JSON, or plain text such as a CSV file.
-type BodyKind = "json" | "text"
+// What the body is read as: parsed JSON, plain text such as a CSV file, or bytes such as a piece of a gzip file.
+type BodyKind = "json" | "text" | "bytes"
 
 // One try: the board answered with a status (and, when it was OK, the body it sent), or the connection dropped.
 type Attempt = { status: number; retryAfter: string | null; body?: unknown } | { dropped: string }
@@ -39,12 +40,12 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-// Builds the request: a GET, or a POST with a JSON body when one is given.
-function requestInit(body: unknown, signal: AbortSignal, kind: BodyKind): RequestInit {
-  const headers: Record<string, string> = { "User-Agent": USER_AGENT, Accept: kind === "json" ? "application/json" : "*/*" }
-  if (body === undefined) return { method: "GET", headers, signal }
+// Builds the request: a GET, or a POST with a JSON body when one is given, plus any extra headers.
+function requestInit(options: FetchOptions, signal: AbortSignal, kind: BodyKind): RequestInit {
+  const headers: Record<string, string> = { "User-Agent": USER_AGENT, Accept: kind === "json" ? "application/json" : "*/*", ...options.headers }
+  if (options.body === undefined) return { method: "GET", headers, signal }
 
-  return { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(body), signal }
+  return { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify(options.body), signal }
 }
 
 // Rejects once the signal aborts, so a body that stops arriving cannot hold the run up past the timeout.
@@ -54,10 +55,10 @@ function abortedAfter(signal: AbortSignal): Promise<never> {
   })
 }
 
-// Reads the body as JSON or text, or says the board answered with something else, such as a sign-in page.
+// Reads the body as JSON, text or bytes, or says the board answered with something else, such as a sign-in page.
 async function readBody(response: Response, signal: AbortSignal, label: string, kind: BodyKind): Promise<unknown> {
   try {
-    return await Promise.race([kind === "json" ? response.json() : response.text(), abortedAfter(signal)])
+    return await Promise.race([kind === "json" ? response.json() : kind === "text" ? response.text() : response.bytes(), abortedAfter(signal)])
   } catch {
     throw new Error(signal.aborted ? `${label} did not answer in time.` : `${label} did not answer with JSON.`)
   }
@@ -71,7 +72,7 @@ async function attempt(url: string, options: FetchOptions, fetchFn: typeof fetch
   try {
     let response: Response
     try {
-      response = await fetchFn(url, requestInit(options.body, controller.signal, kind))
+      response = await fetchFn(url, requestInit(options, controller.signal, kind))
     } catch (error: unknown) {
       if (controller.signal.aborted) throw new Error(`${options.label} did not answer in time.`)
       return { dropped: error instanceof Error ? error.message : "unknown error" }
@@ -109,6 +110,11 @@ export function fetchJson(url: string, options: FetchOptions): Promise<unknown> 
 // Fetches the URL and returns its body as text, such as a CSV file, with the same waits and retries.
 export async function fetchText(url: string, options: FetchOptions): Promise<string> {
   return String(await fetchBody(url, options, "text"))
+}
+
+// Fetches the URL and returns its body as bytes, with the same waits and retries. Pass a Range header to read part of a file.
+export async function fetchBytes(url: string, options: FetchOptions): Promise<Uint8Array> {
+  return (await fetchBody(url, options, "bytes")) as Uint8Array
 }
 
 // Sends the request, retrying after temporary failures, and returns the body read as the given kind.

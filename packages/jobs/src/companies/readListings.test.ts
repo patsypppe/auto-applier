@@ -23,6 +23,9 @@ describe("boardFromUrl", () => {
     ["https://jobs.ashbyhq.com/bad%zz/1", { ats: "ashby", slug: "bad%zz" }],
     ["https://avav.wd1.myworkdayjobs.com/en-US/avav/job/Albuquerque-NM/RF-PCB-Layout-Engineer_9319", { ats: "workday", slug: "avav|wd1|avav" }],
     ["https://fourseasons.wd3.myworkdayjobs.com/search/job/Toronto/Analyst_REQ10374076", { ats: "workday", slug: "fourseasons|wd3|search" }],
+    ["https://intel.wd1.myworkdayjobs.com/en-us/External/job/US-Santa-Clara/Intern_JR0281234", { ats: "workday", slug: "intel|wd1|External" }],
+    ["https://3m.wd1.myworkdayjobs.com/es/Search/job/Mexico/Analista_R01136321", { ats: "workday", slug: "3m|wd1|Search" }],
+    ["https://jj.wd5.myworkdayjobs.com/jj/job/New-Brunswick-NJ/Data-Scientist_R-031234", { ats: "workday", slug: "jj|wd5|jj" }],
   ])("reads %s", (url, board) => {
     expect(boardFromUrl(url)).toEqual(board)
   })

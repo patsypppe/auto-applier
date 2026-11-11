@@ -1,9 +1,12 @@
 // The "companies" command: downloads the public listing files and writes data/companies.json, one entry per board.
 import { join } from "node:path"
+import { gunzipSync } from "node:zlib"
 import { mergeCompanies, readAggregatorList } from "../companies/buildCompanyList"
+import { blocksForJobSites, boardsInBlock, crawlsFrom, pickCrawls } from "../companies/readCommonCrawl"
 import { readLastRound } from "../companies/readLastRound"
 import { readListings } from "../companies/readListings"
-import { fetchJson, fetchText } from "../fetching/fetchJson"
+import { fetchBytes, fetchJson, fetchText } from "../fetching/fetchJson"
+import { fetchLines } from "../fetching/fetchLines"
 import { readCompanyFile, writeJsonFile } from "../storage/files"
 import type { Ats, Company } from "../types"
 
@@ -24,6 +27,10 @@ const AGGREGATOR_SITES: readonly Ats[] = ["greenhouse", "lever", "ashby", "workd
 // The monthly file's name carries its month, so a newer month means changing this address.
 const LASTROUND_URL =
   "https://datahub.io/lastroundai-hiring-data/lastroundai-hiring-data/_r/-/ats-directory/lastroundai-ats-company-directory-2026-08.csv"
+
+const COMMONCRAWL_LIST = "https://index.commoncrawl.org/collinfo.json"
+const COMMONCRAWL_INDEXES = "https://data.commoncrawl.org/cc-index/collections"
+const ONE_REQUEST_A_SECOND_MS = 1000
 
 // Downloads both Simplify listing files and reads the boards out of them.
 async function simplifyCompanies(print: (line: string) => void): Promise<Company[][]> {
@@ -56,11 +63,38 @@ async function lastroundCompanies(print: (line: string) => void): Promise<Compan
   return companies
 }
 
-// Builds the company list from Simplify's files, the aggregator's and LastRound's lists when asked, and data/companies.extra.json.
+// Waits for the given number of milliseconds.
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// Searches the newest crawls' URL index for job-site pages: streams each crawl's lookup file (about 100 MB) to find the
+// blocks that can hold them, then reads those blocks (about 70 of 300 KB a crawl) one a second.
+async function commonCrawlCompanies(args: readonly string[], print: (line: string) => void): Promise<Company[]> {
+  const crawls = pickCrawls(await fetchJson(COMMONCRAWL_LIST, { label: "Common Crawl's list of crawls" }), crawlsFrom(args))
+  const found: Company[] = []
+  for (const crawl of crawls) {
+    const base = `${COMMONCRAWL_INDEXES}/${crawl}/indexes`
+    const blocks = await blocksForJobSites(fetchLines(`${base}/cluster.idx`, `The ${crawl} index lookup`))
+    for (const [index, block] of blocks.entries()) {
+      if (index > 0) await wait(ONE_REQUEST_A_SECOND_MS)
+      const range = `bytes=${block.offset}-${block.offset + block.length - 1}`
+      const bytes = await fetchBytes(`${base}/${block.file}`, { label: `The ${crawl} index block`, headers: { Range: range } })
+      found.push(...boardsInBlock(gunzipSync(bytes).toString("utf8")))
+    }
+    print(`commoncrawl ${crawl}: read ${blocks.length} index blocks`)
+  }
+  const companies = mergeCompanies([found], [])
+  print(`commoncrawl: ${companies.length} boards`)
+  return companies
+}
+
+// Builds the company list from Simplify's files, the aggregator's, LastRound's and Common Crawl's lists when asked, and data/companies.extra.json.
 export async function runCompanies(args: readonly string[], dataDir: string, print: (line: string) => void): Promise<void> {
   const lists = await simplifyCompanies(print)
   if (args.includes("--with-aggregator")) lists.push(...(await aggregatorCompanies(print)))
   if (args.includes("--with-lastround")) lists.push(await lastroundCompanies(print))
+  if (args.includes("--with-commoncrawl")) lists.push(await commonCrawlCompanies(args, print))
   const extra = await readCompanyFile(join(dataDir, "companies.extra.json"), { optional: true, source: "extra" })
 
   const companies = mergeCompanies(lists, extra)

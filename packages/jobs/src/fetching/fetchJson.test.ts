@@ -1,6 +1,6 @@
 // Tests that fetchJson sends one polite request, retries temporary failures with growing waits, and explains failures.
 import { describe, expect, test, vi } from "vitest"
-import { fetchJson, fetchText, RequestError, USER_AGENT } from "./fetchJson"
+import { fetchBytes, fetchJson, fetchText, RequestError, USER_AGENT } from "./fetchJson"
 
 const URL = "https://boards-api.greenhouse.io/v1/boards/acme/jobs"
 const LABEL = "Greenhouse board 'acme'"
@@ -67,6 +67,17 @@ describe("fetchText", () => {
 
     expect(await fetchText(URL, { label: LABEL, fetchFn, sleep })).toBe("done")
     expect(sleep).toHaveBeenCalledWith(1000)
+  })
+})
+
+describe("fetchBytes", () => {
+  test("sends the extra headers, such as a byte range, and returns the bytes", async () => {
+    const fetchFn = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => new Response(new Uint8Array([31, 139, 8]), { status: 206 }))
+
+    const result = await fetchBytes(URL, { label: LABEL, headers: { Range: "bytes=10-12" }, fetchFn, sleep: fakeSleep() })
+
+    expect([...result]).toEqual([31, 139, 8])
+    expect((fetchFn.mock.calls[0]![1]?.headers as Record<string, string>).Range).toBe("bytes=10-12")
   })
 })
 

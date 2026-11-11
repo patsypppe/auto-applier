@@ -7,6 +7,9 @@ z.config(en())
 
 const listingSchema = z.object({ company_name: z.nullish(z.string()), url: z.nullish(z.string()) })
 
+// Bare language codes seen at the start of Workday addresses; Workday answered 404 when "en" and "es" were tried as sites.
+const WORKDAY_LANGUAGES = new Set(["en", "es", "fr", "de", "pt", "it", "nl", "ja", "zh", "ko", "pl"])
+
 // Decodes a slug written with %-escapes, such as "xpansiv%20", and trims it; a broken escape leaves the slug as written.
 function decodeSlug(slug: string): string {
   try {
@@ -19,6 +22,12 @@ function decodeSlug(slug: string): string {
 // Reads the slug from the first part of the link's path, as in jobs.lever.co/<slug>/<id>.
 function firstPathPart(url: URL): string | undefined {
   return url.pathname.split("/").filter((part) => part !== "")[0]
+}
+
+// Returns true for a Workday address's language part: a language and region in any case, or a bare language code.
+// Bare codes are listed, since many real sites have two-letter names, such as "jj" for Johnson & Johnson.
+function isLanguagePart(part: string): boolean {
+  return /^[a-z]{2}-[a-z]{2}$/i.test(part) || WORKDAY_LANGUAGES.has(part.toLowerCase())
 }
 
 // Returns the board a job link belongs to, or undefined when the link does not name one we can read.
@@ -44,9 +53,9 @@ export function boardFromUrl(link: string): Board | undefined {
   }
   const workday = host.match(/^([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com$/)
   if (workday) {
-    // The site follows an optional language part, as in /en-US/<site>/job/...
+    // The site follows an optional language part, as in /en-US/<site>/job/..., /en-us/<site> or /es/<site>.
     const parts = url.pathname.split("/").filter((part) => part !== "")
-    const site = /^[a-z]{2}-[A-Z]{2}$/.test(parts[0] ?? "") ? parts[1] : parts[0]
+    const site = isLanguagePart(parts[0] ?? "") ? parts[1] : parts[0]
     return site ? { ats: "workday", slug: `${workday[1]}|${workday[2]}|${site}` } : undefined
   }
   if (host === "jobs.ashbyhq.com") {

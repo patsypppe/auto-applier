@@ -2,7 +2,7 @@
 
 Collects job postings from companies' own public job boards (Greenhouse, Lever, Ashby and Workday) onto your computer, and tags what each one says about work authorization, with the sentence as evidence. It ranks them against your own profile and settings, showing the skills you have and lack, on a local page where you can also track your applications. It also shows each employer's H-1B approvals from USCIS. See `docs/PLAN.md` for how it is built.
 
-Nothing is sent anywhere except the requests to the job boards, and to GitHub and datahub.io for the company lists. Everything it saves goes in `packages/jobs/data/`, which git ignores.
+Nothing is sent anywhere except the requests to the job boards, and to GitHub, datahub.io and Common Crawl for the company lists. Everything it saves goes in `packages/jobs/data/`, which git ignores.
 
 ## How to run it
 
@@ -15,7 +15,9 @@ npm run collect -w @auto-applier/jobs
 
 `companies` downloads Simplify's public new-grad and internship listing files and writes `data/companies.json`, one entry per job board. Add `-- --with-aggregator` to also include the much longer, mostly non-tech lists from job-board-aggregator (MIT).
 
-Add `-- --with-lastround` to also include LastRound AI's ATS company directory, about 9,900 Greenhouse, Lever and Ashby boards, of which about 8,500 were not in Simplify's files on 2026-11-11. The directory is "LastRound AI Hiring Data" by LastRound AI, https://datahub.io/lastroundai-hiring-data/lastroundai-hiring-data, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). It is read as published; boards it adds are marked `lastround` in `sources`. The file is monthly and the address names the month (2026-08 now), so a newer month means changing `LASTROUND_URL` in `src/commands/companies.ts`. In a sample of 30 of its new boards, 28 answered with 670 jobs between them, so all of them would add roughly 200,000 jobs to `collect` and make `collect` and the feed's start several times slower.
+Add `-- --with-lastround` to also include LastRound AI's ATS company directory, about 9,900 Greenhouse, Lever and Ashby boards, of which about 8,500 were not in Simplify's files on 2026-11-11. The directory is "LastRound AI Hiring Data" by LastRound AI, https://datahub.io/lastroundai-hiring-data/lastroundai-hiring-data, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). It is read as published; boards it adds are marked `lastround` in `sources`. The file is monthly and the address names the month (2026-08 now), so a newer month means changing `LASTROUND_URL` in `src/commands/companies.ts`.
+
+Add `-- --with-commoncrawl` to also search Common Crawl's URL index (https://commoncrawl.org, free to use under its terms of use, https://commoncrawl.org/terms-of-use) for pages on Greenhouse, Lever, Ashby and Workday, and take the board out of each address. It reads the newest crawl; `--crawls 3` reads the three newest. Each crawl streams a lookup file of about 100 MB and then reads about 60 blocks of the index one a second, about 70 seconds in all. On 2026-11-11 the newest crawl (CC-MAIN-2026-43) added 3,764 boards that neither Simplify nor LastRound had: 1,949 Workday, 1,397 Greenhouse, 292 Ashby and 126 Lever. In samples, 12 of 20 new Greenhouse boards, 10 of 10 Ashby and 5 of 10 Lever answered with jobs; the rest are dropped by `collect` after two 404s. The new Workday boards make `--with-workday` take hours longer. iCIMS pages are in the index too but are not read, since the feed cannot read iCIMS boards yet. In a sample of 30 of its new boards, 28 answered with 670 jobs between them, so all of them would add roughly 200,000 jobs to `collect` and make `collect` and the feed's start several times slower.
 
 To add or rename companies, create `data/companies.extra.json`:
 
