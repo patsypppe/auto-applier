@@ -1,8 +1,8 @@
 // The feed the page holds, checks on what the server and the browser give the page, and the line an empty list shows.
 import type { AppliedEntry } from "../feed/applied"
 import type { Card } from "../feed/card"
-import type { FeedSettings } from "../settings"
-import { CHIP_NAMES, type ChipChoices, type ChipFilters } from "./chips"
+import type { FeedSettings, Filters } from "../settings"
+import { CHIP_NAMES, type ChipChoices } from "./chips"
 import type { Visits } from "./visits"
 
 export type Feed = {
@@ -12,7 +12,7 @@ export type Feed = {
   hidden: { reason: string; count: number }[]
   extra: Card[]
   applied: AppliedEntry[]
-  filters?: ChipFilters
+  filters?: Filters
   stemOpt?: boolean
 }
 

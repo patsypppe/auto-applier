@@ -22,6 +22,15 @@ export type PageChips = { readonly newOnly: boolean; readonly eVerifyOnly: boole
 
 export const PAGE_ONLY: readonly (keyof ChipChoices)[] = ["newOnly", "eVerifyOnly"]
 
+// The chips for values the settings panel also saves: posted within, levels, years asked and degree.
+const PANEL_CHIPS: readonly (keyof ChipChoices)[] = ["within", "level", "maxYears", "degree"]
+
+// Returns the stored chips without the ones the settings panel also sets, so a settings save is not overridden by an
+// older chip choice.
+export function withoutPanelChips(chips: Partial<ChipChoices>): Partial<ChipChoices> {
+  return Object.fromEntries(Object.entries(chips).filter(([name]) => !PANEL_CHIPS.includes(name as keyof ChipChoices)))
+}
+
 const MENUS: readonly [keyof ChipChoices, string, readonly [string, string][]][] = [
   ["within", "Posted", [["7", "in the last 7 days"], ["30", "in the last 30 days"], ["90", "in the last 90 days"]]],
   ["maxYears", "Years asked", [["0", "none"], ["1", "up to 1"], ["2", "up to 2"], ["3", "up to 3"], ["5", "up to 5"], ["10", "up to 10"]]],

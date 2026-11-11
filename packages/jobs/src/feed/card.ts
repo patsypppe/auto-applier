@@ -25,6 +25,12 @@ export type Card = {
   history?: EmployerHistory
 }
 
+// Returns true when a STEM OPT student can work at the job: the employer uses E-Verify everywhere and nothing else blocks
+// it. The card's badge and the page's "E-Verify only" chip both use this, so they always agree.
+export function stemOptCanWork(card: Pick<Card, "tags" | "effect">): boolean {
+  return card.effect === "positive" && card.tags.some((found) => found.tag === "e-verify")
+}
+
 // Turns a ranked job into a card.
 export function toCard({ job, score, effect, reasons, tags, pay, history }: RankedJob): Card {
   return {

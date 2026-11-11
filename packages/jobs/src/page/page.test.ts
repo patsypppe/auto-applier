@@ -10,7 +10,6 @@ import { parseSettings } from "../settings"
 type Reply = { status: number; body: unknown } | "no answer"
 type Handler = (url: URL, body: unknown) => Reply | Promise<Reply>
 
-const CHIP_FILTERS = { postedWithinDays: 30, workplaces: [], jobTypes: [], levels: [], maxYearsRequired: 2, minYearlyPay: 0 }
 
 // Builds a card with the given key and title.
 function card(key: string, title: string): Card {
@@ -31,7 +30,7 @@ function card(key: string, title: string): Card {
 
 // Builds a feed answer with the given shown cards and, optionally, hidden counts, hidden cards and history.
 function feed(shown: Card[], more: { hidden?: { reason: string; count: number }[]; extra?: Card[]; applied?: AppliedEntry[]; total?: number } = {}) {
-  return { needsSettings: false, total: more.total ?? shown.length, shown, hidden: more.hidden ?? [], extra: more.extra ?? [], applied: more.applied ?? [], filters: CHIP_FILTERS, stemOpt: false }
+  return { needsSettings: false, total: more.total ?? shown.length, shown, hidden: more.hidden ?? [], extra: more.extra ?? [], applied: more.applied ?? [], filters: SETTINGS.filters, stemOpt: false }
 }
 
 const SETTINGS = parseSettings({ workAuth: { status: "f1-opt" }, filters: { roles: ["data analyst"] } })
@@ -225,6 +224,41 @@ describe("the feed page", () => {
     await openPage()
 
     expect(document.getElementById("cards")!.textContent).toContain(message)
+  })
+
+  test("lets a settings save after a chip change take effect, by clearing the chips the save covers", async () => {
+    const asked: URLSearchParams[] = []
+    routes["GET /api/feed"] = (url) => {
+      asked.push(url.searchParams)
+      return { status: 200, body: feed([card("1", "Data Analyst")]) }
+    }
+    routes["POST /api/settings"] = () => ({ status: 200, body: { settings: SETTINGS } })
+    await openPage()
+
+    const years = document.querySelector<HTMLSelectElement>("#chips select[name='maxYears']")!
+    years.value = "5"
+    years.dispatchEvent(new Event("change"))
+    await settle()
+    expect(asked.at(-1)!.get("maxYears")).toBe("5")
+
+    document.querySelector("#settings form")!.dispatchEvent(new Event("submit", { cancelable: true }))
+    await settle()
+
+    expect(asked.at(-1)!.has("maxYears")).toBe(false)
+    expect(localStorage.getItem("job-feed-chips")).not.toContain("maxYears")
+  })
+
+  test("says on each hidden card which setting or chip hid it", async () => {
+    routes["GET /api/feed"] = (url) => ({
+      status: 200,
+      body: feed([card("1", "Data Analyst")], { hidden: [{ reason: "old", count: 1 }], extra: url.searchParams.has("show") ? [card("2", "Old Job")] : [], total: 2 }),
+    })
+    await openPage()
+
+    showHidden("old")
+    await settle()
+
+    expect(document.querySelector("#extra .why")?.textContent).toBe("Hidden because it was posted more than 90 days ago. Set by Posted within in the settings panel.")
   })
 
   test("says why the list is empty when the search and menus leave nothing", async () => {

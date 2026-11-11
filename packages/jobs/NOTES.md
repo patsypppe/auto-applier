@@ -428,3 +428,17 @@
 - Checked on the real feed (89,784 jobs, 124 shown): with the server stopped, a status change went back to "Not tracked" with the message, a hidden-reason load kept the 124 cards with its message, and search still worked.
 - Measured: 0 blank or stuck pages across the injected failures. Tests: 766, typecheck and build clean.
 - Not covered: a problem from a failed settings load is cleared by the next successful feed load, so if only the settings request failed, the message can disappear while the panel stays empty.
+
+## 2026-11-10: Slice 14b, one order for settings and chips, with a "why hidden" line
+
+- "Sponsorship later" and "clearance" in the settings panel now start from the chosen status (F7). The rule lives once, in `workAuthDefaults` (feed/filterValues.ts), and both the settings file reader and the panel use it. Before, a new F-1 user who skipped the box was saved as needing no sponsorship later, and a citizen got clearance "none".
+- A settings save clears the stored chips for the values the panel also saves: Posted, Level, Years asked and Degree (F8). Pay, Workplace and Job type chips stay, since the panel does not set them. Before, a chip changed once overrode every later save of the same field.
+- "E-Verify only" now keeps exactly the jobs that show the STEM OPT badge (F21): E-Verify everywhere and nothing blocking. Both use `stemOptCanWork` (feed/card.ts). Before, the chip also kept blocked jobs and "E-Verify in some places" jobs.
+- Each hidden card starts with a line saying why it is hidden, with the value used and where it is set: the chip when a stored chip set it, otherwise the settings panel or data/settings.json. page/whyHidden.ts has a sentence for each of the 16 hide reasons; `HIDE_REASONS` in applyFilters.ts is now the list the type comes from.
+- Checked on the real feed (89,784 jobs, 124 shown, F-1 OPT with a STEM degree):
+  - Status menu: citizen set the box off and clearance to "can obtain one"; F-1 OPT set the box on and clearance to "none".
+  - E-Verify only kept 3 cards, all 3 with the badge. The old rule would have kept 5.
+  - Years asked chip at 5 showed 187; saving settings brought it back to 124 and removed the stored chip.
+  - Hidden as experience: 138 cards, each with "Hidden because it asks for more than 2 years of experience. Set by Most years of experience asked in the settings panel." Hidden as blocked: 300 cards, each naming hideBlocked in data/settings.json. With the Posted chip at 7: "old 206", each line naming the Posted chip.
+- Measured: every hide reason has its own sentence (test), and a settings save after a chip change takes effect (page test and the real check above). Tests: 777, typecheck and build clean.
+- Noticed: saving from the panel rewrites the roles in the panel's group order. Harmless, but the file's order changes.

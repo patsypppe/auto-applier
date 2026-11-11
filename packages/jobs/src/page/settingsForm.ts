@@ -1,6 +1,6 @@
 // Builds the settings panel on the feed page: work authorization, roles, levels, places, dates, years and degree. It sends
 // what the user chose, with the saved settings it does not show kept as they are, and shows the server's mistakes.
-import { CLEARANCES, LEVELS, STATUSES } from "../feed/filterValues"
+import { CLEARANCES, LEVELS, STATUSES, workAuthDefaults } from "../feed/filterValues"
 import { DEGREES } from "../matching/degree"
 import type { FeedSettings } from "../settings"
 import type { Degree, WorkAuth, WorkAuthStatus } from "../types"
@@ -114,6 +114,17 @@ function readForm(form: HTMLFormElement, saved: FeedSettings | undefined): Setti
   }
 }
 
+// Sets "sponsorship later" and the clearance menu to what the chosen status usually has; the user can change them after.
+function presetFromStatus(form: HTMLFormElement, status: string): void {
+  const known = STATUSES.find((name) => name === status)
+  if (!known) return
+  const defaults = workAuthDefaults(known)
+  const sponsorship = form.elements.namedItem("needsSponsorshipLater") as HTMLInputElement
+  const clearance = form.elements.namedItem("clearance") as HTMLSelectElement
+  sponsorship.checked = defaults.needsSponsorshipLater
+  clearance.value = defaults.clearance
+}
+
 // Builds the form from the saved settings, or empty for a first setup, and calls onSave with the choices on submit.
 // onSave answers with the server's mistakes, one per line, or undefined when the settings were saved.
 export function renderSettingsForm(saved: FeedSettings | undefined, onSave: (draft: SettingsDraft) => Promise<string | undefined>): HTMLFormElement {
@@ -155,6 +166,9 @@ export function renderSettingsForm(saved: FeedSettings | undefined, onSave: (dra
       menu("myDegree", "My highest degree", [["", "not set"], ...DEGREES.map((degree): [string, string] => [degree, degree])], filters?.myDegree ?? ""),
     ),
   )
+
+  const status = form.elements.namedItem("status") as HTMLSelectElement
+  status.addEventListener("change", () => presetFromStatus(form, status.value))
 
   const errors = element("p", "errors")
   const button = element("button", undefined, "Save settings")

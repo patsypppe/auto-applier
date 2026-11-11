@@ -73,6 +73,26 @@ describe("renderSettingsForm", () => {
     expect(draft.filters).not.toHaveProperty("postedWithinDays")
   })
 
+  test("starts sponsorship later and clearance from the chosen status, and keeps a later change", async () => {
+    const onSave = vi.fn<(draft: SettingsDraft) => Promise<string | undefined>>().mockResolvedValue(undefined)
+    const form = renderSettingsForm(undefined, onSave)
+    const pick = (status: string) => {
+      control(form, "status").value = status
+      control(form, "status").dispatchEvent(new Event("change"))
+    }
+
+    pick("f1-opt")
+    expect(control(form, "needsSponsorshipLater").checked).toBe(true)
+    expect(control(form, "clearance").value).toBe("none")
+    pick("citizen")
+    expect(control(form, "needsSponsorshipLater").checked).toBe(false)
+    expect(control(form, "clearance").value).toBe("can-obtain")
+    control(form, "clearance").value = "active"
+    await submit(form)
+
+    expect(onSave.mock.calls[0]![0].workAuth).toMatchObject({ status: "citizen", needsSponsorshipLater: false, clearance: "active" })
+  })
+
   test("shows each mistake the server found on its own line, and clears them after a good save", async () => {
     const onSave = vi.fn<(draft: SettingsDraft) => Promise<string | undefined>>().mockResolvedValueOnce("first mistake\nsecond mistake").mockResolvedValueOnce(undefined)
     const form = renderSettingsForm(SAVED, onSave)

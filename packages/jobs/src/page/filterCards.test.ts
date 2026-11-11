@@ -59,15 +59,15 @@ describe("filterCards", () => {
     expect(filterCards(CARDS, { ...ANY, sort: "date" }, APPLIED).map((found) => found.key)).toEqual(["c", "b", "a"])
   })
 
-  test("keeps only E-Verify employers when that chip is on", () => {
+  test("keeps only jobs a STEM OPT student can take when E-Verify only is on: E-Verify everywhere and nothing blocking", () => {
     const some = "We use E-Verify in certain locations."
     const cards = [
-      card("e", { tags: [{ tag: "e-verify", evidence: "We use E-Verify.", context: "We use E-Verify." }] }),
-      card("s", { score: 40, tags: [{ tag: "e-verify-some-places", evidence: some, context: some }] }),
+      card("e", { effect: "positive", tags: [{ tag: "e-verify", evidence: "We use E-Verify.", context: "We use E-Verify." }] }),
+      card("s", { score: 40, effect: "positive", tags: [{ tag: "e-verify-some-places", evidence: some, context: some }] }),
       card("n", { score: 30 }),
     ]
 
-    expect(filterCards(cards, { ...ANY, eVerifyOnly: true }, []).map((found) => found.key)).toEqual(["e", "s"])
+    expect(filterCards(cards, { ...ANY, eVerifyOnly: true }, []).map((found) => found.key)).toEqual(["e"])
     expect(filterCards(cards, ANY, []).map((found) => found.key)).toEqual(["e", "s", "n"])
   })
 })

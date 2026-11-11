@@ -4,23 +4,26 @@ import type { FeedSettings } from "../settings"
 import type { Degree, Pay } from "../types"
 import type { RankedJob } from "./getJobs"
 
-export type HideReason =
-  | "abroad"
-  | "blocked"
-  | "likely-blocked"
-  | "role"
-  | "title-word"
-  | "level"
-  | "experience"
-  | "degree"
-  | "location"
-  | "remote"
-  | "workplace"
-  | "job-type"
-  | "pay"
-  | "old"
-  | "company"
-  | "score"
+export const HIDE_REASONS = [
+  "abroad",
+  "blocked",
+  "likely-blocked",
+  "role",
+  "title-word",
+  "level",
+  "experience",
+  "degree",
+  "location",
+  "remote",
+  "workplace",
+  "job-type",
+  "pay",
+  "old",
+  "company",
+  "score",
+] as const
+
+export type HideReason = (typeof HIDE_REASONS)[number]
 
 const HOURS_A_YEAR = 2080
 

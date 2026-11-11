@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest"
 import { mkdtemp, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { loadSettingsIfAny, parseSettings } from "./settings"
+import { loadSettingsIfAny, parseSettings, workAuthDefaults } from "./settings"
 
 const MINIMAL = { workAuth: { status: "f1-opt" }, filters: { roles: ["data scientist"] } }
 
@@ -45,6 +45,15 @@ describe("parseSettings: defaults", () => {
 
     expect(settings.workAuth).toMatchObject({ stemDegree: true, needsSponsorshipLater: false })
     expect(settings.filters).toMatchObject({ hideLikelyBlocked: true, postedWithinDays: 7 })
+  })
+})
+
+describe("workAuthDefaults", () => {
+  test("gives students and visa holders sponsorship later, and only citizens a clearance they can obtain", () => {
+    expect(workAuthDefaults("f1-opt")).toEqual({ needsSponsorshipLater: true, clearance: "none" })
+    expect(workAuthDefaults("h1b")).toEqual({ needsSponsorshipLater: true, clearance: "none" })
+    expect(workAuthDefaults("permanent-resident")).toEqual({ needsSponsorshipLater: false, clearance: "none" })
+    expect(workAuthDefaults("citizen")).toEqual({ needsSponsorshipLater: false, clearance: "can-obtain" })
   })
 })
 

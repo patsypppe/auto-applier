@@ -1,7 +1,7 @@
 // Tests that renderChips shows the filters the server used and reports each change the user makes.
 // @vitest-environment jsdom
 import { describe, expect, test, vi } from "vitest"
-import { renderChips, type ChipChoices } from "./chips"
+import { renderChips, withoutPanelChips, type ChipChoices } from "./chips"
 
 const USED = { postedWithinDays: 90, workplaces: [], jobTypes: [], levels: ["intern", "new-grad", "entry"], maxYearsRequired: 2, minYearlyPay: 0, myDegree: "master" } as const
 const PAGE = { newOnly: false, eVerifyOnly: false, stemOpt: false }
@@ -53,5 +53,13 @@ describe("renderChips", () => {
 
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ eVerifyOnly: "true" }))
     expect(renderChips(USED, PAGE, vi.fn()).querySelector("button[data-value='e-verify']")).toBeNull()
+  })
+})
+
+describe("withoutPanelChips", () => {
+  test("drops the chips the settings panel also sets, and keeps the rest", () => {
+    const chips = { within: "7", level: "intern", maxYears: "5", degree: "phd", minPay: "80000", workplace: "remote", newOnly: "true" }
+
+    expect(withoutPanelChips(chips)).toEqual({ minPay: "80000", workplace: "remote", newOnly: "true" })
   })
 })

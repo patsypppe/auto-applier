@@ -1,7 +1,7 @@
 // Narrows the cards on the feed page by search words, work-authorization effect, application status and whether they are
-// new since the last visit, and to E-Verify employers when asked, then sorts them.
+// new since the last visit, and to the jobs a STEM OPT student can take when asked, then sorts them.
 import type { AppliedEntry } from "../feed/applied"
-import type { Card } from "../feed/card"
+import { stemOptCanWork, type Card } from "../feed/card"
 
 export type PageFilters = {
   search: string
@@ -33,7 +33,7 @@ export function filterCards(cards: readonly Card[], filters: PageFilters, applie
       if (!words.every((word) => haystack.includes(word))) return false
       if (filters.effect !== "any" && card.effect !== filters.effect) return false
       if (filters.newOnly && lastVisit !== undefined && !isNewSince(card, lastVisit)) return false
-      if (filters.eVerifyOnly && !card.tags.some((found) => found.tag === "e-verify" || found.tag === "e-verify-some-places")) return false
+      if (filters.eVerifyOnly && !stemOptCanWork(card)) return false
       const status = statusOf.get(card.key)
       if (filters.status === "not-tracked") return status === undefined
       return filters.status === "any" || status === filters.status

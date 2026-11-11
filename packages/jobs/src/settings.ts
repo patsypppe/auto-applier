@@ -1,10 +1,10 @@
 // Reads data/settings.json: the user's work authorization and what jobs to show, with defaults and a message for each mistake.
 import { readFile } from "node:fs/promises"
-import { CLEARANCES, JOB_TYPES, LEVELS, STATUSES, WORKPLACES } from "./feed/filterValues"
+import { CLEARANCES, JOB_TYPES, LEVELS, STATUSES, workAuthDefaults, WORKPLACES } from "./feed/filterValues"
 import { DEGREES } from "./matching/degree"
 import type { Degree, JobType, Level, WorkAuth, Workplace } from "./types"
 
-export { JOB_TYPES, LEVELS, STATUSES, WORKPLACES }
+export { JOB_TYPES, LEVELS, STATUSES, workAuthDefaults, WORKPLACES }
 
 export type Filters = {
   roles: string[]
@@ -51,13 +51,14 @@ function readWorkAuth(raw: Raw, problems: string[]): WorkAuth {
   const status = STATUSES.find((name) => name === raw.status)
   if (!status) problems.push(`workAuth.status must be one of ${STATUSES.join(", ")}.`)
   const known = status ?? "citizen"
+  const defaults = workAuthDefaults(known)
 
-  const needsSponsorshipLater = booleanAt(raw.needsSponsorshipLater, known.startsWith("f1-") || known === "h1b" || known === "other-needs-sponsorship")
+  const needsSponsorshipLater = booleanAt(raw.needsSponsorshipLater, defaults.needsSponsorshipLater)
   const stemDegree = booleanAt(raw.stemDegree, false)
   if (needsSponsorshipLater === undefined) problems.push("workAuth.needsSponsorshipLater must be true or false.")
   if (stemDegree === undefined) problems.push("workAuth.stemDegree must be true or false.")
 
-  const clearance = raw.clearance === undefined ? (known === "citizen" ? "can-obtain" : "none") : CLEARANCES.find((name) => name === raw.clearance)
+  const clearance = raw.clearance === undefined ? defaults.clearance : CLEARANCES.find((name) => name === raw.clearance)
   if (!clearance) problems.push(`workAuth.clearance must be one of ${CLEARANCES.join(", ")}.`)
 
   return { status: known, needsSponsorshipLater: needsSponsorshipLater ?? false, stemDegree: stemDegree ?? false, clearance: clearance ?? "none" }

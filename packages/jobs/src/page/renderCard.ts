@@ -1,6 +1,6 @@
 // Builds one job card for the feed page. Every piece of text from a posting is set with textContent, never as HTML.
 import { APPLICATION_STATUSES, type AppliedEntry, type ApplicationStatus } from "../feed/applied"
-import type { Card } from "../feed/card"
+import { stemOptCanWork, type Card } from "../feed/card"
 import { historySentence } from "../history/historySentence"
 import type { Degree, Effect, JobType, Pay } from "../types"
 
@@ -84,8 +84,7 @@ function tagsBlock(card: Card): HTMLElement {
 
 // Says that a STEM OPT student can work here: the employer uses E-Verify and nothing else blocks the job.
 function stemOptBadge(card: Card): HTMLElement | undefined {
-  const usesEVerify = card.tags.some((found) => found.tag === "e-verify")
-  return usesEVerify && card.effect === "positive" ? element("p", "stem-opt", "E-Verify employer: STEM OPT can work here") : undefined
+  return stemOptCanWork(card) ? element("p", "stem-opt", "E-Verify employer: STEM OPT can work here") : undefined
 }
 
 // Makes the status menu, showing since when the current status holds, and reports each change.
@@ -108,15 +107,17 @@ function statusBlock(applied: AppliedEntry | undefined, onStatus: (status: Appli
   return block
 }
 
-// Builds the card: title link (marked new when first seen since the last visit), company, places, date and score, then
-// skills, tags, the STEM OPT badge for a user it applies to, other links and the status menu.
+// Builds the card: why it is hidden for a hidden one, title link (marked new when first seen since the last visit),
+// company, places, date and score, then skills, tags, the STEM OPT badge for a user it applies to, other links and the
+// status menu.
 export function renderCard(
   card: Card,
   applied: AppliedEntry | undefined,
   onStatus: (status: ApplicationStatus | "none") => void,
-  options: { isNew?: boolean; stemOpt?: boolean } = {},
+  options: { isNew?: boolean; stemOpt?: boolean; why?: string } = {},
 ): HTMLElement {
   const article = element("article", "card")
+  if (options.why) article.append(element("p", "why", options.why))
 
   const heading = element("h2")
   if (options.isNew) heading.append(element("span", "new", "New"), " ")

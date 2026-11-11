@@ -7,3 +7,12 @@ export const CLEARANCES: readonly WorkAuth["clearance"][] = ["none", "can-obtain
 export const LEVELS: readonly Level[] = ["intern", "new-grad", "entry", "mid", "senior", "staff"]
 export const WORKPLACES: readonly Workplace[] = ["remote", "hybrid", "onsite"]
 export const JOB_TYPES: readonly JobType[] = ["full-time", "part-time", "contract", "intern", "temporary"]
+
+// Returns what a person with this status usually has: students and visa holders will need sponsorship later, and only a
+// citizen can obtain a clearance. The settings file and the settings panel both start from these.
+export function workAuthDefaults(status: WorkAuthStatus): Pick<WorkAuth, "needsSponsorshipLater" | "clearance"> {
+  return {
+    needsSponsorshipLater: status.startsWith("f1-") || status === "h1b" || status === "other-needs-sponsorship",
+    clearance: status === "citizen" ? "can-obtain" : "none",
+  }
+}

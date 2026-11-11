@@ -4,13 +4,14 @@
 import type { ApplicationStatus } from "../feed/applied"
 import type { Card } from "../feed/card"
 import type { FeedSettings } from "../settings"
-import { choicesFrom, PAGE_ONLY, renderChips, type ChipChoices } from "./chips"
+import { choicesFrom, PAGE_ONLY, renderChips, withoutPanelChips, type ChipChoices } from "./chips"
 import { cleanChips, cleanFilters, cleanVisits, emptyMessage, hasApplied, hasSettings, isFeed, type Feed } from "./feedState"
 import { filterCards, isNewSince, type PageFilters } from "./filterCards"
 import { localDate, renderCard } from "./renderCard"
 import { readAnswer } from "./requests"
 import { renderSettingsForm, type SettingsDraft } from "./settingsForm"
 import { nextVisits } from "./visits"
+import { whyHidden } from "./whyHidden"
 
 const SAVED_FILTERS = "job-feed-filters"
 const SAVED_CHIPS = "job-feed-chips"
@@ -124,8 +125,9 @@ async function changeStatus(card: Card, status: ApplicationStatus | "none"): Pro
 }
 
 // Draws a list of cards into a container, marking the ones first seen since the last visit and, for a user the STEM OPT
-// rule applies to, the E-Verify employers. An empty list shows the sentence given for it, if any.
-function drawCards(container: HTMLElement, cards: readonly Card[], whenEmpty?: string): void {
+// rule applies to, the E-Verify employers. An empty list shows the sentence given for it, if any, and hidden cards say
+// why they were hidden.
+function drawCards(container: HTMLElement, cards: readonly Card[], whenEmpty?: string, why?: string): void {
   const applied = new Map(feed.applied.map((entry) => [entry.key, entry]))
   if (cards.length === 0 && whenEmpty) {
     const line = document.createElement("p")
@@ -134,7 +136,7 @@ function drawCards(container: HTMLElement, cards: readonly Card[], whenEmpty?: s
     return container.replaceChildren(line)
   }
   container.replaceChildren(
-    ...cards.map((card) => renderCard(card, applied.get(card.key), (status) => void changeStatus(card, status), { isNew: isNewSince(card, lastVisit), stemOpt: feed.stemOpt })),
+    ...cards.map((card) => renderCard(card, applied.get(card.key), (status) => void changeStatus(card, status), { isNew: isNewSince(card, lastVisit), stemOpt: feed.stemOpt, why })),
   )
 }
 
@@ -162,11 +164,14 @@ function drawHistory(): void {
   byId("history").replaceChildren(...rows)
 }
 
-// Sends the settings to the server, which saves them and ranks the jobs again, then reloads the feed and the panel.
-// Returns the server's mistakes, one per line, when it refused them.
+// Sends the settings to the server, which saves them and ranks the jobs again, then reloads the feed and the panel. The
+// chips for values the panel saves are cleared, so the save takes effect. Returns the server's mistakes, one per line,
+// when it refused them.
 async function saveSettings(draft: SettingsDraft): Promise<string | undefined> {
   const answer = await readAnswer(postJson("/api/settings", draft), hasSettings, "The settings could not be saved")
   if (!answer.ok) return answer.error
+  chips = withoutPanelChips(chips)
+  store(SAVED_CHIPS, chips)
   drawSettings(answer.body.settings ?? undefined)
   await load(showing)
   return undefined
@@ -194,7 +199,7 @@ function draw(): void {
   drawSummary(cards.length)
   drawCards(byId("cards"), cards, emptyMessage(feed))
   byId("extra-title").textContent = showing ? `Hidden as ${showing} (at most 300 shown)` : ""
-  drawCards(byId("extra"), feed.extra)
+  drawCards(byId("extra"), feed.extra, undefined, showing && feed.filters ? whyHidden(showing, feed.filters, chips) : undefined)
   drawHistory()
 }
 

@@ -3,6 +3,7 @@
 import { describe, expect, test, vi } from "vitest"
 import type { AppliedEntry } from "../feed/applied"
 import type { Card } from "../feed/card"
+import { filterCards } from "./filterCards"
 import { renderCard } from "./renderCard"
 
 const CARD: Card = {
@@ -56,6 +57,31 @@ describe("renderCard", () => {
     expect(renderCard({ ...CARD, effect: "positive" }, undefined, vi.fn(), { stemOpt: true }).textContent).not.toContain(badge)
     const somePlaces: Card = { ...eVerify, tags: [{ tag: "e-verify-some-places", evidence: "In certain locations.", context: "In certain locations." }] }
     expect(renderCard(somePlaces, undefined, vi.fn(), { stemOpt: true }).textContent).not.toContain(badge)
+  })
+
+  test("keeps under E-Verify only exactly the cards that show the badge", () => {
+    const tag = (name: "e-verify" | "e-verify-some-places") => ({ tag: name, evidence: "E-Verify.", context: "E-Verify." })
+    const cards: Card[] = [
+      { ...CARD, key: "plus", effect: "positive", tags: [tag("e-verify")] },
+      { ...CARD, key: "blocked", effect: "blocked", tags: [tag("e-verify")] },
+      { ...CARD, key: "likely", effect: "likely-blocked", tags: [tag("e-verify")] },
+      { ...CARD, key: "some-places", effect: "positive", tags: [tag("e-verify-some-places")] },
+      { ...CARD, key: "none", effect: "positive", tags: [] },
+    ]
+    const filters = { search: "", effect: "any", status: "any", sort: "score", newOnly: false, eVerifyOnly: true } as const
+
+    const kept = filterCards(cards, filters, []).map((card) => card.key)
+    const withBadge = cards.filter((card) => renderCard(card, undefined, vi.fn(), { stemOpt: true }).querySelector(".stem-opt")).map((card) => card.key)
+
+    expect(kept).toEqual(["plus"])
+    expect(kept).toEqual(withBadge)
+  })
+
+  test("says why a hidden card was hidden, when given a reason", () => {
+    const why = "Hidden because it was posted more than 30 days ago. Set by the Posted chip."
+
+    expect(renderCard(CARD, undefined, vi.fn(), { why }).querySelector(".why")?.textContent).toBe(why)
+    expect(renderCard(CARD, undefined, vi.fn()).querySelector(".why")).toBeNull()
   })
 
   test("marks a job first seen since the last visit as new", () => {
